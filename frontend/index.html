@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070A13">
+
+    <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="ambient ambient-one"></div>
+<div class="ambient ambient-two"></div>
+<div class="grid-overlay"></div>
+
+
+<!-- =====================================================
+     LOGIN & REGISTER SCREEN
+===================================================== -->
+
+<section id="authScreen" class="screen auth-screen">
+
+    <div class="auth-terminal glass-panel">
+
+        <div class="brand-lockup">
+            <div class="brand-mark">
+                A
+            </div>
+
+            <div>
+                <p class="eyebrow">
+                    AERIVA HEALTH
+                </p>
+                <h1>
+                    AERIVA AI
+                </h1>
+            </div>
+        </div>
+
+        <div class="terminal-status">
+            <span class="status-dot"></span>
+            <span>SYSTEM READY</span>
+            <span class="status-separator">•</span>
+            <span>SECURE LOGIN</span>
+        </div>
+
+        <!-- AUTH TABS -->
+        <div class="auth-tabs" role="tablist" aria-label="Authentication">
+            <button
+                id="signInTab"
+                class="auth-tab active"
+                type="button"
+                onclick="showLogin()">
+                SIGN IN
+            </button>
+
+            <button
+                id="registerTab"
+                class="auth-tab"
+                type="button"
+                onclick="showRegister()">
+                CREATE ACCOUNT
+            </button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginBox">
+            <div class="auth-heading">
+                <p class="section-kicker">
+                    WELCOME BACK
+                </p>
+                <h2>
+                    Sign in to your account.
+                </h2>
+                <p>
+                    Enter your email and password to open your health dashboard.
+                </p>
+            </div>
+
+            <div class="field-stack">
+                <label for="loginEmail">
+                    EMAIL ADDRESS
+                </label>
+                <input
+                    id="loginEmail"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="name@email.com"
+                >
+
+                <label for="loginPassword">
+                    PASSWORD
+                </label>
+                <input
+                    id="loginPassword"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="••••••••"
+                >
+
+                <button
+                    class="neon-button primary"
+                    type="button"
+                    onclick="loginUser()">
+                    <span>
+                        SIGN IN
+                    </span>
+                    <span>
+                        →
+                    </span>
+                </button>
+
+                <p id="loginMessage" class="form-message" aria-live="polite"></p>
+            </div>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="registerBox" class="hidden">
+            <div class="auth-heading">
+                <p class="section-kicker">
+                    GET STARTED
+                </p>
+                <h2>
+                    Create your profile.
+                </h2>
+                <p>
+                    AERIVA personalizes your daily routine based on your details.
+                </p>
+            </div>
+
+            <div class="form-grid two">
+                <div class="field">
+                    <label for="registerName">
+                        YOUR NAME
+                    </label>
+                    <input
+                        id="registerName"
+                        type="text"
+                        autocomplete="name"
+                        placeholder="Kruthik"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="registerEmail">
+                        EMAIL ADDRESS
+                    </label>
+                    <input
+                        id="registerEmail"
+                        type="email"
+                        autocomplete="email"
+                        placeholder="kruthik@example.com"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="registerPassword">
+                        PASSWORD
+                    </label>
+                    <input
+                        id="registerPassword"
+                        type="password"
+                        autocomplete="new-password"
+                        placeholder="At least 6 characters"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="registerAge">
+                        AGE (YEARS)
+                    </label>
+                    <input
+                        id="registerAge"
+                        type="number"
+                        min="1"
+                        max="120"
+                        placeholder="20"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="registerHeight">
+                        HEIGHT (CM)
+                    </label>
+                    <input
+                        id="registerHeight"
+                        type="number"
+                        min="1"
+                        placeholder="175"
+                    >
+                </div>
+
+                <div class="field">
+                    <label for="registerWeight">
+                        WEIGHT (KG)
+                    </label>
+                    <input
+                        id="registerWeight"
+                        type="number"
+                        min="1"
+                        placeholder="70"
+                    >
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="registerGoal">
+                    PRIMARY HEALTH GOAL
+                </label>
+                <select id="registerGoal">
+                    <option value="">
+                        Select your health goal
+                    </option>
+                    <option value="Build healthy habits">
+                        Build healthy habits
+                    </option>
+                    <option value="Improve fitness">
+                        Improve fitness & exercise
+                    </option>
+                    <option value="Improve sleep">
+                        Improve sleep quality
+                    </option>
+                    <option value="Manage weight">
+                        Manage weight
+                    </option>
+                    <option value="Increase energy">
+                        Increase energy
+                    </option>
+                </select>
+            </div>
+
+            <button
+                class="neon-button primary"
+                type="button"
+                onclick="registerUser()">
+                <span>
+                    CREATE ACCOUNT
+                </span>
+                <span>
+                    →
+                </span>
+            </button>
+
+            <p id="registerMessage" class="form-message" aria-live="polite"></p>
+        </div>
+
+        <div class="auth-footer">
+            <span>FASTAPI BACKEND</span>
+            <span>SECURE ENCRYPTED</span>
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     FIRST-TIME SCHEDULE SETUP (ONBOARDING)
+===================================================== -->
+
+<section id="scheduleSetupScreen" class="screen hidden">
+
+    <div class="setup-shell">
+
+        <header class="setup-header">
+            <div>
+                <p class="eyebrow">
+                    QUICK ONBOARDING
+                </p>
+                <h1>
+                    Set up your
+                    <span class="cyan">
+                        daily schedule.
+                    </span>
+                </h1>
+                <p>
+                    Tell AERIVA your usual sleep, meal, and work times so it can create your daily plan.
+                </p>
+            </div>
+
+            <div class="setup-progress" aria-label="Setup step">
+                <span class="progress-step active">1</span>
+                <span class="progress-line"></span>
+                <span class="progress-step">2</span>
+            </div>
+        </header>
+
+        <form id="firstScheduleForm" class="glass-panel setup-card">
+
+            <!-- SLEEP -->
+            <div class="setup-section">
+                <div class="setup-section-title">
+                    <span class="icon-chip green">☾</span>
+                    <div>
+                        <p class="section-kicker">
+                            SLEEP & WAKE
+                        </p>
+                        <h2>
+                            When do you sleep and wake up?
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="time-grid two">
+                    <div class="field">
+                        <label for="firstWakeUp">
+                            WAKE UP TIME
+                        </label>
+                        <input id="firstWakeUp" type="time" value="07:00" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="firstSleep">
+                            BEDTIME (SLEEP)
+                        </label>
+                        <input id="firstSleep" type="time" value="23:00" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOD -->
+            <div class="setup-section">
+                <div class="setup-section-title">
+                    <span class="icon-chip cyan">◈</span>
+                    <div>
+                        <p class="section-kicker">
+                            MEAL TIMES
+                        </p>
+                        <h2>
+                            When do you usually eat?
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="time-grid four">
+                    <div class="field">
+                        <label for="firstBreakfast">
+                            BREAKFAST
+                        </label>
+                        <input id="firstBreakfast" type="time" value="08:30" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="firstLunch">
+                            LUNCH
+                        </label>
+                        <input id="firstLunch" type="time" value="13:00" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="firstSnack">
+                            EVENING SNACK
+                        </label>
+                        <input id="firstSnack" type="time" value="17:00" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="firstDinner">
+                            DINNER
+                        </label>
+                        <input id="firstDinner" type="time" value="20:30" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WORK / STUDY -->
+            <div class="setup-section">
+                <div class="setup-section-title">
+                    <span class="icon-chip amber">⌁</span>
+                    <div>
+                        <p class="section-kicker">
+                            WORK & STUDY
+                        </p>
+                        <h2>
+                            Daily focus and free time
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="time-grid four">
+                    <div class="field">
+                        <label for="firstWorkStart">
+                            WORK / STUDY START
+                        </label>
+                        <input id="firstWorkStart" type="time" value="09:30" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="firstWorkEnd">
+                            WORK / STUDY END
+                        </label>
+                        <input id="firstWorkEnd" type="time" value="17:30" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="firstFreeStart">
+                            FREE TIME START
+                        </label>
+                        <input id="firstFreeStart" type="time" value="18:00" required>
+                    </div>
+
+                    <div class="field">
+                        <label for="firstFreeEnd">
+                            FREE TIME END
+                        </label>
+                        <input id="firstFreeEnd" type="time" value="22:30" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-actions">
+                <div>
+                    <p class="tiny-note">
+                        AERIVA applies this schedule to your week. You can adjust it anytime.
+                    </p>
+                    <p id="firstScheduleMessage" class="form-message" aria-live="polite"></p>
+                </div>
+
+                <button class="neon-button primary large" type="submit">
+                    <span>
+                        SAVE & GO TO DASHBOARD
+                    </span>
+                    <span>
+                        →
+                    </span>
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     MAIN DASHBOARD
+===================================================== -->
+
+<section id="dashboardScreen" class="screen hidden">
+
+    <main class="dashboard-shell">
+
+        <!-- HEADER -->
+        <header class="hud-header">
+            <div class="brand-mini">
+                <div class="brand-mark small">
+                    A
+                </div>
+                <div>
+                    <p class="eyebrow">
+                        AERIVA HEALTH DASHBOARD
+                    </p>
+                    <h1>
+                        Welcome,
+                        <span id="userName">
+                            Player
+                        </span>
+                    </h1>
+                </div>
+            </div>
+
+            <div class="hud-meta">
+                <div class="level-box">
+                    <div class="level-line">
+                        <span>
+                            LEVEL
+                            <strong id="levelValue">
+                                01
+                            </strong>
+                        </span>
+                        <span>
+                            <strong id="xpValue">
+                                0
+                            </strong>
+                            XP
+                        </span>
+                    </div>
+                    <div class="xp-track">
+                        <div id="xpProgress" class="xp-fill"></div>
+                    </div>
+                </div>
+
+                <!-- LIVE CLOCK -->
+                <div class="system-clock">
+                    <span class="live-dot"></span>
+                    <span id="currentTime">
+                        --:--:--
+                    </span>
+                </div>
+
+                <button
+                    class="icon-button"
+                    type="button"
+                    onclick="logoutUser()"
+                    title="Logout"
+                    aria-label="Logout">
+                    LOGOUT
+                </button>
+            </div>
+        </header>
+
+
+        <!-- DAILY OVERVIEW & AI TIP -->
+        <div class="welcome-strip">
+            <div>
+                <p class="section-kicker">
+                    TODAY'S OVERVIEW
+                </p>
+                <h2>
+                    TRACK HABITS. STAY HEALTHY.
+                    <span class="green">
+                        WIN YOUR DAY.
+                    </span>
+                </h2>
+                <p id="currentDate">
+                    Today
+                </p>
+            </div>
+
+            <div class="ai-suggestion">
+                <span class="ai-pulse">
+                    ✦
+                </span>
+                <div>
+                    <span class="section-kicker">
+                        AI HEALTH ADVICE
+                    </span>
+                    <p id="aiSuggestion">
+                        Loading your wellness recommendations...
+                    </p>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- VITALS (HEALTH SCORE, ENERGY, WATER) -->
+        <section class="vitals-grid" aria-label="Daily Health Vitals">
+
+            <!-- HEALTH SCORE -->
+            <article class="vital-card green-card">
+                <div class="card-top">
+                    <span class="section-kicker">
+                        HEALTH SCORE ♥
+                    </span>
+                    <span class="vital-status">
+                        GOOD
+                    </span>
+                </div>
+
+                <div class="radial-wrap">
+                    <div id="healthRadial" class="radial" style="--progress:259deg">
+                        <div>
+                            <strong id="healthValue">
+                                75
+                            </strong>
+                            <small>%</small>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="vital-title">
+                            Daily Health Score
+                        </p>
+                        <p class="vital-sub">
+                            Calculated from your sleep, meals & activity
+                        </p>
+                    </div>
+                </div>
+            </article>
+
+            <!-- ENERGY LEVEL -->
+            <article class="vital-card cyan-card">
+                <div class="card-top">
+                    <span class="section-kicker">
+                        ENERGY LEVEL ⚡
+                    </span>
+                    <span class="vital-status cyan-text">
+                        ACTIVE
+                    </span>
+                </div>
+
+                <div class="energy-meter">
+                    <div class="battery">
+                        <div id="energyFill" class="battery-fill"></div>
+                    </div>
+                    <strong id="energyValue">
+                        75%
+                    </strong>
+                </div>
+
+                <p class="vital-title">
+                    Energy Reserve
+                </p>
+                <p class="vital-sub">
+                    Stay active, take short breaks, and recharge.
+                </p>
+            </article>
+
+            <!-- HYDRATION -->
+            <article class="vital-card cyan-card">
+                <div class="card-top">
+                    <span class="section-kicker">
+                        WATER INTAKE 💧
+                    </span>
+                    <span class="vital-status cyan-text">
+                        DAILY GOAL
+                    </span>
+                </div>
+
+                <div class="hydration-value">
+                    <strong id="waterStat">
+                        0.00 L
+                    </strong>
+                    <span>
+                        / 2.5 L Goal
+                    </span>
+                </div>
+
+                <div class="progress-track">
+                    <div
+                        id="waterProgress"
+                        class="progress-fill cyan-fill"
+                        style="width:0%">
+                    </div>
+                </div>
+
+                <div class="hydration-row">
+                    <span id="waterText">
+                        0.00 L / 2.5 L
+                    </span>
+                    <button
+                        class="mini-button cyan"
+                        type="button"
+                        onclick="addWater()">
+                        +250 ML
+                    </button>
+                </div>
+            </article>
+
+        </section>
+
+
+        <!-- MAIN CONTENT (SCHEDULE + LOGS) -->
+        <div class="main-grid">
+
+            <!-- TIMELINE -->
+            <section class="glass-panel timeline-panel">
+                <div class="panel-header">
+                    <div>
+                        <p class="section-kicker">
+                            TODAY'S SCHEDULE
+                        </p>
+                        <h2>
+                            Daily Routine
+                        </h2>
+                    </div>
+                    <span class="date-badge" id="timelineDate">
+                        TODAY
+                    </span>
+                </div>
+
+                <div id="routineList" class="routine-list"></div>
+
+                <div class="action-dock">
+                    <button
+                        class="neon-button primary"
+                        type="button"
+                        onclick="openFoodModal()">
+                        + LOG FOOD
+                    </button>
+
+                    <button
+                        class="neon-button secondary"
+                        type="button"
+                        onclick="addWater()">
+                        + LOG WATER
+                    </button>
+
+                    <button
+                        class="neon-button outline"
+                        type="button"
+                        onclick="openRoutineModal()">
+                        EDIT SCHEDULE
+                    </button>
+                </div>
+            </section>
+
+            <!-- SIDE PANELS (FOOD, SLEEP, EXERCISE) -->
+            <aside class="side-stack">
+
+                <!-- FOOD LOG -->
+                <section class="glass-panel stat-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="section-kicker">
+                                NUTRITION
+                            </p>
+                            <h2>
+                                Today's Meals
+                            </h2>
+                        </div>
+                        <span class="stat-number">
+                            <span id="calorieStat">
+                                0
+                            </span>
+                            <small>
+                                kcal
+                            </small>
+                        </span>
+                    </div>
+
+                    <div id="foodList" class="food-list"></div>
+
+                    <button
+                        class="text-button"
+                        type="button"
+                        onclick="openFoodModal()">
+                        + ADD FOOD / MEAL →
+                    </button>
+                </section>
+
+                <!-- SLEEP STAT -->
+                <section class="glass-panel stat-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="section-kicker">
+                                SLEEP & REST
+                            </p>
+                            <h2>
+                                Sleep Duration
+                            </h2>
+                        </div>
+                        <span class="stat-number">
+                            <span id="sleepStat">
+                                --
+                            </span>
+                        </span>
+                    </div>
+
+                    <div class="recovery-visual">
+                        <div class="recovery-orbit">
+                            ☾
+                        </div>
+                        <div>
+                            <p>
+                                Healthy Target
+                            </p>
+                            <strong>
+                                Aim for 7 to 9 hours of quality sleep.
+                            </strong>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- EXERCISE -->
+                <section class="glass-panel stat-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="section-kicker">
+                                EXERCISE & WORKOUT
+                            </p>
+                            <h2>
+                                Activity Time
+                            </h2>
+                        </div>
+                        <span class="stat-number">
+                            <span id="exerciseStat">
+                                0 min
+                            </span>
+                        </span>
+                    </div>
+
+                    <button
+                        class="mini-button green full"
+                        type="button"
+                        onclick="completeExercise(15)">
+                        LOG 15 MIN WORKOUT (+15 XP)
+                    </button>
+                </section>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+</section>
+
+
+<!-- =====================================================
+     FOOD LOGGING MODAL
+===================================================== -->
+
+<div id="foodModal" class="modal hidden" aria-hidden="true">
+
+    <div class="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="foodModalTitle">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="closeFoodModal()"
+            aria-label="Close">
+            ×
+        </button>
+
+        <p class="section-kicker">
+            RECORD YOUR MEAL
+        </p>
+        <h2 id="foodModalTitle">
+            What did you eat?
+        </h2>
+        <p class="modal-subtitle">
+            Enter the food item and quantity. AERIVA will estimate the calories automatically.
+        </p>
+
+        <div class="field">
+            <label for="foodMeal">
+                MEAL TYPE
+            </label>
+            <select id="foodMeal">
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Snack">Snack</option>
+                <option value="Dinner">Dinner</option>
+            </select>
+        </div>
+
+        <div class="form-grid two">
+            <div class="field">
+                <label for="foodName">
+                    FOOD NAME
+                </label>
+                <input
+                    id="foodName"
+                    type="text"
+                    placeholder="Idli, dosa, rice, eggs..."
+                >
+            </div>
+
+            <div class="field">
+                <label for="foodQuantity">
+                    QUANTITY / SERVINGS
+                </label>
+                <input
+                    id="foodQuantity"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    placeholder="1"
+                >
+            </div>
+        </div>
+
+        <p id="foodMessage" class="form-message" aria-live="polite"></p>
+
+        <button
+            class="neon-button primary large full"
+            type="button"
+            onclick="saveFood()">
+            SAVE MEAL TO LOG
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     EDIT ROUTINE MODAL
+===================================================== -->
+
+<div id="routineModal" class="modal hidden" aria-hidden="true">
+
+    <div class="modal-card glass-panel routine-modal-card" role="dialog" aria-modal="true" aria-labelledby="routineModalTitle">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="closeRoutineModal()"
+            aria-label="Close">
+            ×
+        </button>
+
+        <p class="section-kicker">
+            DAILY SCHEDULE
+        </p>
+        <h2 id="routineModalTitle">
+            Edit your daily times.
+        </h2>
+        <p class="modal-subtitle">
+            Update your daily routine. All your food and account data stays safe.
+        </p>
+
+        <div class="time-grid two">
+            <div class="field">
+                <label for="routineWake">
+                    WAKE UP TIME
+                </label>
+                <input id="routineWake" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineSleep">
+                    BEDTIME
+                </label>
+                <input id="routineSleep" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineBreakfast">
+                    BREAKFAST TIME
+                </label>
+                <input id="routineBreakfast" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineLunch">
+                    LUNCH TIME
+                </label>
+                <input id="routineLunch" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineSnack">
+                    SNACK TIME
+                </label>
+                <input id="routineSnack" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineDinner">
+                    DINNER TIME
+                </label>
+                <input id="routineDinner" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineWorkStart">
+                    WORK / STUDY START
+                </label>
+                <input id="routineWorkStart" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineWorkEnd">
+                    WORK / STUDY END
+                </label>
+                <input id="routineWorkEnd" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineFreeStart">
+                    FREE TIME START
+                </label>
+                <input id="routineFreeStart" type="time">
+            </div>
+
+            <div class="field">
+                <label for="routineFreeEnd">
+                    FREE TIME END
+                </label>
+                <input id="routineFreeEnd" type="time">
+            </div>
+        </div>
+
+        <p id="routineMessage" class="form-message" aria-live="polite"></p>
+
+        <button
+            class="neon-button primary large full"
+            type="button"
+            onclick="saveRoutine()">
+            SAVE SCHEDULE
+        </button>
+
+    </div>
+
+</div>
+
+<script src="/static/app.js"></script>
+
+</body>
+</html>
