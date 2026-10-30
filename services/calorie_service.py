@@ -1,65 +1,57 @@
-FOOD_CALORIES = {
-    "idli": 58,
-    "dosa": 168,
-    "plain dosa": 168,
-    "masala dosa": 220,
-    "chapati": 120,
-    "roti": 120,
-    "rice": 130,
-    "white rice": 130,
-    "brown rice": 123,
-    "curd": 98,
-    "yogurt": 59,
-    "banana": 89,
-    "apple": 52,
-    "orange": 47,
-    "egg": 78,
-    "boiled egg": 78,
-    "chicken": 239,
-    "chicken breast": 165,
-    "dal": 116,
-    "sambar": 75,
-    "rasam": 30,
-    "vegetable curry": 100,
-    "vegetables": 65,
-    "paneer": 265,
-    "milk": 61,
-    "bread": 79,
-    "peanut butter": 588,
-    "oats": 389,
-    "upma": 150,
-    "poha": 130,
-    "pongal": 180,
-    "biryani": 200,
-    "chapati with dal": 236
-}
+"""
+AERIVA AI — Dynamic Food & Calorie Service
+Powered by LangGraph and Groq API.
+Does not store food names or static calories in this file.
+All calorie estimations, portions, and food suggestions are guessed dynamically by the AI Agent.
+"""
+
+from typing import List, Dict, Any
+from agents.food_agent import (
+    calculate_food_calories_langgraph,
+    guess_food_suggestions_langgraph
+)
 
 
-def estimate_calories(food_name: str, quantity: float = 1) -> dict:
-    normalized_food = food_name.strip().lower()
+def estimate_calories(food_name: str, quantity: float = 1.0) -> Dict[str, Any]:
+    """
+    Dynamically estimates calories for any food using LangGraph and Groq LLM.
+    No food database is stored in this file.
+    """
+    clean_name = str(food_name).strip()
+    qty = max(0.1, float(quantity))
 
-    calories_per_unit = FOOD_CALORIES.get(
-        normalized_food
-    )
-
-    if calories_per_unit is None:
+    if not clean_name:
         return {
-            "food_name": food_name,
-            "quantity": quantity,
-            "calories": 0,
+            "food_name": "",
+            "quantity": qty,
+            "calories": 0.0,
             "found": False,
-            "message": (
-                "Food not found in the local calorie database. "
-                "A nutrition lookup will be added later."
-            )
+            "message": "Please enter a food name."
         }
 
-    calories = calories_per_unit * quantity
+    # Invoke LangGraph Groq Food Agent
+    ai_result = calculate_food_calories_langgraph(clean_name, qty)
 
     return {
-        "food_name": food_name,
-        "quantity": quantity,
-        "calories": round(calories, 2),
+        "food_name": ai_result["food_name"],
+        "quantity": qty,
+        "calories": ai_result["calories"],
+        "calories_per_unit": ai_result["calories_per_unit"],
+        "serving_description": ai_result["serving_description"],
+        "category": ai_result["category"],
+        "macros": ai_result.get("macros", {}),
+        "is_junk": ai_result.get("is_junk", False),
+        "healthy_swap": ai_result.get("healthy_swap", ""),
+        "explanation": ai_result["explanation"],
+        "confidence": ai_result.get("confidence", "AI estimated"),
         "found": True,
-        "message": "Calories estimated successfully."
+        "message": "Calculated dynamically using LangGraph & Groq AI."
     }
+
+
+def search_indian_foods(query: str, limit: int = 6) -> List[Dict[str, Any]]:
+    """
+    Dynamically predicts and guesses matching food names and calories as the user types.
+    Powered by LangGraph and Groq LLM without storing static data in this file.
+    """
+    return guess_food_suggestions_langgraph(query, limit=limit)

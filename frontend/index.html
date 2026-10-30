@@ -647,57 +647,125 @@
         <!-- MAIN CONTENT (SCHEDULE + LOGS) -->
         <div class="main-grid">
 
-            <!-- TIMELINE -->
-            <section class="glass-panel timeline-panel">
-                <div class="panel-header">
-                    <div>
-                        <p class="section-kicker">
-                            TODAY'S SCHEDULE
-                        </p>
-                        <h2>
-                            Daily Routine
-                        </h2>
+            <!-- LEFT COLUMN: TIMELINE + NEXT-DAY MEAL PLANNER -->
+            <div class="timeline-column" style="display: flex; flex-direction: column; gap: 16px;">
+
+                <!-- TIMELINE -->
+                <section class="glass-panel timeline-panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">
+                                TODAY'S SCHEDULE
+                            </p>
+                            <h2>
+                                Daily Routine
+                            </h2>
+                        </div>
+                        <span class="date-badge" id="timelineDate">
+                            TODAY
+                        </span>
                     </div>
-                    <span class="date-badge" id="timelineDate">
-                        TODAY
-                    </span>
-                </div>
 
-                <div id="routineList" class="routine-list"></div>
+                    <div id="routineList" class="routine-list"></div>
 
-                <div class="action-dock">
-                    <button
-                        class="neon-button primary"
-                        type="button"
-                        onclick="openFoodModal()">
-                        + LOG FOOD
-                    </button>
+                    <div class="action-dock">
+                        <button
+                            class="neon-button primary"
+                            type="button"
+                            onclick="openFoodModal()">
+                            + LOG FOOD
+                        </button>
 
-                    <button
-                        class="neon-button secondary"
-                        type="button"
-                        onclick="addWater()">
-                        + LOG WATER
-                    </button>
+                        <button
+                            class="neon-button secondary"
+                            type="button"
+                            onclick="openWaterModal()">
+                            + LOG WATER
+                        </button>
 
-                    <button
-                        class="neon-button outline"
-                        type="button"
-                        onclick="openRoutineModal()">
-                        EDIT SCHEDULE
-                    </button>
-                </div>
-            </section>
+                        <button
+                            class="neon-button outline"
+                            type="button"
+                            style="border-color: rgba(245, 158, 11, 0.4); color: #FCD34D;"
+                            onclick="openStepModal()">
+                            + LOG STEPS
+                        </button>
+
+                        <button
+                            class="neon-button outline"
+                            type="button"
+                            onclick="openRoutineModal()">
+                            EDIT SCHEDULE
+                        </button>
+                    </div>
+                </section>
+
+                <!-- AI NEXT-DAY MEAL PLANNER (ACCORDING TO PRESENT & BEFORE DAY) -->
+                <section id="nextDayMealSection" class="glass-panel next-day-planner-panel">
+                    <div class="next-day-header">
+                        <div>
+                            <p class="section-kicker" style="color: #67E8F9;">
+                                MULTI-DAY NUTRITION INTELLIGENCE
+                            </p>
+                            <h2 style="font-size: 19px; font-weight: 800; color: #F8FAFC; margin-bottom: 4px;">
+                                Next-Day Meal Suggestions
+                            </h2>
+                            <p style="font-size: 11.5px; color: #94A3B8; margin: 0;">
+                                Curated Indian meals for tomorrow based on your today &amp; yesterday food logs.
+                            </p>
+                        </div>
+                        <div id="nextDayBadgeContainer">
+                            <span class="next-day-badge-status" id="nextDayStatusBadge">
+                                <span>⚡</span>
+                                <span id="nextDayStatusText">ANALYZING DIET</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- REASONING / RATIONALE -->
+                    <div id="nextDayRationale" class="next-day-rationale-box">
+                        Analyzing your meals from today and yesterday to formulate tomorrow's optimal meal schedule...
+                    </div>
+
+                    <!-- 4-MEAL GRID -->
+                    <div id="nextDayMealGrid" class="next-day-grid">
+                        <!-- Populated dynamically by JavaScript -->
+                    </div>
+
+                    <!-- SUMMARY FOOTER -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px;">
+                        <span style="color: #94A3B8;">
+                            Total Target: <strong id="nextDayTotalCals" style="color: #10B981; font-weight: 800;">~1,850 kcal</strong>
+                        </span>
+                        <div style="display: flex; gap: 8px;">
+                            <button 
+                                class="mini-button" 
+                                type="button" 
+                                style="border-color: rgba(6, 182, 212, 0.4); color: #67E8F9; background: rgba(6, 182, 212, 0.1);"
+                                onclick="loadNextDaySuggestions()">
+                                ↻ REFRESH SUGGESTIONS
+                            </button>
+                            <button 
+                                class="mini-button green" 
+                                type="button" 
+                                onclick="openFoodModal('Breakfast')">
+                                + LOG A MEAL NOW
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
 
             <!-- SIDE PANELS (FOOD, SLEEP, EXERCISE) -->
             <aside class="side-stack">
 
-                <!-- FOOD LOG -->
+                <!-- FOOD LOG & DIET ADVISOR -->
                 <section class="glass-panel stat-panel">
                     <div class="panel-header compact">
                         <div>
                             <p class="section-kicker">
-                                NUTRITION
+                                NUTRITION & CALORIES
                             </p>
                             <h2>
                                 Today's Meals
@@ -715,12 +783,129 @@
 
                     <div id="foodList" class="food-list"></div>
 
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
+                        <button
+                            class="mini-button full"
+                            type="button"
+                            style="border-color: rgba(6, 182, 212, 0.4); color: #67E8F9; background: rgba(6, 182, 212, 0.1); font-weight: 800; font-size: 11px;"
+                            onclick="openFoodModal(null, true)">
+                            📸 SNAP FOOD PHOTO
+                        </button>
+                        <button
+                            class="text-button"
+                            type="button"
+                            style="margin-bottom: 0; white-space: nowrap;"
+                            onclick="openFoodModal()">
+                            + LOG MEAL →
+                        </button>
+                    </div>
+
+                    <!-- SMART DIET & JUNK FOOD ADVISOR -->
+                    <div id="dietAdvisorContainer"></div>
+                </section>
+
+                <!-- STEPS STAT -->
+                <section class="glass-panel stat-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="section-kicker">
+                                DAILY STEP COUNTER
+                            </p>
+                            <h2>
+                                Steps Walked
+                            </h2>
+                        </div>
+                        <span class="stat-number">
+                            <span id="stepStat">
+                                0
+                            </span>
+                            <small>
+                                / 10,000
+                            </small>
+                        </span>
+                    </div>
+
+                    <div style="height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 99px; overflow: hidden; margin-bottom: 12px;">
+                        <div id="stepProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #F59E0B, #FBBF24); border-radius: 99px; transition: width 400ms ease;"></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 11px;">
+                        <span id="stepDistance" style="color: #94A3B8;">0.0 km</span>
+                        <span id="stepCalories" style="color: #FCD34D; font-weight: 700;">~0 kcal burned</span>
+                    </div>
+
                     <button
-                        class="text-button"
+                        class="mini-button full"
+                        style="border-color: rgba(245, 158, 11, 0.4); color: #FCD34D; background: rgba(245, 158, 11, 0.1);"
                         type="button"
-                        onclick="openFoodModal()">
-                        + ADD FOOD / MEAL →
+                        onclick="openStepModal()">
+                        + LOG / UPDATE TODAY'S STEPS
                     </button>
+                </section>
+
+                <!-- EXERCISE & SCHEDULED WORKOUT -->
+                <section class="glass-panel stat-panel">
+                    <div class="panel-header compact">
+                        <div>
+                            <p class="section-kicker">
+                                SCHEDULED EXERCISE
+                            </p>
+                            <h2>
+                                Activity Time
+                            </h2>
+                        </div>
+                        <span class="stat-number">
+                            <span id="exerciseStat">
+                                0 min
+                            </span>
+                        </span>
+                    </div>
+
+                    <!-- SMART EXERCISE & FREE-TIME BURN RECOMMENDER -->
+                    <div id="workoutScheduleCard" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 4px;">
+                            <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: #67E8F9;">FREE SCHEDULE WINDOW</span>
+                            <span id="scheduledWorkoutTime" style="font-size: 11px; font-weight: 800; color: #E2E8F0;">Loading...</span>
+                        </div>
+
+                        <!-- LIVE METRICS: CALORIES IN vs STEP BURN vs TARGET BURN -->
+                        <div class="exercise-meta-stats">
+                            <div class="exercise-meta-box">
+                                <span class="meta-label">Food Intake</span>
+                                <span class="meta-val" id="exerciseMetaFood" style="color: #FDA4AF;">0 kcal</span>
+                            </div>
+                            <div class="exercise-meta-box">
+                                <span class="meta-label">Steps Burn</span>
+                                <span class="meta-val" id="exerciseMetaSteps" style="color: #FCD34D;">0 kcal</span>
+                            </div>
+                            <div class="exercise-meta-box">
+                                <span class="meta-label">Target Burn</span>
+                                <span class="meta-val" id="exerciseMetaBurn" style="color: #34D399;">-- kcal</span>
+                            </div>
+                        </div>
+
+                        <div id="scheduledWorkoutRoutine" style="font-size: 13.5px; font-weight: 800; color: #F8FAFC; margin-bottom: 4px;">
+                            Prescribed Workout Routine
+                        </div>
+                        <div id="scheduledWorkoutDesc" style="font-size: 11px; color: #94A3B8; margin-bottom: 12px; line-height: 1.4;">
+                            Calculated dynamically according to your food intake and steps walked.
+                        </div>
+
+                        <!-- DYNAMIC EXERCISE BREAKDOWN LIST -->
+                        <div id="exerciseBreakdownList" style="margin-bottom: 12px;">
+                            <!-- Populated with tailored sets and reps -->
+                        </div>
+
+                        <div id="workoutCompleteArea">
+                            <button
+                                id="workoutCompleteBtn"
+                                class="mini-button green full"
+                                type="button"
+                                onclick="toggleWorkoutComplete()">
+                                ✓ COMPLETED WORKOUT (+25 XP)
+                            </button>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- SLEEP STAT -->
@@ -756,32 +941,6 @@
                     </div>
                 </section>
 
-                <!-- EXERCISE -->
-                <section class="glass-panel stat-panel">
-                    <div class="panel-header compact">
-                        <div>
-                            <p class="section-kicker">
-                                EXERCISE & WORKOUT
-                            </p>
-                            <h2>
-                                Activity Time
-                            </h2>
-                        </div>
-                        <span class="stat-number">
-                            <span id="exerciseStat">
-                                0 min
-                            </span>
-                        </span>
-                    </div>
-
-                    <button
-                        class="mini-button green full"
-                        type="button"
-                        onclick="completeExercise(15)">
-                        LOG 15 MIN WORKOUT (+15 XP)
-                    </button>
-                </section>
-
             </aside>
 
         </div>
@@ -793,6 +952,13 @@
 
 <!-- =====================================================
      FOOD LOGGING MODAL
+===================================================== -->
+<!-- =====================================================
+     FOOD LOGGING MODAL
+===================================================== -->
+
+<!-- =====================================================
+     MULTI-ITEM FOOD LOGGING MODAL
 ===================================================== -->
 
 <div id="foodModal" class="modal hidden" aria-hidden="true">
@@ -808,20 +974,20 @@
         </button>
 
         <p class="section-kicker">
-            RECORD YOUR MEAL
+            NUTRITION & MEAL LOG
         </p>
         <h2 id="foodModalTitle">
-            What did you eat?
+            Log Your Meal
         </h2>
-        <p class="modal-subtitle">
-            Enter the food item and quantity. AERIVA will estimate the calories automatically.
+        <p id="foodModalSubtitle" class="modal-subtitle">
+            Add all the food items you had for this meal. AERIVA will calculate individual and total calories automatically.
         </p>
 
-        <div class="field">
+        <div class="field" style="margin-bottom: 16px;">
             <label for="foodMeal">
                 MEAL TYPE
             </label>
-            <select id="foodMeal">
+            <select id="foodMeal" onchange="updateFoodModalTitle(this.value)">
                 <option value="Breakfast">Breakfast</option>
                 <option value="Lunch">Lunch</option>
                 <option value="Snack">Snack</option>
@@ -829,39 +995,251 @@
             </select>
         </div>
 
-        <div class="form-grid two">
-            <div class="field">
-                <label for="foodName">
-                    FOOD NAME
-                </label>
-                <input
-                    id="foodName"
-                    type="text"
-                    placeholder="Idli, dosa, rice, eggs..."
+        <!-- =====================================================
+             AI VISION FOOD SCANNER (PHOTO & PORTION ESTIMATOR)
+        ===================================================== -->
+        <div class="ai-vision-scanner-container" id="aiVisionScannerContainer">
+            <input 
+                type="file" 
+                id="foodImageInput" 
+                accept="image/*" 
+                capture="environment" 
+                style="position: absolute; opacity: 0; width: 0.1px; height: 0.1px; pointer-events: none; z-index: -1;" 
+                onchange="handleFoodImageSelected(this)"
+            >
+
+            <!-- SCANNER DROPZONE / TRIGGER -->
+            <div 
+                class="scanner-dropzone" 
+                id="scannerDropzone" 
+                onclick="triggerFoodImageUpload(event)"
+                role="button"
+                tabindex="0"
+                aria-label="Upload or take food photo"
+            >
+                <div class="scanner-icon-bubble">
+                    <span style="font-size: 22px;">📸</span>
+                    <span class="scanner-ai-badge">AI VISION</span>
+                </div>
+                <div class="scanner-dropzone-info">
+                    <h4 class="scanner-dropzone-title">Upload or Snap Food Photo</h4>
+                    <p class="scanner-dropzone-desc">AI will identify the dish name, detect portion quantity, and calculate calories</p>
+                </div>
+                <button 
+                    type="button"
+                    class="mini-button" 
+                    id="chooseImageButton"
+                    style="border-color: rgba(6, 182, 212, 0.4); color: #67E8F9; background: rgba(6, 182, 212, 0.15); white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                    onclick="triggerFoodImageUpload(event)"
                 >
+                    CHOOSE IMAGE
+                </button>
             </div>
 
-            <div class="field">
-                <label for="foodQuantity">
-                    QUANTITY / SERVINGS
-                </label>
-                <input
-                    id="foodQuantity"
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    placeholder="1"
-                >
+            <!-- SCANNING IN PROGRESS / RESULT CARD -->
+            <div id="scannerResultBox" class="scanner-result-box hidden">
+                <div class="scanner-image-preview-wrapper">
+                    <img id="scannedImagePreview" alt="Food Photo" class="scanned-image-preview">
+                    <div id="scannerScanningPulse" class="scanner-radar-overlay">
+                        <div class="scanner-radar-beam"></div>
+                        <span class="scanner-radar-label">⚡ AI ANALYZING FOOD & PORTION...</span>
+                    </div>
+                </div>
+
+                <div class="scanner-detected-details" id="scannerDetectedDetails">
+                    <!-- Populated dynamically by app.js -->
+                </div>
             </div>
+        </div>
+
+        <!-- DYNAMIC MULTI-ITEM CONTAINER -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: #94A3B8; text-transform: uppercase; margin-bottom: 0;">
+                FOOD ITEMS & QUANTITY
+            </label>
+            <span style="font-size: 10px; color: #64748B;">Auto-calculated or editable</span>
+        </div>
+        
+        <div id="multiFoodContainer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+            <!-- Row items populated dynamically by JavaScript -->
+        </div>
+
+        <button
+            class="mini-button full"
+            type="button"
+            style="border-color: rgba(6, 182, 212, 0.4); color: #67E8F9; background: rgba(6, 182, 212, 0.08); margin-bottom: 16px;"
+            onclick="addFoodItemRow()">
+            + ADD ANOTHER ITEM TO THIS MEAL
+        </button>
+
+        <!-- LIVE TOTAL ESTIMATED CALORIES -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; margin-bottom: 16px;">
+            <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: #6EE7B7;">TOTAL ESTIMATED FOR THIS MEAL:</span>
+            <span id="modalTotalCalories" style="font-size: 18px; font-weight: 900; color: #10B981;">0 kcal</span>
         </div>
 
         <p id="foodMessage" class="form-message" aria-live="polite"></p>
 
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+            <button
+                class="neon-button primary large full"
+                type="button"
+                onclick="saveMultiFood()">
+                SAVE MEAL TO LOG (+10 XP)
+            </button>
+
+            <button
+                class="neon-button outline large full"
+                type="button"
+                style="border-color: rgba(244, 63, 94, 0.4); color: #FDA4AF; background: rgba(244, 63, 94, 0.08);"
+                onclick="skipMeal()">
+                ✕ I SKIPPED THIS MEAL
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     WATER LOGGING MODAL
+===================================================== -->
+
+<div id="waterModal" class="modal hidden" aria-hidden="true">
+
+    <div class="modal-card glass-panel" role="dialog" aria-modal="true">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="closeWaterModal()"
+            aria-label="Close">
+            ×
+        </button>
+
+        <p class="section-kicker">
+            HYDRATION TRACKER
+        </p>
+        <h2>
+            How much water did you drink?
+        </h2>
+        <p class="modal-subtitle">
+            Accurate hydration boosts focus and metabolism. Goal: 2.50 Litres daily.
+        </p>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 16px; margin-bottom: 18px;">
+            <div>
+                <span style="font-size: 10px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">TODAY'S TOTAL HYDRATION</span>
+                <div id="modalWaterDisplay" style="font-size: 24px; font-weight: 900; color: #67E8F9; margin-top: 2px;">0.00 L</div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 10px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">GOAL TARGET</span>
+                <div style="font-size: 16px; font-weight: 800; color: #E2E8F0; margin-top: 2px;">2.50 L</div>
+            </div>
+        </div>
+
+        <p style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; margin-bottom: 10px;">
+            QUICK ADD PRESETS
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+            <button class="mini-button full" type="button" style="border-color: rgba(6,182,212,0.4); color: #67E8F9;" onclick="logWaterAmount(0.25)">
+                + 250 ml (1 Glass)
+            </button>
+            <button class="mini-button full" type="button" style="border-color: rgba(6,182,212,0.4); color: #67E8F9;" onclick="logWaterAmount(0.50)">
+                + 500 ml (1 Bottle)
+            </button>
+            <button class="mini-button full" type="button" style="border-color: rgba(6,182,212,0.4); color: #67E8F9;" onclick="logWaterAmount(0.75)">
+                + 750 ml
+            </button>
+            <button class="mini-button full" type="button" style="border-color: rgba(6,182,212,0.4); color: #67E8F9;" onclick="logWaterAmount(1.00)">
+                + 1.00 L (Large)
+            </button>
+        </div>
+
+        <div class="field" style="margin-bottom: 16px;">
+            <label for="customWaterInput">OR ENTER CUSTOM MILLILITRES (ML)</label>
+            <div style="display: flex; gap: 8px;">
+                <input id="customWaterInput" type="number" min="50" step="50" placeholder="e.g. 350 ml">
+                <button class="mini-button green" type="button" style="min-width: 90px;" onclick="logCustomWater()">
+                    + ADD ML
+                </button>
+            </div>
+        </div>
+
+        <button
+            class="text-button"
+            type="button"
+            style="color: #94A3B8; text-align: center; width: 100%;"
+            onclick="resetWaterToday()">
+            Reset Today's Water Count
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     NIGHTTIME STEP TRACKER MODAL
+===================================================== -->
+
+<div id="stepModal" class="modal hidden" aria-hidden="true">
+
+    <div class="modal-card glass-panel" role="dialog" aria-modal="true">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="closeStepModal()"
+            aria-label="Close">
+            ×
+        </button>
+
+        <p class="section-kicker">
+            EVENING STEP CHECK-IN
+        </p>
+        <h2>
+            How many steps did you walk today?
+        </h2>
+        <p class="modal-subtitle">
+            Log your steps before sleeping to close your daily activity ring. Daily target: 10,000 steps.
+        </p>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 16px; margin-bottom: 18px;">
+            <div>
+                <span style="font-size: 10px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">TODAY'S RECORDED STEPS</span>
+                <div id="modalStepDisplay" style="font-size: 26px; font-weight: 900; color: #FCD34D; margin-top: 2px;">0 steps</div>
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 10px; font-weight: 800; color: #94A3B8; text-transform: uppercase;">TARGET</span>
+                <div style="font-size: 16px; font-weight: 800; color: #E2E8F0; margin-top: 2px;">10,000</div>
+            </div>
+        </div>
+
+        <div class="field" style="margin-bottom: 16px;">
+            <label for="stepCountInput">ENTER TOTAL STEPS WALKED TODAY</label>
+            <input id="stepCountInput" type="number" min="100" max="50000" step="100" placeholder="e.g. 8450">
+        </div>
+
+        <p style="font-size: 11px; font-weight: 800; color: #94A3B8; text-transform: uppercase; margin-bottom: 10px;">
+            OR SELECT QUICK PRESET
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px;">
+            <button class="mini-button full" type="button" style="border-color: rgba(245,158,11,0.3); color: #FCD34D;" onclick="setStepPreset(5000)">5,000</button>
+            <button class="mini-button full" type="button" style="border-color: rgba(245,158,11,0.3); color: #FCD34D;" onclick="setStepPreset(8000)">8,000</button>
+            <button class="mini-button full" type="button" style="border-color: rgba(245,158,11,0.3); color: #FCD34D;" onclick="setStepPreset(10000)">10,000</button>
+            <button class="mini-button full" type="button" style="border-color: rgba(245,158,11,0.3); color: #FCD34D;" onclick="setStepPreset(12000)">12,000</button>
+        </div>
+
         <button
             class="neon-button primary large full"
             type="button"
-            onclick="saveFood()">
-            SAVE MEAL TO LOG
+            style="border-color: rgba(245, 158, 11, 0.6); background: linear-gradient(135deg, #F59E0B, #D97706); color: #000;"
+            onclick="saveStepsFromModal()">
+            SAVE TODAY'S STEPS (+15 XP)
         </button>
 
     </div>
