@@ -64,28 +64,46 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
 function showLogin() {
+    const loginBox = document.getElementById("loginBox");
+    const registerBox = document.getElementById("registerBox");
+    if (loginBox) loginBox.classList.remove("hidden");
+    if (registerBox) registerBox.classList.add("hidden");
 
-    document.getElementById("loginBox").classList.remove("hidden");
+    const signInTab = document.getElementById("signInTab");
+    const registerTab = document.getElementById("registerTab");
+    if (signInTab) signInTab.classList.add("active");
+    if (registerTab) registerTab.classList.remove("active");
 
-    document.getElementById("registerBox").classList.add("hidden");
-
-    document.getElementById("loginMessage").textContent = "";
-
-    document.getElementById("registerMessage").textContent = "";
-
+    const loginMessage = document.getElementById("loginMessage");
+    if (loginMessage) loginMessage.textContent = "";
 }
 
 
 function showRegister() {
+    const loginBox = document.getElementById("loginBox");
+    const registerBox = document.getElementById("registerBox");
+    if (loginBox) loginBox.classList.add("hidden");
+    if (registerBox) registerBox.classList.remove("hidden");
 
-    document.getElementById("loginBox").classList.add("hidden");
+    const signInTab = document.getElementById("signInTab");
+    const registerTab = document.getElementById("registerTab");
+    if (registerTab) registerTab.classList.add("active");
+    if (signInTab) signInTab.classList.remove("active");
 
-    document.getElementById("registerBox").classList.remove("hidden");
+    const registerGoogleStep = document.getElementById("registerGoogleStep");
+    const registerProfileStep = document.getElementById("registerProfileStep");
 
-    document.getElementById("loginMessage").textContent = "";
+    // If already authenticated via Google, show profile step directly
+    if (authToken && currentUser) {
+        if (registerGoogleStep) registerGoogleStep.classList.add("hidden");
+        if (registerProfileStep) registerProfileStep.classList.remove("hidden");
+    } else {
+        if (registerGoogleStep) registerGoogleStep.classList.remove("hidden");
+        if (registerProfileStep) registerProfileStep.classList.add("hidden");
+    }
 
-    document.getElementById("registerMessage").textContent = "";
-
+    const registerMessage = document.getElementById("registerMessage");
+    if (registerMessage) registerMessage.textContent = "";
 }
 
 
@@ -5363,6 +5381,40 @@ async function handleGoogleCredentialResponse(response) {
         const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");
         const dashboardScreen = document.getElementById("dashboardScreen");
 
+        // If user profile is not completed yet (new user or missing details), show Step 2 details form
+        if (!data.profile_completed) {
+            showRegister();
+
+            const registerGoogleStep = document.getElementById("registerGoogleStep");
+            const registerProfileStep = document.getElementById("registerProfileStep");
+            if (registerGoogleStep) registerGoogleStep.classList.add("hidden");
+            if (registerProfileStep) registerProfileStep.classList.remove("hidden");
+
+            const emailLabel = document.getElementById("googleLinkedEmailLabel");
+            if (emailLabel && data.user.email) {
+                emailLabel.textContent = `Google Account Linked: ${data.user.email}`;
+            }
+
+            const nameInput = document.getElementById("registerName");
+            if (nameInput) nameInput.value = data.user.name || "";
+
+            const ageInput = document.getElementById("registerAge");
+            if (ageInput && data.user.age) ageInput.value = data.user.age;
+
+            const heightInput = document.getElementById("registerHeight");
+            if (heightInput && data.user.height) heightInput.value = data.user.height;
+
+            const weightInput = document.getElementById("registerWeight");
+            if (weightInput && data.user.weight) weightInput.value = data.user.weight;
+
+            const goalInput = document.getElementById("registerGoal");
+            if (goalInput && data.user.health_goal) goalInput.value = data.user.health_goal;
+
+            if (typeof updateAerivaQuickChips === "function") updateAerivaQuickChips();
+            return;
+        }
+
+        // Profile already completed! Proceed directly to Dashboard or Schedule Setup
         if (data.onboarding_completed) {
             if (authScreen) authScreen.classList.add("hidden");
             if (scheduleSetupScreen) scheduleSetupScreen.classList.add("hidden");
@@ -5381,7 +5433,78 @@ async function handleGoogleCredentialResponse(response) {
         if (typeof updateAerivaQuickChips === "function") updateAerivaQuickChips();
     } catch (err) {
         console.error("Google Auth error:", err);
-        alert(err.message || "Google authentication failed.");
+        const loginMessage = document.getElementById("loginMessage");
+        if (loginMessage) loginMessage.textContent = err.message || "Google authentication failed.";
+        const regMsg = document.getElementById("registerMessage");
+        if (regMsg) regMsg.textContent = err.message || "Google authentication failed.";
+    }
+}
+
+async function handleGoogleProfileSubmit(event) {
+    if (event) event.preventDefault();
+
+    const name = document.getElementById("registerName").value.trim();
+    const age = parseInt(document.getElementById("registerAge").value);
+    const height = parseFloat(document.getElementById("registerHeight").value);
+    const weight = parseFloat(document.getElementById("registerWeight").value);
+    const healthGoal = document.getElementById("registerGoal").value;
+
+    const messageEl = document.getElementById("profileMessage");
+    if (!name || isNaN(age) || isNaN(height) || isNaN(weight) || !healthGoal) {
+        if (messageEl) messageEl.textContent = "Please fill in all profile fields.";
+        return;
+    }
+
+    if (messageEl) messageEl.textContent = "Saving your profile...";
+
+    try {
+        const token = authToken || localStorage.getItem("aeriva_token");
+        const res = await fetch("/auth/update-profile", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: name,
+                age: age,
+                height: height,
+                weight: weight,
+                health_goal: healthGoal
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || "Failed to update profile");
+        }
+
+        currentUser = data.user;
+
+        const authScreen = document.getElementById("authScreen");
+        const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");
+        const dashboardScreen = document.getElementById("dashboardScreen");
+
+        if (data.onboarding_completed) {
+            if (authScreen) authScreen.classList.add("hidden");
+            if (scheduleSetupScreen) scheduleSetupScreen.classList.add("hidden");
+            if (dashboardScreen) dashboardScreen.classList.remove("hidden");
+            const userName = document.getElementById("userName");
+            if (userName) userName.textContent = currentUser.name || "PLAYER";
+            await loadFood();
+            await loadRoutine();
+            loadWaterTracker();
+        } else {
+            // New user first-time schedule setup
+            if (authScreen) authScreen.classList.add("hidden");
+            if (scheduleSetupScreen) scheduleSetupScreen.classList.remove("hidden");
+            if (dashboardScreen) dashboardScreen.classList.add("hidden");
+        }
+
+        if (typeof updateAerivaQuickChips === "function") updateAerivaQuickChips();
+    } catch (err) {
+        console.error("Profile update error:", err);
+        if (messageEl) messageEl.textContent = err.message || "Failed to save profile.";
     }
 }
 

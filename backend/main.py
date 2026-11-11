@@ -399,6 +399,8 @@ def auth_google(req: GoogleAuthRequest):
 
         token = create_access_token({"sub": str(user.id)})
 
+        has_profile = bool(user.age and user.height and user.weight and user.health_goal)
+
         return {
             "message": "Google authentication successful",
             "access_token": token,
@@ -407,10 +409,76 @@ def auth_google(req: GoogleAuthRequest):
                 "id": user.id,
                 "name": user.name,
                 "email": user.email,
+                "age": user.age,
+                "height": user.height,
+                "weight": user.weight,
+                "health_goal": user.health_goal,
                 "onboarding_completed": bool(user.onboarding_completed)
             },
             "onboarding_completed": bool(user.onboarding_completed),
+            "profile_completed": has_profile,
             "is_new_user": is_new_user
+        }
+    finally:
+        db.close()
+
+
+class ProfileUpdateRequest(BaseModel):
+    name: str | None = None
+    age: int | None = None
+    height: float | None = None  # feet
+    weight: float | None = None  # kg
+    health_goal: str | None = None
+
+
+@app.post("/auth/update-profile")
+def update_profile(
+    req: ProfileUpdateRequest,
+    authorization: str | None = Header(default=None)
+):
+    """
+    Updates the authenticated user's physical metrics and health goals.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication token required")
+
+    user = get_current_user(authorization)
+    db = SessionLocal()
+    try:
+        db_user = db.query(User).filter(User.id == user.id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if req.name and req.name.strip():
+            db_user.name = req.name.strip()
+        if req.age is not None:
+            db_user.age = req.age
+        if req.height is not None:
+            db_user.height = req.height
+        if req.weight is not None:
+            db_user.weight = req.weight
+        if req.health_goal and req.health_goal.strip():
+            db_user.health_goal = req.health_goal.strip()
+
+        db.commit()
+        db.refresh(db_user)
+
+        has_profile = bool(db_user.age and db_user.height and db_user.weight and db_user.health_goal)
+
+        return {
+            "message": "Profile updated successfully",
+            "user": {
+                "id": db_user.id,
+                "name": db_user.name,
+                "email": db_user.email,
+                "age": db_user.age,
+                "height": db_user.height,
+                "weight": db_user.weight,
+                "health_goal": db_user.health_goal,
+                "onboarding_completed": bool(db_user.onboarding_completed)
+            },
+            "profile_completed": has_profile,
+            "onboarding_completed": bool(db_user.onboarding_completed)
         }
     finally:
         db.close()
@@ -1289,7 +1357,8 @@ def get_exercise_recommendation(
 
         # 2. User metrics & Basal Metabolic Rate
         weight_kg = float(user.weight or 68.0) if (user and user.weight) else 68.0
-        height_cm = float(user.height or 172.0) if (user and user.height) else 172.0
+        raw_height = float(user.height or 172.0) if (user and user.height) else 172.0
+        height_cm = (raw_height * 30.48) if (raw_height < 10.0) else raw_height
         age = int(user.age or 25) if (user and user.age) else 25
         goal = str(user.health_goal or "Maintain health").lower() if (user and user.health_goal) else "maintain health"
 
@@ -1595,7 +1664,7 @@ def analyze_health(
             {
                 "user_name": user.name or "Player",
                 "age": user.age or 25,
-                "height": user.height or 170.0,
+                "height": ((float(user.height) * 30.48 if float(user.height) < 10.0 else float(user.height)) if user.height else 170.0),
                 "weight": user.weight or 65.0,
                 "health_goal": user.health_goal or "Maintain health",
                 "sleep_hours": sleep_hours,

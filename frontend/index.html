@@ -7,7 +7,7 @@
 
     <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
 
-    <link rel="stylesheet" href="/static/style.css?v=2.8">
+    <link rel="stylesheet" href="/static/style.css?v=2.9">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -67,7 +67,7 @@
             </button>
         </div>
 
-        <!-- LOGIN FORM -->
+        <!-- LOGIN FORM: DIRECT 1-CLICK GOOGLE LOGIN -->
         <div id="loginBox">
             <div class="auth-heading">
                 <p class="section-kicker">
@@ -77,190 +77,170 @@
                     Sign in to your account.
                 </h2>
                 <p>
-                    Enter your email and password to open your health dashboard.
+                    Instant 1-click access with your verified Google account.
                 </p>
             </div>
 
-            <div class="field-stack">
-                <label for="loginEmail">
-                    EMAIL ADDRESS
-                </label>
-                <input
-                    id="loginEmail"
-                    type="email"
-                    autocomplete="email"
-                    placeholder="name@email.com"
-                >
-
-                <label for="loginPassword">
-                    PASSWORD
-                </label>
-                <input
-                    id="loginPassword"
-                    type="password"
-                    autocomplete="current-password"
-                    placeholder="••••••••"
-                >
-
-                <button
-                    class="neon-button primary"
-                    type="button"
-                    onclick="loginUser()">
-                    <span>
-                        SIGN IN
-                    </span>
-                    <span>
-                        →
-                    </span>
-                </button>
+            <div class="field-stack direct-google-card">
+                <div class="google-btn-container" id="googleSignInWrapper">
+                    <div id="googleSignInBtn"></div>
+                </div>
 
                 <p id="loginMessage" class="form-message" aria-live="polite"></p>
 
-                <div class="auth-divider">
-                    <span>OR CONTINUE WITH</span>
-                </div>
-
-                <div class="google-btn-container" id="googleSignInWrapper">
-                    <div id="googleSignInBtn"></div>
+                <div class="google-trust-badge">
+                    <span>🔒 100% Secure &amp; Verified by Google</span>
                 </div>
             </div>
         </div>
 
-        <!-- REGISTER FORM -->
+        <!-- REGISTER FORM: GOOGLE LINK + HEALTH PROFILE DETAILS -->
         <div id="registerBox" class="hidden">
-            <div class="auth-heading">
-                <p class="section-kicker">
-                    GET STARTED
-                </p>
-                <h2>
-                    Create your profile.
-                </h2>
-                <p>
-                    AERIVA personalizes your daily routine based on your details.
-                </p>
-            </div>
 
-            <div class="form-grid two">
-                <div class="field">
-                    <label for="registerName">
-                        YOUR NAME
-                    </label>
-                    <input
-                        id="registerName"
-                        type="text"
-                        autocomplete="name"
-                        placeholder="Kruthik"
-                    >
+            <!-- STEP 1: LINK GOOGLE ACCOUNT -->
+            <div id="registerGoogleStep">
+                <div class="auth-heading">
+                    <p class="section-kicker">
+                        STEP 1 OF 2
+                    </p>
+                    <h2>
+                        Link your Google account.
+                    </h2>
+                    <p>
+                        Connect your Google account first to verify your email and activate your personal health profile.
+                    </p>
                 </div>
 
-                <div class="field">
-                    <label for="registerEmail">
-                        EMAIL ADDRESS
-                    </label>
-                    <input
-                        id="registerEmail"
-                        type="email"
-                        autocomplete="email"
-                        placeholder="kruthik@example.com"
-                    >
-                </div>
+                <div class="field-stack direct-google-card">
+                    <div class="google-btn-container" id="googleRegisterWrapper">
+                        <div id="googleRegisterBtn"></div>
+                    </div>
 
-                <div class="field">
-                    <label for="registerPassword">
-                        PASSWORD
-                    </label>
-                    <input
-                        id="registerPassword"
-                        type="password"
-                        autocomplete="new-password"
-                        placeholder="At least 6 characters"
-                    >
-                </div>
-
-                <div class="field">
-                    <label for="registerAge">
-                        AGE (YEARS)
-                    </label>
-                    <input
-                        id="registerAge"
-                        type="number"
-                        min="1"
-                        max="120"
-                        placeholder="20"
-                    >
-                </div>
-
-                <div class="field">
-                    <label for="registerHeight">
-                        HEIGHT (CM)
-                    </label>
-                    <input
-                        id="registerHeight"
-                        type="number"
-                        min="1"
-                        placeholder="175"
-                    >
-                </div>
-
-                <div class="field">
-                    <label for="registerWeight">
-                        WEIGHT (KG)
-                    </label>
-                    <input
-                        id="registerWeight"
-                        type="number"
-                        min="1"
-                        placeholder="70"
-                    >
+                    <p id="registerMessage" class="form-message" aria-live="polite"></p>
                 </div>
             </div>
 
-            <div class="field">
-                <label for="registerGoal">
-                    PRIMARY HEALTH GOAL
-                </label>
-                <select id="registerGoal">
-                    <option value="">
-                        Select your health goal
-                    </option>
-                    <option value="Build healthy habits">
-                        Build healthy habits
-                    </option>
-                    <option value="Improve fitness">
-                        Improve fitness & exercise
-                    </option>
-                    <option value="Improve sleep">
-                        Improve sleep quality
-                    </option>
-                    <option value="Manage weight">
-                        Manage weight
-                    </option>
-                    <option value="Increase energy">
-                        Increase energy
-                    </option>
-                </select>
-            </div>
+            <!-- STEP 2: PROFILE DETAILS (SHOWN AFTER GOOGLE ACCOUNT LINKED) -->
+            <div id="registerProfileStep" class="hidden">
+                <div class="google-linked-badge" id="googleLinkedBanner">
+                    <span class="badge-icon">✓</span>
+                    <span id="googleLinkedEmailLabel">Google Account Linked</span>
+                </div>
 
-            <button
-                class="neon-button primary"
-                type="button"
-                onclick="registerUser()">
-                <span>
-                    CREATE ACCOUNT
-                </span>
-                <span>
-                    →
-                </span>
-            </button>
+                <div class="auth-heading">
+                    <p class="section-kicker">
+                        STEP 2 OF 2
+                    </p>
+                    <h2>
+                        Create your profile.
+                    </h2>
+                    <p>
+                        AERIVA personalizes your daily routine based on your details.
+                    </p>
+                </div>
 
-            <p id="registerMessage" class="form-message" aria-live="polite"></p>
+                <form id="googleProfileForm" onsubmit="handleGoogleProfileSubmit(event)">
+                    <div class="field-stack">
+                        <div class="field">
+                            <label for="registerName">
+                                YOUR NAME
+                            </label>
+                            <input
+                                id="registerName"
+                                type="text"
+                                autocomplete="name"
+                                placeholder="Enter your name"
+                                required
+                            >
+                        </div>
 
-            <div class="auth-divider">
-                <span>OR SIGN UP WITH</span>
-            </div>
+                        <div class="form-grid three">
+                            <div class="field">
+                                <label for="registerAge">
+                                    AGE (YEARS)
+                                </label>
+                                <input
+                                    id="registerAge"
+                                    type="number"
+                                    min="1"
+                                    max="120"
+                                    placeholder="Enter your age"
+                                    required
+                                >
+                            </div>
 
-            <div class="google-btn-container" id="googleRegisterWrapper">
-                <div id="googleRegisterBtn"></div>
+                            <div class="field">
+                                <label for="registerHeight">
+                                    HEIGHT (Feet)
+                                </label>
+                                <input
+                                    id="registerHeight"
+                                    type="number"
+                                    step="0.1"
+                                    min="1"
+                                    max="9"
+                                    placeholder="Enter your height"
+                                    required
+                                >
+                            </div>
+
+                            <div class="field">
+                                <label for="registerWeight">
+                                    WEIGHT (KG)
+                                </label>
+                                <input
+                                    id="registerWeight"
+                                    type="number"
+                                    step="0.1"
+                                    min="1"
+                                    max="300"
+                                    placeholder="Enter your weight"
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="registerGoal">
+                                PRIMARY HEALTH GOAL
+                            </label>
+                            <select id="registerGoal" required>
+                                <option value="">
+                                    Select your health goal
+                                </option>
+                                <option value="Build healthy habits">
+                                    Build healthy habits
+                                </option>
+                                <option value="Improve fitness">
+                                    Improve fitness &amp; exercise
+                                </option>
+                                <option value="Improve sleep">
+                                    Improve sleep quality
+                                </option>
+                                <option value="Manage weight">
+                                    Manage weight
+                                </option>
+                                <option value="Increase energy">
+                                    Increase energy
+                                </option>
+                            </select>
+                        </div>
+
+                        <button
+                            class="neon-button primary"
+                            type="submit"
+                            id="submitProfileBtn">
+                            <span>
+                                COMPLETE PROFILE &amp; CONTINUE
+                            </span>
+                            <span>
+                                →
+                            </span>
+                        </button>
+
+                        <p id="profileMessage" class="form-message" aria-live="polite"></p>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -1918,7 +1898,7 @@
 </div>
 
 
-<script src="/static/app.js?v=2.8"></script>
+<script src="/static/app.js?v=2.9"></script>
 
 </body>
 </html>
