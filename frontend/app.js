@@ -386,6 +386,7 @@ async function loadDashboard() {
     if (authScreen) authScreen.classList.add("hidden");
     if (scheduleSetupScreen) scheduleSetupScreen.classList.add("hidden");
     if (dashboardScreen) dashboardScreen.classList.remove("hidden");
+    if (typeof updateAerivaQuickChips === "function") updateAerivaQuickChips();
 
     // Ensure all modals remain closed upon login (no repeat popups)
     const foodModal = document.getElementById("foodModal");
@@ -4367,6 +4368,9 @@ function logoutUser() {
 
     showLogin();
 
+    if (typeof updateAerivaQuickChips === "function") updateAerivaQuickChips();
+    if (typeof clearAerivaChat === "function") clearAerivaChat();
+
 }
 
 
@@ -4514,3 +4518,743 @@ document.addEventListener(
 
     }
 );
+
+
+/* =====================================================
+   AERIVA AI COPILOT CHATBOT - DRAGGABLE & PLATFORM GUIDE
+===================================================== */
+
+let aerivaChatHistory = [];
+let aerivaIsWaiting = false;
+
+function isUserOnLoginScreen() {
+    const authScreen = document.getElementById("authScreen");
+    const token = localStorage.getItem("aeriva_token");
+    if (!token) return true;
+    if (authScreen && !authScreen.classList.contains("hidden")) return true;
+    return false;
+}
+
+// Initial welcoming message on the login screen
+const AERIVA_LOGIN_GREETING = `👋 Welcome to **AERIVA AI — Smart Health & Lifestyle Dashboard**! I'm **AERIVA**, your personal AI health copilot!
+
+🌟 **What is this webpage?**
+AERIVA is your all-in-one personal wellness command center designed to optimize your daily health:
+• 📅 **Personalized Routine**: Sync your meal times, work hours, hydration, and sleep rhythm.
+• 📷 **AI Food Photo Scanner**: Snap photos of your meals for instant dish recognition, calories, and macros.
+• ⚡ **Interactive Exercise Mode**: Guided workouts with animated form tips, live rep counters, and interval timers.
+• 🛡️ **AI Health Safety Shield**: Real-time clinical precaution engine guarding your nutrition, sleep, and physical activity.
+
+🔐 **To Get Started**:
+• **Already have an account?** Enter your email & password and click **Sign In** to open your dashboard.
+• **Don't have an account yet?** Click **Create Account** to register your profile in 30 seconds!`;
+
+// Initial welcoming message on the authenticated dashboard
+const AERIVA_INITIAL_GREETING = `👋 Hi there! I'm **AERIVA**, your personal AI Health & Platform Copilot!
+
+I am here to guide and assist you across every single corner of this application:
+• **Dashboard 1 (Daily Routine)**: Track your schedule, meal times, sleep rhythm, water cups, and log meals with the AI photo scanner.
+• **Dashboard 2 (Exercise Mode)**: Interactive guided workout circuits with rep counters, interval timers, and form tips.
+• **Dashboard 3 (Precautions & Safety)**: Health safety shields, real-time precautions, and AI next-day meal suggestions.
+
+💡 *Tip: You can **drag my floating avatar or this window anywhere** across your screen!*
+
+Select a quick topic above or ask me anything!`;
+
+function updateAerivaQuickChips() {
+    const chipsContainer = document.querySelector(".aeriva-quick-chips");
+    if (!chipsContainer) return;
+
+    if (isUserOnLoginScreen()) {
+        chipsContainer.innerHTML = `
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('What is this webpage and what can it do?')">🌟 What is AERIVA?</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How do I create a new account?')">✨ Create Account</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How do I sign in to my account?')">🔐 How to Sign In</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('What health features are inside once I log in?')">🛡️ Health Features</button>
+        `;
+    } else {
+        chipsContainer.innerHTML = `
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('What does this webpage do? Give me a full tour.')">🗺️ Full Tour</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How do I log my food using a photo?')">📷 Scan Food</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How does Exercise Mode work in Dashboard 2?')">⚡ Exercise Mode</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('Explain Dashboard 3 Health Precautions and Safety Shield.')">🛡️ Precautions</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How do I edit my daily routine schedule?')">⚙️ Edit Routine</button>
+        `;
+    }
+}
+
+function formatAerivaMarkdown(text) {
+    if (!text) return "";
+
+    // Escape HTML tags to prevent XSS
+    let safe = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // Extract interactive actions like [action:open_food|+ LOG A MEAL]
+    const actionRegex = /\[action:([a-zA-Z0-9_-]+)\|([^\]]+)\]/g;
+    const actions = [];
+    safe = safe.replace(actionRegex, (match, actionType, label) => {
+        actions.push({ actionType, label: label.trim() });
+        return ""; // remove from prose to append as interactive action buttons at bottom
+    });
+
+    const lines = safe.split("\n");
+    let out = [];
+    let inList = null; // "ul" or "ol"
+    let inTable = false;
+    let tableRows = [];
+
+    function closeList() {
+        if (inList) {
+            out.push(`</${inList}>`);
+            inList = null;
+        }
+    }
+
+    function flushTable() {
+        if (!inTable) return;
+        if (tableRows.length > 0) {
+            let html = '<div class="chat-table-wrapper"><table class="chat-table">';
+            const headerCells = tableRows[0];
+            html += '<thead><tr>' + headerCells.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+            for (let i = 1; i < tableRows.length; i++) {
+                html += '<tr>' + tableRows[i].map(c => `<td>${c}</td>`).join('') + '</tr>';
+            }
+            html += '</tbody></table></div>';
+            out.push(html);
+        }
+        tableRows = [];
+        inTable = false;
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        let rawLine = lines[i];
+        let trimmed = rawLine.trim();
+
+        // Table row check: line has "|" and starts/ends with "|"
+        if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+            closeList();
+            const cells = trimmed.split("|").slice(1, -1).map(c => c.trim());
+            const isSeparator = cells.every(c => /^:?-+:?$/.test(c));
+            if (!inTable) {
+                inTable = true;
+                tableRows = [cells];
+            } else {
+                if (!isSeparator) {
+                    tableRows.push(cells);
+                }
+            }
+            continue;
+        } else {
+            flushTable();
+        }
+
+        if (trimmed === "") {
+            closeList();
+            continue;
+        }
+
+        // Horizontal rules: ---, ***, ___
+        if (/^(\-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+            closeList();
+            out.push('<hr class="chat-divider" />');
+            continue;
+        }
+
+        // Headers: #, ##, ###, ####
+        const hMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+        if (hMatch) {
+            closeList();
+            const lvl = hMatch[1].length;
+            out.push(`<h${lvl + 1} class="chat-heading chat-h${lvl}">${hMatch[2]}</h${lvl + 1}>`);
+            continue;
+        }
+
+        // Blockquotes: > quote
+        if (trimmed.startsWith("&gt;")) {
+            closeList();
+            out.push(`<blockquote class="chat-quote">${trimmed.replace(/^&gt;\s?/, "")}</blockquote>`);
+            continue;
+        }
+
+        // Bullet lists: •, -, * followed by space
+        const bulletMatch = trimmed.match(/^([•\-\*])\s+(.+)$/);
+        if (bulletMatch) {
+            if (inList !== "ul") {
+                closeList();
+                out.push('<ul class="chat-ul">');
+                inList = "ul";
+            }
+            out.push(`<li>${bulletMatch[2]}</li>`);
+            continue;
+        }
+
+        // Numbered lists: 1., 2. followed by space
+        const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
+        if (numMatch) {
+            if (inList !== "ol") {
+                closeList();
+                out.push('<ol class="chat-ol">');
+                inList = "ol";
+            }
+            out.push(`<li>${numMatch[2]}</li>`);
+            continue;
+        }
+
+        // Regular paragraph
+        closeList();
+        out.push(`<p class="chat-p">${trimmed}</p>`);
+    }
+
+    closeList();
+    flushTable();
+
+    let fullHtml = out.join("");
+
+    // Inline bold: **text** or __text__
+    fullHtml = fullHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    fullHtml = fullHtml.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+
+    // Inline italics: *text* or _text_ (when not part of a tag or word)
+    fullHtml = fullHtml.replace(/(^|[\s(])\*([^\*\n]+)\*(?=[\s),.!?]|$)/g, "$1<em>$2</em>");
+    fullHtml = fullHtml.replace(/(^|[\s(])_([^_\n]+)_(?=[\s),.!?]|$)/g, "$1<em>$2</em>");
+
+    // Inline code: `code`
+    fullHtml = fullHtml.replace(/`([^`]+)`/g, '<code class="chat-code">$1</code>');
+
+    // Append action buttons if any were found
+    if (actions.length > 0) {
+        fullHtml += '<div class="aeriva-actions-container">';
+        for (const act of actions) {
+            fullHtml += `<button type="button" class="aeriva-action-btn" onclick="executeAerivaAction('${act.actionType}')">${act.label}</button>`;
+        }
+        fullHtml += '</div>';
+    }
+
+    return fullHtml;
+}
+
+function appendAerivaMessage(role, text) {
+    const list = document.getElementById("aerivaMessagesList");
+    if (!list) return;
+
+    const row = document.createElement("div");
+    row.className = `aeriva-msg-row ${role === "user" ? "user-msg" : "bot-msg"}`;
+
+    if (role === "bot") {
+        const botAvatar = document.createElement("img");
+        botAvatar.src = "/static/aeriva-bot.jpg";
+        botAvatar.alt = "AERIVA";
+        botAvatar.className = "bot-avatar-tiny";
+        row.appendChild(botAvatar);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = `msg-bubble ${role}`;
+    bubble.innerHTML = formatAerivaMarkdown(text);
+    row.appendChild(bubble);
+
+    list.appendChild(row);
+    list.scrollTop = list.scrollHeight;
+}
+
+function showAerivaTypingIndicator() {
+    removeAerivaTypingIndicator();
+    const list = document.getElementById("aerivaMessagesList");
+    if (!list) return;
+
+    const row = document.createElement("div");
+    row.id = "aerivaTypingRow";
+    row.className = "aeriva-msg-row bot-msg";
+
+    const botAvatar = document.createElement("img");
+    botAvatar.src = "/static/aeriva-bot.jpg";
+    botAvatar.alt = "AERIVA";
+    botAvatar.className = "bot-avatar-tiny";
+    row.appendChild(botAvatar);
+
+    const indicator = document.createElement("div");
+    indicator.className = "aeriva-typing-indicator";
+    indicator.innerHTML = "<span></span><span></span><span></span>";
+    row.appendChild(indicator);
+
+    list.appendChild(row);
+    list.scrollTop = list.scrollHeight;
+}
+
+function removeAerivaTypingIndicator() {
+    const existing = document.getElementById("aerivaTypingRow");
+    if (existing) existing.remove();
+}
+
+function toggleAerivaChat(forceOpen = null) {
+    const popup = document.getElementById("aerivaChatPopup");
+    if (!popup) return;
+
+    const isHidden = popup.classList.contains("hidden");
+    const shouldOpen = forceOpen !== null ? forceOpen : isHidden;
+
+    if (shouldOpen) {
+        popup.classList.remove("hidden");
+        updateAerivaQuickChips();
+
+        const input = document.getElementById("aerivaChatInput");
+        if (input) {
+            setTimeout(() => input.focus(), 150);
+        }
+
+        // If no messages yet, show greeting matching user's login state
+        const list = document.getElementById("aerivaMessagesList");
+        if (list && list.children.length === 0) {
+            if (isUserOnLoginScreen()) {
+                appendAerivaMessage("bot", AERIVA_LOGIN_GREETING);
+                const starterLoginActions = `
+[action:focus_login|🔐 SIGN IN TO ACCOUNT]
+[action:switch_register|✨ CREATE NEW ACCOUNT]`;
+                appendAerivaMessage("bot", starterLoginActions);
+            } else {
+                appendAerivaMessage("bot", AERIVA_INITIAL_GREETING);
+                const starterActions = `
+[action:tab_routine|📋 DASHBOARD 1: ROUTINE]
+[action:tab_fitness|⚡ DASHBOARD 2: EXERCISES]
+[action:tab_precautions|🛡️ DASHBOARD 3: PRECAUTIONS]
+[action:open_food|📷 SCAN FOOD WITH CAMERA]`;
+                appendAerivaMessage("bot", starterActions);
+            }
+        }
+    } else {
+        popup.classList.add("hidden");
+    }
+}
+
+function closeAerivaChat() {
+    const popup = document.getElementById("aerivaChatPopup");
+    if (popup) popup.classList.add("hidden");
+}
+
+function clearAerivaChat() {
+    aerivaChatHistory = [];
+    const list = document.getElementById("aerivaMessagesList");
+    if (list) {
+        list.innerHTML = "";
+        updateAerivaQuickChips();
+        if (isUserOnLoginScreen()) {
+            appendAerivaMessage("bot", AERIVA_LOGIN_GREETING);
+            appendAerivaMessage("bot", `[action:focus_login|🔐 SIGN IN TO ACCOUNT]\n[action:switch_register|✨ CREATE NEW ACCOUNT]`);
+        } else {
+            appendAerivaMessage("bot", AERIVA_INITIAL_GREETING);
+        }
+    }
+}
+
+function sendAerivaQuickPrompt(promptText) {
+    toggleAerivaChat(true);
+    sendAerivaMessage(promptText);
+}
+
+function handleAerivaChatSubmit(e) {
+    if (e) e.preventDefault();
+    const input = document.getElementById("aerivaChatInput");
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text || aerivaIsWaiting) return;
+    input.value = "";
+    sendAerivaMessage(text);
+}
+
+async function sendAerivaMessage(userText) {
+    if (!userText || aerivaIsWaiting) return;
+    aerivaIsWaiting = true;
+
+    // Render user message
+    appendAerivaMessage("user", userText);
+    aerivaChatHistory.push({ role: "user", content: userText });
+
+    const sendBtn = document.getElementById("aerivaSendBtn");
+    if (sendBtn) sendBtn.disabled = true;
+
+    showAerivaTypingIndicator();
+
+    try {
+        const headers = { "Content-Type": "application/json" };
+        const token = localStorage.getItem("aeriva_token");
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const onLoginScreen = isUserOnLoginScreen();
+
+        const res = await fetch("/chat/assistant", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                message: userText,
+                history: aerivaChatHistory.slice(-8),
+                is_auth_screen: onLoginScreen
+            })
+        });
+
+        removeAerivaTypingIndicator();
+
+        if (!res.ok) {
+            throw new Error(`Server returned HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const botReply = data.reply || "I'm here to help! Could you please repeat that?";
+
+        appendAerivaMessage("bot", botReply);
+        aerivaChatHistory.push({ role: "assistant", content: botReply });
+    } catch (err) {
+        console.error("Aeriva Chat Error:", err);
+        removeAerivaTypingIndicator();
+        if (isUserOnLoginScreen()) {
+            appendAerivaMessage(
+                "bot",
+                `Welcome to AERIVA AI! Ready to get started?\n\n` +
+                `• [action:focus_login|🔐 Sign In To Existing Account]\n` +
+                `• [action:switch_register|✨ Create A New Account]`
+            );
+        } else {
+            appendAerivaMessage(
+                "bot",
+                `I'm having trouble connecting to the AI brain right now. In the meantime, you can explore:\n\n` +
+                `• [action:tab_routine|📋 Go to Dashboard 1: Daily Routine]\n` +
+                `• [action:tab_fitness|⚡ Go to Dashboard 2: Exercise Mode]\n` +
+                `• [action:tab_precautions|🛡️ Go to Dashboard 3: Health Precautions]`
+            );
+        }
+    } finally {
+        aerivaIsWaiting = false;
+        if (sendBtn) sendBtn.disabled = false;
+    }
+}
+
+function executeAerivaAction(actionType) {
+    switch (actionType) {
+        case "focus_login":
+            if (typeof showLogin === "function") showLogin();
+            const loginEmail = document.getElementById("loginEmail");
+            if (loginEmail) {
+                loginEmail.scrollIntoView({ behavior: "smooth", block: "center" });
+                setTimeout(() => loginEmail.focus(), 250);
+            }
+            break;
+
+        case "switch_register":
+            if (typeof showRegister === "function") showRegister();
+            const registerName = document.getElementById("registerName");
+            if (registerName) {
+                registerName.scrollIntoView({ behavior: "smooth", block: "center" });
+                setTimeout(() => registerName.focus(), 250);
+            }
+            break;
+
+        case "open_food":
+            if (typeof openFoodModal === "function") {
+                openFoodModal();
+            } else {
+                alert("Food modal not loaded yet.");
+            }
+            break;
+
+        case "open_steps":
+            if (typeof openStepModal === "function") {
+                openStepModal();
+            } else {
+                alert("Step modal not loaded yet.");
+            }
+            break;
+
+        case "open_routine":
+            if (typeof openRoutineModal === "function") {
+                openRoutineModal();
+            } else {
+                alert("Routine modal not loaded yet.");
+            }
+            break;
+
+        case "open_exercise":
+            if (typeof openExerciseModePopup === "function") {
+                openExerciseModePopup(0);
+            } else {
+                if (typeof switchDashboardTab === "function") {
+                    switchDashboardTab("fitness");
+                }
+            }
+            break;
+
+        case "tab_routine":
+            if (typeof switchDashboardTab === "function") {
+                switchDashboardTab("routine");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            break;
+
+        case "tab_fitness":
+            if (typeof switchDashboardTab === "function") {
+                switchDashboardTab("fitness");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            break;
+
+        case "tab_precautions":
+            if (typeof switchDashboardTab === "function") {
+                switchDashboardTab("precautions");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+            break;
+
+        case "scroll_top":
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            break;
+
+        case "scroll_scanner":
+            if (typeof openFoodModal === "function") {
+                openFoodModal(null, true);
+            }
+            break;
+
+        default:
+            console.log("Unknown AERIVA action:", actionType);
+            break;
+    }
+}
+
+/* =====================================================
+   DRAGGABLE LOGIC FOR LAUNCHER AND CHAT POPUP
+===================================================== */
+function initAerivaChatbot() {
+    const trigger = document.getElementById("aerivaChatTrigger");
+    const popup = document.getElementById("aerivaChatPopup");
+    const header = document.getElementById("aerivaChatHeader");
+    const minimizeBtn = document.getElementById("aerivaMinimizeBtn");
+    const closeBtn = document.getElementById("aerivaCloseBtn");
+    const clearBtn = document.getElementById("aerivaClearChatBtn");
+
+    if (!trigger || !popup) return;
+
+    // Minimize toggle
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            popup.classList.toggle("minimized");
+            minimizeBtn.textContent = popup.classList.contains("minimized") ? "+" : "−";
+        });
+    }
+
+    // Close button
+    if (closeBtn) {
+        closeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            closeAerivaChat();
+        });
+    }
+
+    // Clear chat button
+    if (clearBtn) {
+        clearBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (confirm("Clear your conversation history with AERIVA?")) {
+                clearAerivaChat();
+            }
+        });
+    }
+
+    // --------------------------------------------------
+    // RESTORE SAVED POSITIONS
+    // --------------------------------------------------
+    try {
+        const savedTriggerPos = localStorage.getItem("aeriva_trigger_pos");
+        if (savedTriggerPos) {
+            const { left, top } = JSON.parse(savedTriggerPos);
+            if (typeof left === "number" && typeof top === "number") {
+                const clampX = Math.max(8, Math.min(left, window.innerWidth - 86));
+                const clampY = Math.max(8, Math.min(top, window.innerHeight - 86));
+                trigger.style.left = `${clampX}px`;
+                trigger.style.top = `${clampY}px`;
+                trigger.style.right = "auto";
+                trigger.style.bottom = "auto";
+            }
+        }
+
+        const savedPopupPos = localStorage.getItem("aeriva_popup_pos");
+        if (savedPopupPos) {
+            const { left, top } = JSON.parse(savedPopupPos);
+            if (typeof left === "number" && typeof top === "number") {
+                const popupWidth = popup.offsetWidth || 390;
+                const popupHeight = popup.offsetHeight || 580;
+                const clampX = Math.max(8, Math.min(left, window.innerWidth - popupWidth - 8));
+                const clampY = Math.max(8, Math.min(top, window.innerHeight - popupHeight - 8));
+                popup.style.left = `${clampX}px`;
+                popup.style.top = `${clampY}px`;
+                popup.style.right = "auto";
+                popup.style.bottom = "auto";
+            }
+        }
+    } catch (err) {
+        console.warn("Could not restore Aeriva positions:", err);
+    }
+
+    // --------------------------------------------------
+    // DRAGGABLE TRIGGER BUTTON
+    // --------------------------------------------------
+    let isDraggingTrigger = false;
+    let triggerStartX = 0;
+    let triggerStartY = 0;
+    let triggerInitLeft = 0;
+    let triggerInitTop = 0;
+    let triggerHasMoved = false;
+
+    trigger.addEventListener("pointerdown", (e) => {
+        isDraggingTrigger = true;
+        triggerHasMoved = false;
+        triggerStartX = e.clientX;
+        triggerStartY = e.clientY;
+
+        const rect = trigger.getBoundingClientRect();
+        triggerInitLeft = rect.left;
+        triggerInitTop = rect.top;
+
+        trigger.setPointerCapture(e.pointerId);
+    });
+
+    trigger.addEventListener("pointermove", (e) => {
+        if (!isDraggingTrigger) return;
+        const dx = e.clientX - triggerStartX;
+        const dy = e.clientY - triggerStartY;
+
+        if (Math.hypot(dx, dy) > 5) {
+            triggerHasMoved = true;
+        }
+
+        if (triggerHasMoved) {
+            const width = trigger.offsetWidth;
+            const height = trigger.offsetHeight;
+            const newX = Math.max(8, Math.min(triggerInitLeft + dx, window.innerWidth - width - 8));
+            const newY = Math.max(8, Math.min(triggerInitTop + dy, window.innerHeight - height - 8));
+
+            trigger.style.left = `${newX}px`;
+            trigger.style.top = `${newY}px`;
+            trigger.style.right = "auto";
+            trigger.style.bottom = "auto";
+        }
+    });
+
+    const finishTriggerDrag = (e) => {
+        if (!isDraggingTrigger) return;
+        isDraggingTrigger = false;
+        try {
+            trigger.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+
+        if (triggerHasMoved) {
+            const rect = trigger.getBoundingClientRect();
+            localStorage.setItem("aeriva_trigger_pos", JSON.stringify({ left: rect.left, top: rect.top }));
+        } else {
+            // Tap/click without dragging -> Toggle Chat!
+            toggleAerivaChat();
+        }
+    };
+
+    trigger.addEventListener("pointerup", finishTriggerDrag);
+    trigger.addEventListener("pointercancel", finishTriggerDrag);
+
+    // Keyboard support (Enter or Space to open)
+    trigger.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggleAerivaChat();
+        }
+    });
+
+    // --------------------------------------------------
+    // DRAGGABLE POPUP WINDOW (VIA HEADER)
+    // --------------------------------------------------
+    if (header) {
+        let isDraggingPopup = false;
+        let popupStartX = 0;
+        let popupStartY = 0;
+        let popupInitLeft = 0;
+        let popupInitTop = 0;
+
+        header.addEventListener("pointerdown", (e) => {
+            // Don't drag if clicking buttons inside the header
+            if (e.target.closest(".header-icon-btn")) return;
+
+            isDraggingPopup = true;
+            popupStartX = e.clientX;
+            popupStartY = e.clientY;
+
+            const rect = popup.getBoundingClientRect();
+            popupInitLeft = rect.left;
+            popupInitTop = rect.top;
+
+            header.setPointerCapture(e.pointerId);
+        });
+
+        header.addEventListener("pointermove", (e) => {
+            if (!isDraggingPopup) return;
+            const dx = e.clientX - popupStartX;
+            const dy = e.clientY - popupStartY;
+
+            const width = popup.offsetWidth;
+            const height = popup.offsetHeight;
+            const newX = Math.max(8, Math.min(popupInitLeft + dx, window.innerWidth - width - 8));
+            const newY = Math.max(8, Math.min(popupInitTop + dy, window.innerHeight - height - 8));
+
+            popup.style.left = `${newX}px`;
+            popup.style.top = `${newY}px`;
+            popup.style.right = "auto";
+            popup.style.bottom = "auto";
+        });
+
+        const finishPopupDrag = (e) => {
+            if (!isDraggingPopup) return;
+            isDraggingPopup = false;
+            try {
+                header.releasePointerCapture(e.pointerId);
+            } catch (_) {}
+
+            const rect = popup.getBoundingClientRect();
+            localStorage.setItem("aeriva_popup_pos", JSON.stringify({ left: rect.left, top: rect.top }));
+        };
+
+        header.addEventListener("pointerup", finishPopupDrag);
+        header.addEventListener("pointercancel", finishPopupDrag);
+    }
+
+    // --------------------------------------------------
+    // CLAMP ON WINDOW RESIZE
+    // --------------------------------------------------
+    window.addEventListener("resize", () => {
+        if (trigger.style.left && trigger.style.left !== "auto") {
+            const rect = trigger.getBoundingClientRect();
+            const width = trigger.offsetWidth;
+            const height = trigger.offsetHeight;
+            const clampedX = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+            const clampedY = Math.max(8, Math.min(rect.top, window.innerHeight - height - 8));
+            trigger.style.left = `${clampedX}px`;
+            trigger.style.top = `${clampedY}px`;
+        }
+
+        if (popup.style.left && popup.style.left !== "auto") {
+            const rect = popup.getBoundingClientRect();
+            const width = popup.offsetWidth;
+            const height = popup.offsetHeight;
+            const clampedX = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+            const clampedY = Math.max(8, Math.min(rect.top, window.innerHeight - height - 8));
+            popup.style.left = `${clampedX}px`;
+            popup.style.top = `${clampedY}px`;
+        }
+    });
+}
+
+// Auto-initialize chatbot on DOM load
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAerivaChatbot);
+} else {
+    initAerivaChatbot();
+}

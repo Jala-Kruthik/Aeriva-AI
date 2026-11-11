@@ -7,7 +7,7 @@
 
     <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
 
-    <link rel="stylesheet" href="/static/style.css?v=2.4">
+    <link rel="stylesheet" href="/static/style.css?v=2.7">
 </head>
 
 <body>
@@ -1825,7 +1825,83 @@
 </div>
 
 
-<script src="/static/app.js?v=2.4"></script>
+<!-- =====================================================
+     AERIVA DRAGGABLE AI COPILOT CHATBOT WIDGET
+===================================================== -->
+<div id="aerivaChatWidget" class="aeriva-chat-wrapper" aria-label="AERIVA AI Copilot">
+
+    <!-- FLOATING DRAGGABLE LAUNCHER BUTTON -->
+    <div id="aerivaChatTrigger" class="aeriva-trigger-btn" title="Chat with AERIVA (Drag anywhere)" role="button" tabindex="0">
+        <div class="aeriva-halo-glow"></div>
+        <div class="aeriva-avatar-ring">
+            <img src="/static/aeriva-bot.jpg" alt="AERIVA Robot Copilot" class="aeriva-avatar-img">
+            <span class="aeriva-online-badge"></span>
+        </div>
+        <div class="aeriva-trigger-tooltip">
+            <span class="tooltip-badge">AI COPILOT</span>
+            <span class="tooltip-text">Hi! Need help? Drag me anywhere or tap to chat!</span>
+        </div>
+    </div>
+
+    <!-- DRAGGABLE FLOATING CHAT POPUP WINDOW -->
+    <div id="aerivaChatPopup" class="aeriva-chat-popup hidden" role="dialog" aria-modal="false" aria-labelledby="aerivaChatTitle">
+        <!-- DRAG HEADER -->
+        <div id="aerivaChatHeader" class="aeriva-chat-header">
+            <div class="header-bot-info">
+                <div class="header-avatar-wrap">
+                    <img src="/static/aeriva-bot.jpg" alt="AERIVA" class="header-avatar-img">
+                    <span class="online-indicator-dot"></span>
+                </div>
+                <div>
+                    <div class="bot-name-row">
+                        <h3 id="aerivaChatTitle" class="bot-name">AERIVA</h3>
+                        <span class="bot-tag">AI COPILOT</span>
+                    </div>
+                    <span class="bot-status">● Ready to guide you anywhere</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button type="button" class="header-icon-btn" id="aerivaClearChatBtn" title="Clear Chat History">🗑️</button>
+                <button type="button" class="header-icon-btn" id="aerivaMinimizeBtn" title="Minimize Chat">−</button>
+                <button type="button" class="header-icon-btn close-btn" id="aerivaCloseBtn" title="Close Chat">✕</button>
+            </div>
+        </div>
+
+        <!-- QUICK TOUR & FEATURE SHORTCUT PILLS -->
+        <div class="aeriva-quick-chips">
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('What does this webpage do? Give me a full tour.')">🗺️ Full Tour</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How do I log my food using a photo?')">📷 Scan Food</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How does Exercise Mode work in Dashboard 2?')">⚡ Exercise Mode</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('Explain Dashboard 3 Health Precautions and Safety Shield.')">🛡️ Precautions</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How do I edit my daily routine schedule?')">⚙️ Edit Routine</button>
+        </div>
+
+        <!-- CHAT MESSAGES CONTAINER -->
+        <div id="aerivaMessagesList" class="aeriva-messages-area" aria-live="polite">
+            <!-- Messages dynamically rendered here -->
+        </div>
+
+        <!-- CHAT INPUT AREA -->
+        <form id="aerivaChatForm" class="aeriva-chat-input-bar" onsubmit="handleAerivaChatSubmit(event)">
+            <input
+                id="aerivaChatInput"
+                type="text"
+                autocomplete="off"
+                placeholder="Ask AERIVA anything about this webpage..."
+                aria-label="Message AERIVA"
+            />
+            <button type="submit" id="aerivaSendBtn" class="aeriva-send-btn" title="Send message" aria-label="Send message">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+
+<script src="/static/app.js?v=2.7"></script>
 
 </body>
 </html>

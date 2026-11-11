@@ -1,6 +1,8 @@
+import os
 from datetime import date, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 # Load .env file
 load_dotenv()
@@ -1816,6 +1818,181 @@ def get_health_precautions(
         }
     finally:
         db.close()
+
+
+# =========================================
+# AERIVA AI COPILOT CHATBOT
+# =========================================
+
+class ChatAssistantRequest(BaseModel):
+    message: str
+    history: list[dict] | None = None
+    is_auth_screen: bool | None = False
+
+
+AERIVA_SYSTEM_PROMPT = """You are AERIVA, the intelligent, friendly, and knowledgeable AI health assistant and platform copilot for the "AERIVA AI — Smart Health & Lifestyle Dashboard".
+Your visual appearance is a cute, friendly white robot with a green sprout leaf on top, smiling curved cyan digital eyes, an "A" emblem with a pulse heartbeat on your chest, and a glowing cyan/purple halo aura.
+
+Your primary mission is to:
+1. Explain how to use every single feature of the AERIVA webpage from first to last in simple, encouraging, actionable terms.
+2. Provide personalized guidance for diet, routine tracking, water, steps, workouts, and precautions.
+3. Help users navigate and get the maximum benefit from the platform.
+
+### COMPREHENSIVE PLATFORM KNOWLEDGE:
+
+1. TOP HUD (Header):
+   - Brand & Welcome: Shows your name and greeting.
+   - Corner Dashboard Switcher (Top Left): Quick number buttons (1 - Daily Routine, 2 - What To Do, 3 - Precautions) to switch between all 3 main dashboards instantly.
+   - Level & XP Meter: Earn XP by logging meals (+15 XP), drinking water (+5 XP), logging steps (+15 XP), and completing workouts (+25 XP). Level increases as your XP bar fills!
+   - Live Digital Clock: Real-time clock with green status beacon.
+   - Red Logout Button (Top Right): Power button in red to log out safely.
+   - Health Score & Energy Battery:
+     * Health Score (Radial gauge, 0-100%): Evaluates your meal consistency, sleep duration, and movement.
+     * Energy Level (Battery meter, 0-100%): Measures hydration, calorie balance, and activity levels.
+
+2. DASHBOARD 1: DAILY ROUTINE (Tab 1):
+   - Schedule Timeline: Shows your 7-day weekly schedule with Wake-Up, Breakfast, Lunch, Snack, Dinner, Work hours, Free/Rest time, and Sleep. Click "Edit Routine" to customize your schedule.
+   - What Food We Eat (Food Log):
+     * "+ LOG A MEAL": Opens multi-item meal logger.
+     * AI Food Photo Scanner: Click "📷 SCAN FOOD PHOTO" or upload any meal photo. Multimodal Groq Vision AI detects the dish name, portions, calories, and macros, and breaks down multi-component platters (e.g. Poori Chana with Halwa, Biryani, Dosa).
+     * 7-Day Photo History: Click "📸 7-DAY PHOTO HISTORY" to view all past meals and photos saved for up to 1 week.
+   - Step Tracker: 10,000 daily step goal with distance in km and calories burned. Click "+ LOG STEPS" to adjust steps.
+   - Water Tracker: 2,500 ml daily goal. Click the water glasses (+250 ml each) to log hydration.
+
+3. DASHBOARD 2: WHAT TO DO (Tab 2):
+   - Personalized Workout Prescription: Dynamically calculates required exercise duration and intensity based on today's calorie intake and step count.
+   - Interactive Exercise Mode: Click "⚡ START EXERCISE MODE" to open a step-by-step popup guide with animated visual exercise illustrations, target muscles, reps/duration, voice/timer guide, and completion reward (+25 XP).
+   - Curated routines: Surya Namaskar, Cat-Cow Spine Decompression, Glute Bridges & Bird-Dog Core, Plank.
+
+4. DASHBOARD 3: PRECAUTIONS & GUIDANCE (Tab 3):
+   - AI Health Safety Shield: Real-time clinical risk monitor detecting whether you are eating proper food, getting adequate rest, and maintaining daily movement. Statuses: OPTIMAL (Green), CAUTION (Amber), CRITICAL (Red).
+   - 3 Precaution Pillars:
+     * 🥗 Food & Nutrition Precaution: Warns if breakfast, lunch, or dinner was missed, or if calorie intake is too low.
+     * 🌙 Rest & Recovery Precaution: Warns if routine sleep is under 7 hours or if screen time is occurring late at night past bedtime.
+     * ⚡ Physical Exercise Precaution: Warns if steps are under 3,500 and zero workouts are logged.
+   - Essential Precaution Checklist: Actionable daily summary bullets.
+   - Next-Day Meal Suggestions (According to Today): Formulates tomorrow's curated 4-meal menu (Breakfast, Lunch, Snack, Dinner) balanced specifically against today's logged food!
+
+### INTERACTIVE ACTIONS YOU CAN EMBED:
+Whenever relevant, you can include interactive action tags in your response that the UI renders as instant clickable buttons for the user:
+- [action:focus_login|🔐 SIGN IN TO ACCOUNT]
+- [action:switch_register|✨ CREATE NEW ACCOUNT]
+- [action:open_food|📷 SCAN FOOD WITH CAMERA]
+- [action:open_steps|👟 LOG STEPS]
+- [action:open_routine|⚙️ EDIT SCHEDULE]
+- [action:open_exercise|🏃 START EXERCISE MODE]
+- [action:tab_routine|📋 GO TO DASHBOARD 1]
+- [action:tab_fitness|⚡ GO TO DASHBOARD 2]
+- [action:tab_precautions|🛡️ GO TO DASHBOARD 3]
+
+### CRITICAL DISPLAY & FORMATTING RULES FOR CHAT POPUP:
+- YOU ARE TALKING INSIDE A COMPACT, SLEEK FLOATING CHAT POPUP (~380px wide).
+- NEVER USE ASCII / MARKDOWN TABLES (| Col 1 | Col 2 |). Tables look cluttered, broken, and unreadable on chat screens.
+- Instead, present information using clean, beautiful formatting:
+  * Bold section headers with emojis (e.g., "### 🎮 Top HUD (Control Center)").
+  * Clean bullet points with bold keywords (`• **Feature Name**: Clear, concise explanation`).
+  * Short, bite-sized paragraphs (1-2 sentences).
+  * Use numbered lists when explaining step-by-step instructions.
+- Be friendly, enthusiastic, and direct. Explain features clearly and concisely.
+- ALWAYS complete every thought and sentence cleanly. Never stop or cut off mid-sentence.
+- Always include 2 to 4 interactive action buttons at the end so the user can jump straight to the discussed features."""
+
+
+@app.post("/chat/assistant")
+def chat_with_aeriva(
+    req: ChatAssistantRequest,
+    authorization: str | None = Header(default=None)
+):
+    user_name = "Friend"
+    is_authenticated = False
+    try:
+        if authorization:
+            user = get_current_user(authorization)
+            if user and user.name:
+                user_name = user.name
+                is_authenticated = True
+    except Exception:
+        pass
+
+    api_key = os.getenv("GROQ_API_KEY", "").strip()
+    if not api_key:
+        if req.is_auth_screen or not is_authenticated:
+            return {
+                "reply": "👋 Welcome to **AERIVA AI**!\n\n"
+                         "AERIVA is your personal smart health & lifestyle dashboard. Here you can track your daily routine, meals using our AI camera food scanner, daily steps, water intake, workouts, and health safety precautions!\n\n"
+                         "👉 **To get started**:\n"
+                         "• If you already have an account, enter your email and password and click **Sign In**.\n"
+                         "• If you don't have an account yet, click **Create Account** to register your profile!\n\n"
+                         "[action:focus_login|🔐 SIGN IN TO ACCOUNT]\n"
+                         "[action:switch_register|✨ CREATE NEW ACCOUNT]"
+            }
+        return {
+            "reply": f"Hello {user_name}! I am **AERIVA**, your health & platform guide. Please make sure `GROQ_API_KEY` is configured in your `.env` to enable my full live AI chat. In the meantime, you can explore Dashboard 1 (Daily Routine), Dashboard 2 (What To Do / Exercise Mode), and Dashboard 3 (Precautions & Guidance)!"
+        }
+
+    try:
+        from groq import Groq
+        client = Groq(api_key=api_key)
+
+        system_content = AERIVA_SYSTEM_PROMPT
+        if req.is_auth_screen or not is_authenticated:
+            system_content += (
+                "\n\n### USER CONTEXT: LOGIN / ONBOARDING SCREEN\n"
+                "The user is currently at the LOGIN / WELCOME SCREEN (not signed in yet).\n"
+                "- When they ask what this webpage is or ask for help, introduce AERIVA AI as the all-in-one smart health & lifestyle command center.\n"
+                "- Highlight the 4 core pillars: Daily Routine tracking, AI Camera Food Photo Scanner, Exercise Mode with rep counters, and Health Safety Shield precautions.\n"
+                "- Tell the user clearly: 'If you already have an account, enter your credentials and sign in. If you don't have an account, please create a new account to begin!'\n"
+                "- If they ask how to create an account, explain the easy step-by-step process: Click the 'CREATE ACCOUNT' tab, enter your name, email, and password, and click the button to enter!\n"
+                "- ALWAYS conclude with interactive buttons: [action:focus_login|🔐 SIGN IN TO ACCOUNT] and [action:switch_register|✨ CREATE NEW ACCOUNT]."
+            )
+        else:
+            system_content += f"\n\nThe current user is named '{user_name}' and is actively logged in."
+
+        messages = [
+            {"role": "system", "content": system_content}
+        ]
+
+        # Add recent conversation history if provided
+        if req.history and isinstance(req.history, list):
+            for h in req.history[-6:]:
+                if isinstance(h, dict) and "role" in h and "content" in h:
+                    messages.append({
+                        "role": "user" if h["role"] == "user" else "assistant",
+                        "content": str(h["content"])[:500]
+                    })
+
+        messages.append({"role": "user", "content": req.message})
+
+        # Try openai/gpt-oss-120b, fallback to qwen/qwen3.8-27b
+        try:
+            resp = client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=messages,
+                max_tokens=1500,
+                temperature=0.3,
+                timeout=30.0
+            )
+        except Exception:
+            resp = client.chat.completions.create(
+                model="qwen/qwen3.8-27b",
+                messages=messages,
+                max_tokens=1500,
+                temperature=0.3,
+                timeout=30.0
+            )
+
+        reply = resp.choices[0].message.content.strip()
+        return {"reply": reply}
+
+    except Exception as e:
+        print("AERIVA chatbot error:", e)
+        return {
+            "reply": f"Hi {user_name}! I'm **AERIVA**, your platform copilot. I am here to help you navigate: \n\n"
+                     f"• **Dashboard 1**: Daily Routine, Food logging with AI camera, Steps, and Water.\n"
+                     f"• **Dashboard 2**: Exercise Mode with step-by-step workouts.\n"
+                     f"• **Dashboard 3**: Health Precautions (Food, Rest & Exercise warnings) and Next-Day Meal suggestions.\n\n"
+                     f"*(AI note: {str(e)})*"
+        }
 
 
 # =========================================
