@@ -1,13 +1,17 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
-DATABASE_URL = "sqlite:///./database/aeriva.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database/aeriva.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    connect_args=connect_args
 )
 
 

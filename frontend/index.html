@@ -7,7 +7,7 @@
 
     <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
 
-    <link rel="stylesheet" href="/static/style.css?v=4.0">
+    <link rel="stylesheet" href="/static/style.css?v=4.1">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -111,21 +111,6 @@
                 </button>
             </div>
 
-            <!-- MINI FEATURE CHIPS -->
-            <div class="stage-feature-chips">
-                <div class="stage-chip">
-                    <span class="chip-dot cyan"></span>
-                    <span>AI Routine Matrix</span>
-                </div>
-                <div class="stage-chip">
-                    <span class="chip-dot emerald"></span>
-                    <span>Vitals Telemetry</span>
-                </div>
-                <div class="stage-chip">
-                    <span class="chip-dot purple"></span>
-                    <span>Google OAuth 2.0</span>
-                </div>
-            </div>
 
         </div>
 
@@ -551,7 +536,7 @@
      MAIN DASHBOARD
 ===================================================== -->
 
-<section id="dashboardScreen" class="screen hidden">
+<section id="dashboardScreen" class="screen arena-stage-theme dashboard-arena-theme hidden">
 
     <main class="dashboard-shell">
 
@@ -572,6 +557,16 @@
                         </span>
                     </h1>
                 </div>
+
+                <!-- TOP FLOATING PILL STATUS (MATCHES LOGIN PAGE) -->
+                <div class="stage-pill-badge dashboard-pill" id="dashboardPill">
+                    <span class="pill-grid-icon" aria-hidden="true">
+                        <span></span><span></span><span></span>
+                        <span></span><span></span><span></span>
+                    </span>
+                    <span class="pill-text">Working</span>
+                </div>
+            </div>
 
                 <!-- LEFT SIDE CORNER DASHBOARD SWITCHER (1 - DAILY ROUTINE / 2 - WHAT TO DO / 3 - PRECAUTIONS) -->
                 <div class="left-corner-switcher" id="leftCornerDashboardSwitcher" role="navigation" aria-label="Dashboard Switcher">
@@ -2028,7 +2023,7 @@
 </div>
 
 
-<script src="/static/app.js?v=4.0"></script>
+<script src="/static/app.js?v=4.1"></script>
 
 </body>
 </html>

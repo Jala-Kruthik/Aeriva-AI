@@ -36,23 +36,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     startTimeAwareness();
 
     if (authToken) {
-
         try {
-
             await loadDashboard();
-
         } catch (error) {
+            console.error("Dashboard initial load:", error);
+            // Persistent session recovery: Restore from cached profile if present
+            const cachedUserStr = localStorage.getItem("aeriva_user");
+            if (cachedUserStr) {
+                try {
+                    currentUser = JSON.parse(cachedUserStr);
+                    const authScreen = document.getElementById("authScreen");
+                    const dashboardScreen = document.getElementById("dashboardScreen");
+                    if (authScreen) authScreen.classList.add("hidden");
+                    if (dashboardScreen) dashboardScreen.classList.remove("hidden");
+                    const userName = document.getElementById("userName");
+                    if (userName && currentUser.name) userName.textContent = currentUser.name;
+                    await loadFood();
+                    await loadRoutine();
+                    loadWaterTracker();
+                    loadStepTracker();
+                } catch (e) {
+                    console.error("Cached profile restore error:", e);
+                }
+            }
 
-            console.error(error);
-
-            logoutUser();
-
+            // Retry loading dashboard in 2.5s (handles Render free tier cold-start spin-up)
+            setTimeout(async () => {
+                if (authToken) {
+                    try {
+                        await loadDashboard();
+                    } catch (retryErr) {
+                        console.warn("Retry dashboard load error:", retryErr);
+                    }
+                }
+            }, 2500);
         }
-
     } else {
-
         showLogin();
-
     }
 
 });
@@ -392,10 +412,21 @@ async function loadDashboard() {
     );
 
     if (!response.ok) {
-        throw new Error("Authentication failed");
+        if (response.status === 401) {
+            const errData = await response.json().catch(() => ({}));
+            if (errData.detail === "Invalid or expired token") {
+                logoutUser();
+                throw new Error("Invalid or expired token");
+            }
+        }
+        throw new Error("Authentication failed with status " + response.status);
     }
 
     currentUser = await response.json();
+    localStorage.setItem("aeriva_user", JSON.stringify(currentUser));
+    if (currentUser.email) {
+        localStorage.setItem("aeriva_user_email", currentUser.email);
+    }
 
     const authScreen = document.getElementById("authScreen");
     const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");
@@ -5374,8 +5405,16 @@ async function handleGoogleCredentialResponse(response) {
         }
 
         localStorage.setItem("aeriva_token", data.access_token);
+        localStorage.setItem("aeriva_user", JSON.stringify(data.user));
+        if (data.user && data.user.email) {
+            localStorage.setItem("aeriva_user_email", data.user.email);
+        }
         authToken = data.access_token;
         currentUser = data.user;
+        localStorage.setItem("aeriva_user", JSON.stringify(data.user));
+        if (data.user && data.user.email) {
+            localStorage.setItem("aeriva_user_email", data.user.email);
+        }
 
         const authScreen = document.getElementById("authScreen");
         const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");
@@ -5480,6 +5519,10 @@ async function handleGoogleProfileSubmit(event) {
         }
 
         currentUser = data.user;
+        localStorage.setItem("aeriva_user", JSON.stringify(data.user));
+        if (data.user && data.user.email) {
+            localStorage.setItem("aeriva_user_email", data.user.email);
+        }
 
         const authScreen = document.getElementById("authScreen");
         const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");

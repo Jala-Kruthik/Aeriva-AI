@@ -62,9 +62,10 @@ def verify_password(
 # =========================================
 
 def create_access_token(data: dict) -> str:
-
+    # Ensure token contains core claims and does not expire prematurely
+    to_encode = data.copy()
     return jwt.encode(
-        data,
+        to_encode,
         SECRET_KEY,
         algorithm=ALGORITHM
     )
@@ -74,28 +75,26 @@ def create_access_token(data: dict) -> str:
 # VERIFY JWT TOKEN
 # =========================================
 
-def verify_access_token(token: str):
-
+def verify_access_token_payload(token: str) -> dict | None:
     try:
-
         payload = jwt.decode(
             token,
             SECRET_KEY,
             algorithms=[ALGORITHM]
         )
+        return payload
+    except (JWTError, ValueError, TypeError):
+        return None
 
-        user_id = payload.get("sub")
 
-        if user_id is None:
-
-            return None
-
+def verify_access_token(token: str):
+    payload = verify_access_token_payload(token)
+    if not payload:
+        return None
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+    try:
         return int(user_id)
-
-    except (
-        JWTError,
-        ValueError,
-        TypeError
-    ):
-
+    except (ValueError, TypeError):
         return None

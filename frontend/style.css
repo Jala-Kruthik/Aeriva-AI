@@ -5516,3 +5516,164 @@ h2 {
     margin: 0;
 }
 
+
+/* =========================================================
+   INNER DASHBOARD ARENA THEME (MATCHES LOGIN LUXURY STAGE)
+========================================================= */
+
+.dashboard-arena-theme {
+    background: radial-gradient(circle at 50% 0%, #15092a 0%, #080314 45%, #05020c 100%) !important;
+    min-height: 100vh;
+    position: relative;
+    color: #F8FAFC !important;
+}
+
+.dashboard-pill {
+    margin-bottom: 0 !important;
+    margin-left: 14px !important;
+}
+
+@media (max-width: 768px) {
+    .dashboard-pill {
+        display: none !important;
+    }
+}
+
+/* Glass Panels */
+.dashboard-arena-theme .glass-panel {
+    background: rgba(14, 10, 30, 0.78) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(168, 85, 247, 0.22) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 25px rgba(168, 85, 247, 0.1) !important;
+}
+
+/* Vital Cards */
+.dashboard-arena-theme .vital-card {
+    background: rgba(16, 11, 34, 0.78) !important;
+    border: 1px solid rgba(168, 85, 247, 0.25) !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5), 0 0 20px rgba(168, 85, 247, 0.12) !important;
+    backdrop-filter: blur(16px) !important;
+    transition: all 0.3s ease !important;
+}
+
+.dashboard-arena-theme .vital-card:hover {
+    border-color: rgba(192, 132, 252, 0.45) !important;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(168, 85, 247, 0.25) !important;
+    transform: translateY(-2px);
+}
+
+/* Navigation Tabs & Switchers */
+.dashboard-arena-theme .dashboard-nav-container {
+    background: rgba(12, 8, 26, 0.7) !important;
+    border: 1px solid rgba(168, 85, 247, 0.2) !important;
+    border-radius: 20px !important;
+}
+
+.dashboard-arena-theme .dashboard-nav-tab {
+    background: rgba(22, 14, 46, 0.6) !important;
+    border: 1px solid rgba(168, 85, 247, 0.22) !important;
+    color: #E2E8F0 !important;
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+.dashboard-arena-theme .dashboard-nav-tab:hover {
+    border-color: rgba(192, 132, 252, 0.5) !important;
+    background: rgba(168, 85, 247, 0.18) !important;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.25) !important;
+}
+
+.dashboard-arena-theme .dashboard-nav-tab.active {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(6, 182, 212, 0.25)) !important;
+    border-color: #C084FC !important;
+    box-shadow: 0 0 28px rgba(168, 85, 247, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+.dashboard-arena-theme .dashboard-nav-tab.active .dashboard-nav-title {
+    color: #FFFFFF !important;
+    text-shadow: 0 0 12px rgba(192, 132, 252, 0.6) !important;
+}
+
+/* Left Corner Header Switcher */
+.dashboard-arena-theme .left-corner-switcher {
+    background: rgba(16, 10, 34, 0.7) !important;
+    border: 1px solid rgba(168, 85, 247, 0.25) !important;
+}
+
+.dashboard-arena-theme .corner-dash-btn {
+    color: #CBD5E1 !important;
+}
+
+.dashboard-arena-theme .corner-dash-btn.active {
+    background: linear-gradient(135deg, #A855F7, #06B6D4) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.5) !important;
+}
+
+/* Action Buttons */
+.dashboard-arena-theme .neon-button.primary,
+.dashboard-arena-theme .action-dock-btn.cyan,
+.dashboard-arena-theme .mini-button.cyan {
+    background: linear-gradient(135deg, #A855F7, #06B6D4) !important;
+    border: none !important;
+    box-shadow: 0 4px 20px rgba(168, 85, 247, 0.45) !important;
+    color: #FFFFFF !important;
+}
+
+.dashboard-arena-theme .neon-button.primary:hover,
+.dashboard-arena-theme .action-dock-btn.cyan:hover,
+.dashboard-arena-theme .mini-button.cyan:hover {
+    box-shadow: 0 6px 26px rgba(168, 85, 247, 0.65), 0 0 18px rgba(6, 182, 212, 0.5) !important;
+    transform: translateY(-1px);
+}
+
+/* Routine Items & Quest Cards */
+.dashboard-arena-theme .routine-item {
+    background: rgba(20, 14, 42, 0.65) !important;
+    border: 1px solid rgba(168, 85, 247, 0.18) !important;
+    transition: all 0.25s ease !important;
+}
+
+.dashboard-arena-theme .routine-item:hover {
+    border-color: rgba(192, 132, 252, 0.4) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 16px rgba(168, 85, 247, 0.2) !important;
+    transform: translateX(3px);
+}
+
+.dashboard-arena-theme .quest-card {
+    background: rgba(20, 14, 42, 0.65) !important;
+    border: 1px solid rgba(168, 85, 247, 0.2) !important;
+    transition: all 0.25s ease !important;
+}
+
+.dashboard-arena-theme .quest-card:hover {
+    border-color: rgba(192, 132, 252, 0.45) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 20px rgba(168, 85, 247, 0.25) !important;
+}
+
+.dashboard-arena-theme .precaution-card {
+    background: rgba(20, 14, 42, 0.65) !important;
+    border: 1px solid rgba(168, 85, 247, 0.2) !important;
+}
+
+/* Modals */
+.modal-card {
+    background: rgba(15, 10, 32, 0.95) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), 0 0 40px rgba(168, 85, 247, 0.25) !important;
+}
+
+.dashboard-arena-theme .section-kicker {
+    color: #C084FC !important;
+    text-shadow: 0 0 10px rgba(192, 132, 252, 0.4) !important;
+}
+
+.dashboard-arena-theme .date-badge {
+    background: rgba(168, 85, 247, 0.18) !important;
+    border: 1px solid rgba(168, 85, 247, 0.35) !important;
+    color: #E9D5FF !important;
+}
+
+

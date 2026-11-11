@@ -42,6 +42,7 @@ from backend.security import (
     verify_password,
     create_access_token,
     verify_access_token,
+    verify_access_token_payload,
     normalize_email
 )
 
@@ -548,23 +549,51 @@ def get_current_user(authorization: str | None):
             detail="Invalid authorization header"
         )
 
-    token = authorization.replace("Bearer ", "", 1)
-    user_id = verify_access_token(token)
+    token = authorization.replace("Bearer ", "", 1).strip()
+    payload = verify_access_token_payload(token)
 
-    if user_id is None:
+    if not payload:
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token"
         )
 
+    user_id = payload.get("sub")
+    email = payload.get("email")
+    name = payload.get("name", "Aeriva User")
+
     db = SessionLocal()
 
     try:
-        user = (
-            db.query(User)
-            .filter(User.id == user_id)
-            .first()
-        )
+        user = None
+        if user_id and str(user_id).isdigit():
+            user = (
+                db.query(User)
+                .filter(User.id == int(user_id))
+                .first()
+            )
+
+        if not user and email:
+            norm_email = normalize_email(str(email))
+            user = (
+                db.query(User)
+                .filter(User.email == norm_email)
+                .first()
+            )
+
+        # Resilient persistence: If container restarted and DB was recreated, restore user profile from verified JWT
+        if not user and email:
+            import secrets
+            norm_email = normalize_email(str(email))
+            user = User(
+                name=name,
+                email=norm_email,
+                password=hash_password(secrets.token_urlsafe(32)),
+                onboarding_completed=True
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
 
         if not user:
             raise HTTPException(
