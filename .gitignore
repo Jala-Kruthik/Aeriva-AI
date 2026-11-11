@@ -40,3 +40,6 @@ uploads/
 
 # Logs
 *.log
+
+# Sensitive documents & backup files
+*.pdf

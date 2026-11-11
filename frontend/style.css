@@ -4798,3 +4798,64 @@ h2 {
         top: auto !important;
     }
 }
+
+
+/* =====================================================
+   GOOGLE AUTHENTICATION BUTTON STYLES
+===================================================== */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 18px 0 14px 0;
+    color: #64748B;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.auth-divider span {
+    padding: 0 12px;
+}
+
+.google-btn-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-top: 4px;
+    min-height: 44px;
+}
+
+.google-placeholder-btn {
+    width: 100%;
+    max-width: 320px;
+    height: 44px;
+    background: #131B2E;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 24px;
+    color: #F8FAFC;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.google-placeholder-btn:hover {
+    background: #1E293B;
+    border-color: #38BDF8;
+    box-shadow: 0 4px 16px rgba(56, 189, 248, 0.25);
+    transform: translateY(-1px);
+}

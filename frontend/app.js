@@ -5258,3 +5258,135 @@ if (document.readyState === "loading") {
 } else {
     initAerivaChatbot();
 }
+
+
+/* =====================================================
+   GOOGLE SIGN-IN & ONE-TAP INTEGRATION
+===================================================== */
+let aerivaGoogleClientId = null;
+
+async function initGoogleAuth() {
+    try {
+        const res = await fetch("/auth/google/client-id");
+        if (res.ok) {
+            const data = await res.json();
+            aerivaGoogleClientId = data.client_id;
+        }
+    } catch (e) {
+        console.warn("Could not fetch Google Client ID:", e);
+    }
+
+    const signInBtn = document.getElementById("googleSignInBtn");
+    const regBtn = document.getElementById("googleRegisterBtn");
+
+    if (!aerivaGoogleClientId) {
+        const renderPlaceholder = (el) => {
+            if (!el) return;
+            el.innerHTML = `
+                <button type="button" class="google-placeholder-btn" onclick="showGoogleSetupPrompt()">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15.2c0 2.8.7 5.5 1.9 7.9l3.7-2.9z"/><path fill="#34A853" d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.9C3.7 20.6 7.5 23.5 12 23.5z"/></svg>
+                    <span>Continue with Google</span>
+                </button>
+            `;
+        };
+        renderPlaceholder(signInBtn);
+        renderPlaceholder(regBtn);
+        return;
+    }
+
+    const checkAndRender = () => {
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+            google.accounts.id.initialize({
+                client_id: aerivaGoogleClientId,
+                callback: handleGoogleCredentialResponse,
+                auto_select: false
+            });
+
+            if (signInBtn) {
+                signInBtn.innerHTML = "";
+                google.accounts.id.renderButton(signInBtn, {
+                    theme: "filled_black",
+                    size: "large",
+                    shape: "pill",
+                    width: 300,
+                    text: "continue_with"
+                });
+            }
+
+            if (regBtn) {
+                regBtn.innerHTML = "";
+                google.accounts.id.renderButton(regBtn, {
+                    theme: "filled_black",
+                    size: "large",
+                    shape: "pill",
+                    width: 300,
+                    text: "continue_with"
+                });
+            }
+        } else {
+            setTimeout(checkAndRender, 200);
+        }
+    };
+
+    checkAndRender();
+}
+
+function showGoogleSetupPrompt() {
+    alert(
+        "To enable Google Sign-In:\n\n" +
+        "1. Create your Google OAuth Client ID in Google Cloud Console.\n" +
+        "2. Add GOOGLE_CLIENT_ID=your_id in your .env or Render dashboard.\n\n" +
+        "Once added, users can log in with 1-click Google account verification!"
+    );
+}
+
+async function handleGoogleCredentialResponse(response) {
+    if (!response || !response.credential) return;
+
+    try {
+        const res = await fetch("/auth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_token: response.credential })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || "Google login failed");
+        }
+
+        localStorage.setItem("aeriva_token", data.access_token);
+        authToken = data.access_token;
+        currentUser = data.user;
+
+        const authScreen = document.getElementById("authScreen");
+        const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");
+        const dashboardScreen = document.getElementById("dashboardScreen");
+
+        if (data.onboarding_completed) {
+            if (authScreen) authScreen.classList.add("hidden");
+            if (scheduleSetupScreen) scheduleSetupScreen.classList.add("hidden");
+            if (dashboardScreen) dashboardScreen.classList.remove("hidden");
+            const userName = document.getElementById("userName");
+            if (userName) userName.textContent = currentUser.name || "PLAYER";
+            await loadFood();
+            await loadRoutine();
+            loadWaterTracker();
+        } else {
+            if (authScreen) authScreen.classList.add("hidden");
+            if (scheduleSetupScreen) scheduleSetupScreen.classList.remove("hidden");
+            if (dashboardScreen) dashboardScreen.classList.add("hidden");
+        }
+
+        if (typeof updateAerivaQuickChips === "function") updateAerivaQuickChips();
+    } catch (err) {
+        console.error("Google Auth error:", err);
+        alert(err.message || "Google authentication failed.");
+    }
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initGoogleAuth);
+} else {
+    initGoogleAuth();
+}

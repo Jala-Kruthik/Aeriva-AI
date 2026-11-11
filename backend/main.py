@@ -325,6 +325,92 @@ def login_user(user: UserLogin):
 
 
 # =========================================
+# GOOGLE SIGN-IN & AUTHENTICATION
+# =========================================
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
+
+
+@app.get("/auth/google/client-id")
+def get_google_client_id():
+    """Returns the Google Client ID configured in environment."""
+    return {"client_id": os.getenv("GOOGLE_CLIENT_ID", "").strip()}
+
+
+@app.post("/auth/google")
+def auth_google(req: GoogleAuthRequest):
+    """
+    Verifies Google ID token, registers new user or signs in existing user,
+    and returns a valid AERIVA JWT access token.
+    """
+    import requests
+    import secrets
+
+    token_str = req.id_token.strip()
+    if not token_str:
+        raise HTTPException(status_code=400, detail="Missing Google ID token")
+
+    # Verify ID token with Google's public tokeninfo service
+    try:
+        resp = requests.get(
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={token_str}",
+            timeout=10.0
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=400, detail="Invalid Google token")
+        info = resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to verify Google token: {str(e)}")
+
+    email = info.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Google token does not contain an email address")
+
+    email = normalize_email(email)
+    name = (info.get("name") or info.get("given_name") or "Google User").strip()
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        is_new_user = False
+
+        if not user:
+            is_new_user = True
+            random_pw = secrets.token_urlsafe(32)
+            hashed_pw = hash_password(random_pw)
+            user = User(
+                name=name,
+                email=email,
+                password=hashed_pw,
+                onboarding_completed=False
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        token = create_access_token({"sub": str(user.id)})
+
+        return {
+            "message": "Google authentication successful",
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "onboarding_completed": bool(user.onboarding_completed)
+            },
+            "onboarding_completed": bool(user.onboarding_completed),
+            "is_new_user": is_new_user
+        }
+    finally:
+        db.close()
+
+
+# =========================================
 # DEVELOPMENT PASSWORD RESET
 # =========================================
 

@@ -7,7 +7,8 @@
 
     <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
 
-    <link rel="stylesheet" href="/static/style.css?v=2.7">
+    <link rel="stylesheet" href="/static/style.css?v=2.8">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -114,6 +115,14 @@
                 </button>
 
                 <p id="loginMessage" class="form-message" aria-live="polite"></p>
+
+                <div class="auth-divider">
+                    <span>OR CONTINUE WITH</span>
+                </div>
+
+                <div class="google-btn-container" id="googleSignInWrapper">
+                    <div id="googleSignInBtn"></div>
+                </div>
             </div>
         </div>
 
@@ -245,6 +254,14 @@
             </button>
 
             <p id="registerMessage" class="form-message" aria-live="polite"></p>
+
+            <div class="auth-divider">
+                <span>OR SIGN UP WITH</span>
+            </div>
+
+            <div class="google-btn-container" id="googleRegisterWrapper">
+                <div id="googleRegisterBtn"></div>
+            </div>
         </div>
 
         <div class="auth-footer">
@@ -1901,7 +1918,7 @@
 </div>
 
 
-<script src="/static/app.js?v=2.7"></script>
+<script src="/static/app.js?v=2.8"></script>
 
 </body>
 </html>
