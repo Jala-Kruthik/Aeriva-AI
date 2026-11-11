@@ -5678,14 +5678,14 @@ h2 {
 
 
 /* =========================================================
-   CARTOON EXERCISE VIDEO PLAYER & 60FPS MOTION ANIMATIONS
+   CARTOON EXERCISE VIDEO PLAYER (HIGH-DPI 60FPS CANVAS ENGINE)
 ========================================================= */
 
 .exercise-popup-diagram-box,
 .active-exercise-diagram-box {
     width: 100% !important;
-    min-height: 250px !important;
-    max-height: 300px !important;
+    min-height: 290px !important;
+    max-height: 340px !important;
     background: transparent !important;
     border: none !important;
     padding: 0 !important;
@@ -5693,33 +5693,81 @@ h2 {
     overflow: hidden !important;
 }
 
-.cartoon-video-wrapper {
+.cartoon-video-player {
     position: relative;
     width: 100%;
-    height: 100%;
-    min-height: 250px;
     background: radial-gradient(circle at 50% 35%, #1c0e3a 0%, #0d061f 55%, #05020c 100%);
     border: 1px solid rgba(168, 85, 247, 0.35);
     border-radius: 18px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
     overflow: hidden;
     user-select: none;
     box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(168, 85, 247, 0.2);
 }
 
-/* Video Topbar */
-.cartoon-video-topbar {
+.cartoon-canvas-viewport {
+    position: relative;
+    width: 100%;
+    height: 240px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.cartoon-video-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.cartoon-big-play-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(168, 85, 247, 0.85);
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.8);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.cartoon-big-play-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.cartoon-big-play-btn:hover {
+    transform: translate(-50%, -50%) scale(1.12);
+    background: #A855F7;
+    box-shadow: 0 0 40px rgba(192, 132, 252, 1);
+}
+
+.cartoon-hud-overlay {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    right: 12px;
+    display: flex;
     justify-content: space-between;
-    padding: 8px 14px;
-    background: linear-gradient(180deg, rgba(12, 6, 26, 0.88), transparent);
+    align-items: center;
+    pointer-events: none;
     z-index: 5;
 }
 
-.video-live-badge {
+.cartoon-hud-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -5727,14 +5775,14 @@ h2 {
     font-weight: 800;
     color: #F8FAFC;
     letter-spacing: 0.08em;
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.25);
+    border: 1px solid rgba(239, 68, 68, 0.45);
     padding: 3px 9px;
     border-radius: 999px;
-    text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+    backdrop-filter: blur(6px);
 }
 
-.live-dot {
+.hud-rec-dot {
     width: 6.5px;
     height: 6.5px;
     border-radius: 50%;
@@ -5748,12 +5796,87 @@ h2 {
     50% { opacity: 0.25; transform: scale(0.8); }
 }
 
-.video-speed-group {
-    display: flex;
-    gap: 5px;
+.cartoon-hud-phase {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #22D3EE;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(6, 182, 212, 0.15);
+    border: 1px solid rgba(6, 182, 212, 0.35);
+    padding: 3px 10px;
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
 }
 
-.video-speed-btn {
+/* Bottom Controls */
+.cartoon-video-bottombar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(10, 5, 22, 0.95);
+    border-top: 1px solid rgba(168, 85, 247, 0.2);
+    z-index: 5;
+}
+
+.cartoon-ctrl-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A855F7, #06B6D4);
+    border: none;
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.cartoon-ctrl-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
+}
+
+.cartoon-timer {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94A3B8;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.cartoon-scrubber-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.cartoon-scrubber-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #A855F7, #22D3EE);
+    border-radius: 999px;
+    width: 0%;
+    transition: width 0.05s linear;
+}
+
+.cartoon-speed-toggles {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.cartoon-speed-btn {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.16);
     color: #CBD5E1;
@@ -5765,114 +5888,14 @@ h2 {
     transition: all 0.2s ease;
 }
 
-.video-speed-btn:hover,
-.video-speed-btn.active {
+.cartoon-speed-btn:hover,
+.cartoon-speed-btn.active {
     background: rgba(168, 85, 247, 0.35);
     border-color: #C084FC;
     color: #FFFFFF;
     box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
 }
 
-/* Video Stage */
-.cartoon-video-stage {
-    position: relative;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-.cartoon-video-stage svg {
-    width: 100%;
-    height: 195px;
-    max-height: 205px;
-    display: block;
-}
-
-/* Video Bottom Controls */
-.cartoon-video-controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 8px 14px;
-    background: linear-gradient(0deg, rgba(8, 3, 18, 0.94), transparent);
-    z-index: 5;
-    border-top: 1px solid rgba(168, 85, 247, 0.18);
-}
-
-.cartoon-play-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #A855F7, #06B6D4);
-    border: none;
-    color: #FFFFFF;
-    font-size: 11px;
-    cursor: pointer;
-    box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
-    transition: all 0.2s ease;
-}
-
-.cartoon-play-btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 18px rgba(168, 85, 247, 0.7);
-}
-
-.cartoon-progress-track {
-    flex: 1;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    overflow: hidden;
-    position: relative;
-}
-
-.cartoon-progress-fill {
-    height: 100%;
-    width: 100%;
-    background: linear-gradient(90deg, #A855F7, #22D3EE);
-    border-radius: 999px;
-    animation: scrubberCycle 3s infinite linear;
-}
-
-@keyframes scrubberCycle {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-}
-
-.cartoon-cue-badge {
-    font-size: 10px;
-    font-weight: 800;
-    color: #22D3EE;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
-    white-space: nowrap;
-}
-
-/* PAUSED STATE */
-.video-paused .anim-character,
-.video-paused .cartoon-progress-fill {
-    animation-play-state: paused !important;
-}
-
-/* SPEED MODIFIERS */
-.video-speed-075 .anim-character,
-.video-speed-075 .cartoon-progress-fill {
-    animation-duration: 4.2s !important;
-}
-
-.video-speed-125 .anim-character,
-.video-speed-125 .cartoon-progress-fill {
-    animation-duration: 2.1s !important;
-}
 
 
 /* =========================================================

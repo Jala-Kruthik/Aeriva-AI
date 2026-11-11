@@ -2524,264 +2524,1028 @@ function getWorkoutProgressStorageKey() {
     return `aeriva_workout_step_prog_${userId}_${dateKey}`;
 }
 
-function toggleCartoonVideo(btn) {
-    const wrapper = btn.closest('.cartoon-video-wrapper');
-    if (!wrapper) return;
-    wrapper.classList.toggle('video-paused');
-    const isPaused = wrapper.classList.contains('video-paused');
-    btn.innerHTML = isPaused ? '▶' : '⏸';
-    btn.title = isPaused ? 'Play Cartoon Video' : 'Pause Cartoon Video';
+/* =========================================================
+   CARTOON EXERCISE VIDEO PLAYER (HIGH-DPI 60FPS CANVAS ENGINE)
+========================================================= */
+
+let currentCartoonAnimationId = null;
+let cartoonVideoState = {
+    key: "squat",
+    name: "Squats",
+    isPlaying: true,
+    progress: 0,
+    cycleDuration: 3.0,
+    speed: 1.0,
+    lastTimestamp: 0,
+    repCount: 1
+};
+
+function stopCartoonVideoPlayer() {
+    if (currentCartoonAnimationId) {
+        cancelAnimationFrame(currentCartoonAnimationId);
+        currentCartoonAnimationId = null;
+    }
 }
 
-function setCartoonSpeed(btn, speed) {
-    const wrapper = btn.closest('.cartoon-video-wrapper');
-    if (!wrapper) return;
-    wrapper.classList.remove('video-speed-075', 'video-speed-125');
-    wrapper.querySelectorAll('.video-speed-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    if (speed === 0.75) wrapper.classList.add('video-speed-075');
-    if (speed === 1.25) wrapper.classList.add('video-speed-125');
+function toggleCartoonPlayback(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    cartoonVideoState.isPlaying = !cartoonVideoState.isPlaying;
+    const btn = document.getElementById("cartoonPlayPauseBtn");
+    const bigBtn = document.getElementById("cartoonBigPlayBtn");
+    if (btn) btn.textContent = cartoonVideoState.isPlaying ? "⏸" : "▶";
+    if (bigBtn) {
+        if (cartoonVideoState.isPlaying) {
+            bigBtn.classList.remove("visible");
+        } else {
+            bigBtn.classList.add("visible");
+        }
+    }
+}
+
+function setCartoonPlaySpeed(speed, btn) {
+    cartoonVideoState.speed = speed;
+    const parent = btn ? btn.parentElement : null;
+    if (parent) {
+        parent.querySelectorAll(".cartoon-speed-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+    }
+}
+
+function scrubCartoonVideo(event) {
+    if (event && event.stopPropagation) event.stopPropagation();
+    const track = document.getElementById("cartoonScrubberTrack");
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+    cartoonVideoState.progress = pct;
+}
+
+function getExerciseCycleDuration(key, name) {
+    const k = (key || "").toLowerCase();
+    const n = (name || "").toLowerCase();
+    if (k.includes("jumping") || n.includes("jumping") || n.includes("jack")) return 1.4;
+    if (k.includes("pushup") || n.includes("push-up") || n.includes("push up")) return 2.6;
+    if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("spine")) return 4.0;
+    if (k.includes("plank") || n.includes("plank")) return 2.0;
+    if (k.includes("glute") || n.includes("bridge")) return 2.8;
+    if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) return 6.0;
+    if (k.includes("child") || n.includes("child")) return 3.5;
+    return 3.0; // Squats & default
+}
+
+function getExerciseInitialCue(key, name) {
+    const k = (key || "").toLowerCase();
+    const n = (name || "").toLowerCase();
+    if (k.includes("squat") || n.includes("squat") || n.includes("lunge")) return "⬇️ INHALE DOWN (2s) · ⬆️ EXHALE DRIVE (1s)";
+    if (k.includes("jumping") || n.includes("jumping") || n.includes("jack")) return "⭐ EXPLOSIVE STAR JUMP · ⚡ SOFT LANDING";
+    if (k.includes("pushup") || n.includes("push-up") || n.includes("push up")) return "⬇️ LOWER TO 90° ELBOWS · ⬆️ PRESS UP";
+    if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("spine")) return "🌬️ INHALE: COW POSE · 💨 EXHALE: CAT POSE";
+    if (k.includes("glute") || n.includes("bridge")) return "▲ SQUEEZE GLUTES AT TOP (2s)";
+    if (k.includes("plank") || n.includes("plank")) return "🔒 LOCK ABDOMINALS · NO SAGGING";
+    if (k.includes("surya") || n.includes("surya")) return "☀️ 12-STEP MEDITATIVE FULL-BODY FLOW";
+    if (k.includes("child") || n.includes("child")) return "🧘 REST HIPS ON HEELS · DECOMPRESS";
+    return "🔄 CONTROLLED FULL RANGE OF MOTION";
 }
 
 function getExerciseCartoonVideoHTML(key, name) {
-    const k = (key || "").toLowerCase();
-    const n = (name || "").toLowerCase();
-
-    let cue = "FORM & MOVEMENT GUIDE";
-    let svgContent = "";
-
-    // 1. SQUATS & LUNGES
-    if (k.includes("squat") || n.includes("squat") || n.includes("lunge")) {
-        cue = "⬇️ INHALE DOWN (2s) · ⬆️ EXHALE DRIVE (1s)";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <linearGradient id="gymMatGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.8"/>
-                    <stop offset="100%" stop-color="#06B6D4" stop-opacity="0.8"/>
-                </linearGradient>
-            </defs>
-            <rect x="20" y="162" width="280" height="6" rx="3" fill="url(#gymMatGrad)"/>
-            <ellipse cx="160" cy="162" rx="42" ry="7" fill="rgba(0,0,0,0.6)" class="anim-character anim-squat-shadow"/>
-            <g class="anim-character anim-squat-body">
-                <rect x="145" y="72" width="30" height="42" rx="10" fill="#1E293B" stroke="#38BDF8" stroke-width="2.5"/>
-                <rect x="146" y="106" width="28" height="6" rx="2" fill="#06B6D4"/>
-                <circle cx="160" cy="50" r="18" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-                <rect x="142" y="44" width="36" height="6" rx="2" fill="#06B6D4"/>
-                <circle cx="155" cy="50" r="2.5" fill="#0F172A"/>
-                <circle cx="165" cy="50" r="2.5" fill="#0F172A"/>
-                <path d="M 155 58 Q 160 62 165 58" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
-                <g class="anim-character anim-squat-arms">
-                    <line x1="145" y1="80" x2="115" y2="92" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
-                    <line x1="115" y1="92" x2="90" y2="92" stroke="#FDE047" stroke-width="5.5" stroke-linecap="round"/>
-                    <circle cx="90" cy="92" r="5" fill="#38BDF8"/>
-                    <line x1="175" y1="80" x2="205" y2="92" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
-                    <line x1="205" y1="92" x2="230" y2="92" stroke="#FDE047" stroke-width="5.5" stroke-linecap="round"/>
-                    <circle cx="230" cy="92" r="5" fill="#38BDF8"/>
-                </g>
-                <g class="anim-character anim-squat-knees">
-                    <line x1="150" y1="112" x2="132" y2="138" stroke="#38BDF8" stroke-width="7" stroke-linecap="round"/>
-                    <line x1="132" y1="138" x2="135" y2="162" stroke="#0F172A" stroke-width="6.5" stroke-linecap="round"/>
-                    <rect x="126" y="158" width="18" height="6" rx="3" fill="#10B981"/>
-                    <line x1="170" y1="112" x2="188" y2="138" stroke="#38BDF8" stroke-width="7" stroke-linecap="round"/>
-                    <line x1="188" y1="138" x2="185" y2="162" stroke="#0F172A" stroke-width="6.5" stroke-linecap="round"/>
-                    <rect x="176" y="158" width="18" height="6" rx="3" fill="#10B981"/>
-                </g>
-            </g>
-            <text x="160" y="24" fill="#38BDF8" font-size="10" font-weight="900" text-anchor="middle">✓ CHEST PROUD · THIGHS PARALLEL</text>
-        </svg>`;
-    }
-    // 2. JUMPING JACKS & CARDIO
-    else if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio")) {
-        cue = "⭐ EXPLOSIVE STAR JUMP · ⚡ SOFT LANDING";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <rect x="25" y="166" width="270" height="6" rx="3" fill="rgba(168,85,247,0.4)"/>
-            <g class="anim-character anim-jack-jump">
-                <path class="anim-character anim-jack-star" d="M 160 12 L 163 22 L 173 22 L 165 28 L 168 38 L 160 32 L 152 38 L 155 28 L 147 22 L 157 22 Z" fill="#FBBF24"/>
-                <rect x="146" y="74" width="28" height="38" rx="8" fill="#7E22CE" stroke="#C084FC" stroke-width="2.5"/>
-                <circle cx="160" cy="52" r="17" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-                <rect x="144" y="46" width="32" height="5" rx="2" fill="#A855F7"/>
-                <circle cx="155" cy="52" r="2.5" fill="#0F172A"/>
-                <circle cx="165" cy="52" r="2.5" fill="#0F172A"/>
-                <path d="M 155 60 Q 160 64 165 60" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
-                <line x1="148" y1="78" x2="115" y2="40" stroke="#FDE047" stroke-width="6" stroke-linecap="round" class="anim-character anim-jack-leftarm"/>
-                <line x1="172" y1="78" x2="205" y2="40" stroke="#FDE047" stroke-width="6" stroke-linecap="round" class="anim-character anim-jack-rightarm"/>
-                <line x1="152" y1="112" x2="130" y2="164" stroke="#A855F7" stroke-width="7" stroke-linecap="round" class="anim-character anim-jack-leftleg"/>
-                <line x1="168" y1="112" x2="190" y2="164" stroke="#A855F7" stroke-width="7" stroke-linecap="round" class="anim-character anim-jack-rightleg"/>
-            </g>
-            <text x="160" y="24" fill="#C084FC" font-size="10" font-weight="900" text-anchor="middle">⚡ RHYTHMIC FULL-BODY CARDIO CADENCE</text>
-        </svg>`;
-    }
-    // 3. PUSH-UPS & MOUNTAIN CLIMBERS
-    else if (k.includes("pushup") || n.includes("push-up") || n.includes("push up") || n.includes("mountain")) {
-        cue = "⬇️ LOWER TO 90° ELBOWS · ⬆️ PRESS UP EXPLOSIVELY";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(6,182,212,0.35)"/>
-            <g class="anim-character anim-pushup-body">
-                <circle cx="65" cy="156" r="6" fill="#10B981"/>
-                <line x1="65" y1="154" x2="235" y2="108" stroke="#0F172A" stroke-width="12" stroke-linecap="round"/>
-                <line x1="65" y1="154" x2="235" y2="108" stroke="#10B981" stroke-width="6" stroke-linecap="round" class="anim-character anim-pushup-core"/>
-                <circle cx="250" cy="100" r="16" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-                <rect x="236" y="94" width="28" height="5" rx="2" fill="#06B6D4"/>
-                <circle cx="256" cy="100" r="2.5" fill="#0F172A"/>
-                <g class="anim-character anim-pushup-arms">
-                    <line x1="220" y1="114" x2="220" y2="158" stroke="#FDE047" stroke-width="7" stroke-linecap="round"/>
-                    <rect x="212" y="156" width="18" height="5" rx="2.5" fill="#06B6D4"/>
-                </g>
-            </g>
-            <text x="160" y="32" fill="#10B981" font-size="10" font-weight="900" text-anchor="middle">✓ KEEP NECK NEUTRAL · ELBOWS AT 45°</text>
-        </svg>`;
-    }
-    // 4. CAT-COW & SPINE MOBILITY
-    else if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("cat cow") || n.includes("spine")) {
-        cue = "🌬️ INHALE: DROP BELLY (COW) · 💨 EXHALE: ROUND SPINE (CAT)";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <rect x="25" y="158" width="270" height="6" rx="3" fill="rgba(6,182,212,0.3)"/>
-            <circle cx="85" cy="154" r="6" fill="#10B981"/>
-            <line x1="85" y1="154" x2="85" y2="110" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
-            <circle cx="215" cy="154" r="6" fill="#10B981"/>
-            <line x1="215" y1="154" x2="215" y2="110" stroke="#FDE047" stroke-width="7" stroke-linecap="round"/>
-            <path class="anim-character anim-catcow-spine" d="M 85 106 Q 150 75 215 95" fill="none" stroke="#22D3EE" stroke-width="9" stroke-linecap="round"/>
-            <g class="anim-character anim-catcow-head">
-                <circle cx="232" cy="85" r="16" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-                <rect x="220" y="79" width="24" height="4" rx="2" fill="#06B6D4"/>
-                <circle cx="238" cy="85" r="2.5" fill="#0F172A"/>
-            </g>
-            <text x="160" y="32" fill="#22D3EE" font-size="10" font-weight="900" text-anchor="middle">DECOMPRESS VERTEBRAE WITH BREATH</text>
-        </svg>`;
-    }
-    // 5. GLUTE BRIDGES & CORE
-    else if (k.includes("glute") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
-        cue = "▲ SQUEEZE GLUTES AT PEAK ELEVATION (2s)";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="158" width="280" height="6" rx="3" fill="rgba(16,185,129,0.3)"/>
-            <circle cx="65" cy="148" r="15" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-            <line x1="65" y1="154" x2="95" y2="154" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
-            <line x1="230" y1="154" x2="230" y2="120" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
-            <rect x="220" y="152" width="20" height="6" rx="3" fill="#10B981"/>
-            <g class="anim-character anim-glute-hips">
-                <line x1="95" y1="154" x2="175" y2="105" stroke="#10B981" stroke-width="8.5" stroke-linecap="round"/>
-                <line x1="175" y1="105" x2="230" y2="120" stroke="#10B981" stroke-width="8.5" stroke-linecap="round"/>
-                <circle cx="175" cy="105" r="7" fill="#FBBF24"/>
-            </g>
-            <text x="160" y="32" fill="#10B981" font-size="10" font-weight="900" text-anchor="middle">DRIVE THROUGH HEELS · LEVEL PELVIS</text>
-        </svg>`;
-    }
-    // 6. PLANK
-    else if (k.includes("plank") || n.includes("plank")) {
-        cue = "🔒 LOCK ABDOMINALS · NO SAGGING HIPS";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(6,182,212,0.3)"/>
-            <g class="anim-character anim-plank-body">
-                <circle cx="65" cy="155" r="6" fill="#10B981"/>
-                <line x1="65" y1="154" x2="235" y2="118" stroke="#10B981" stroke-width="8" stroke-linecap="round"/>
-                <circle cx="145" cy="136" r="14" fill="none" stroke="#22D3EE" stroke-width="2.5" stroke-dasharray="4 3" class="anim-core-ring"/>
-                <circle cx="250" cy="112" r="16" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-                <rect x="236" y="106" width="28" height="5" rx="2" fill="#06B6D4"/>
-                <line x1="225" y1="124" x2="225" y2="158" stroke="#FDE047" stroke-width="7" stroke-linecap="round"/>
-                <line x1="225" y1="158" x2="245" y2="158" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
-            </g>
-            <text x="160" y="32" fill="#22D3EE" font-size="10" font-weight="900" text-anchor="middle">STRICT ISOMETRIC HOLLOW-BODY TENSION</text>
-        </svg>`;
-    }
-    // 7. SURYA NAMASKAR (SUN SALUTATIONS)
-    else if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) {
-        cue = "☀️ 12-STEP MEDITATIVE FULL-BODY FLOW";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="160" cy="45" r="28" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" stroke-width="2"/>
-            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(245,158,11,0.3)"/>
-            <g transform="translate(45, 0)">
-                <circle cx="30" cy="65" r="12" fill="#FDE047"/>
-                <line x1="30" y1="77" x2="30" y2="125" stroke="#F59E0B" stroke-width="5" stroke-linecap="round"/>
-                <line x1="30" y1="125" x2="25" y2="160" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
-                <text x="30" y="178" fill="#FBBF24" font-size="8" font-weight="800" text-anchor="middle">1. PRAYER</text>
-            </g>
-            <g transform="translate(130, 0)">
-                <circle cx="30" cy="95" r="12" fill="#FDE047"/>
-                <line x1="30" y1="107" x2="30" y2="135" stroke="#06B6D4" stroke-width="5" stroke-linecap="round"/>
-                <line x1="30" y1="135" x2="25" y2="160" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
-                <text x="30" y="178" fill="#38BDF8" font-size="8" font-weight="800" text-anchor="middle">2. FOLD</text>
-            </g>
-            <g transform="translate(215, 0)">
-                <circle cx="30" cy="115" r="12" fill="#FDE047"/>
-                <path d="M 10 160 Q 30 145 45 130" stroke="#10B981" stroke-width="5" fill="none" stroke-linecap="round"/>
-                <text x="30" y="178" fill="#34D399" font-size="8" font-weight="800" text-anchor="middle">3. COBRA</text>
-            </g>
-            <text x="160" y="24" fill="#FBBF24" font-size="10" font-weight="900" text-anchor="middle">SYNCHRONIZE EACH TRANSITION WITH BREATH</text>
-        </svg>`;
-    }
-    // 8. CHILD'S POSE & RESTORATIVE
-    else if (k.includes("child") || n.includes("child") || n.includes("hip opener")) {
-        cue = "🧘 REST HIPS ON HEELS · DECOMPRESS";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(6,182,212,0.3)"/>
-            <ellipse cx="80" cy="155" rx="16" ry="7" fill="#0F172A"/>
-            <path d="M 80 150 Q 130 120 190 145" stroke="#22D3EE" stroke-width="8" fill="none" stroke-linecap="round"/>
-            <circle cx="205" cy="148" r="14" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-            <line x1="165" y1="135" x2="270" y2="157" stroke="#10B981" stroke-width="5.5" stroke-linecap="round"/>
-            <circle cx="272" cy="157" r="4" fill="#38BDF8"/>
-            <text x="160" y="35" fill="#67E8F9" font-size="10" font-weight="900" text-anchor="middle">SLOW DIAPHRAGMATIC BREATHING</text>
-        </svg>`;
-    }
-    // 9. DEFAULT ACTIVE MOBILITY & WORKOUT
-    else {
-        cue = "🔄 CONTROLLED FULL RANGE OF MOTION";
-        svgContent = `
-        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
-            <rect x="25" y="162" width="270" height="6" rx="3" fill="rgba(168,85,247,0.35)"/>
-            <g class="anim-character anim-squat-body">
-                <rect x="146" y="74" width="28" height="40" rx="8" fill="#1E293B" stroke="#A855F7" stroke-width="2.5"/>
-                <circle cx="160" cy="50" r="17" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
-                <rect x="144" y="44" width="32" height="5" rx="2" fill="#A855F7"/>
-                <circle cx="155" cy="50" r="2.5" fill="#0F172A"/>
-                <circle cx="165" cy="50" r="2.5" fill="#0F172A"/>
-                <line x1="146" y1="80" x2="110" y2="70" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
-                <line x1="174" y1="80" x2="210" y2="70" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
-                <line x1="152" y1="114" x2="140" y2="162" stroke="#A855F7" stroke-width="7" stroke-linecap="round"/>
-                <line x1="168" y1="114" x2="180" y2="162" stroke="#A855F7" stroke-width="7" stroke-linecap="round"/>
-            </g>
-            <text x="160" y="24" fill="#C084FC" font-size="10" font-weight="900" text-anchor="middle">ACTIVE BIOMECHANICAL ALIGNMENT</text>
-        </svg>`;
-    }
-
+    const cue = getExerciseInitialCue(key, name);
     return `
-    <div class="cartoon-video-wrapper" id="cartoonVideoBox">
-        <div class="cartoon-video-topbar">
-            <span class="video-live-badge">
-                <span class="live-dot"></span>
-                <span>CARTOON VIDEO DEMO</span>
-            </span>
-            <div class="video-speed-group">
-                <button type="button" class="video-speed-btn" onclick="setCartoonSpeed(this, 0.75)" title="Slow Motion">0.75x</button>
-                <button type="button" class="video-speed-btn active" onclick="setCartoonSpeed(this, 1)" title="Normal Speed">1x</button>
-                <button type="button" class="video-speed-btn" onclick="setCartoonSpeed(this, 1.25)" title="Fast Speed">1.25x</button>
+    <div class="cartoon-video-player" id="cartoonPlayerContainer">
+        <div class="cartoon-canvas-viewport" onclick="toggleCartoonPlayback(event)">
+            <canvas id="cartoonExerciseCanvas" class="cartoon-video-canvas"></canvas>
+            <button type="button" class="cartoon-big-play-btn" id="cartoonBigPlayBtn" title="Play / Pause" onclick="toggleCartoonPlayback(event)">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="6 3 20 12 6 21 6 3"></polygon>
+                </svg>
+            </button>
+            <div class="cartoon-hud-overlay">
+                <span class="cartoon-hud-badge">
+                    <span class="hud-rec-dot"></span>
+                    <span>CARTOON 60FPS DEMO</span>
+                </span>
+                <span class="cartoon-hud-phase" id="cartoonPhaseCue">${escapeHTML(cue)}</span>
             </div>
         </div>
-
-        <div class="cartoon-video-stage">
-            ${svgContent}
-        </div>
-
-        <div class="cartoon-video-controls">
-            <button type="button" class="cartoon-play-btn" onclick="toggleCartoonVideo(this)" title="Pause / Play Video">⏸</button>
-            <div class="cartoon-progress-track">
-                <div class="cartoon-progress-fill"></div>
+        <div class="cartoon-video-bottombar">
+            <button type="button" class="cartoon-ctrl-btn" id="cartoonPlayPauseBtn" onclick="toggleCartoonPlayback(event)" title="Play / Pause">
+                ⏸
+            </button>
+            <span class="cartoon-timer" id="cartoonTimeDisplay">00:01 / 00:03</span>
+            <div class="cartoon-scrubber-track" id="cartoonScrubberTrack" onclick="scrubCartoonVideo(event)" onpointerdown="scrubCartoonVideo(event)">
+                <div class="cartoon-scrubber-progress" id="cartoonScrubberProgress" style="width: 0%;"></div>
             </div>
-            <span class="cartoon-cue-badge">${cue}</span>
+            <div class="cartoon-speed-toggles">
+                <button type="button" class="cartoon-speed-btn" onclick="setCartoonPlaySpeed(0.5, this)">0.5x</button>
+                <button type="button" class="cartoon-speed-btn active" onclick="setCartoonPlaySpeed(1, this)">1x</button>
+                <button type="button" class="cartoon-speed-btn" onclick="setCartoonPlaySpeed(1.5, this)">1.5x</button>
+            </div>
         </div>
     </div>`;
 }
 
 function getExerciseIllustrationSVG(key, name) {
+    setTimeout(() => {
+        const d = document.getElementById("popupDiagramBox") || document.getElementById("guideModalDiagramBox");
+        if (d && (!currentCartoonAnimationId || cartoonVideoState.key !== key)) {
+            mountCartoonVideoPlayer(d, key, name);
+        }
+    }, 50);
     return getExerciseCartoonVideoHTML(key, name);
 }
+
+function mountCartoonVideoPlayer(containerEl, key, name) {
+    stopCartoonVideoPlayer();
+    if (!containerEl) return;
+
+    containerEl.innerHTML = getExerciseCartoonVideoHTML(key, name);
+
+    cartoonVideoState.key = key || "squat";
+    cartoonVideoState.name = name || "Squats";
+    cartoonVideoState.isPlaying = true;
+    cartoonVideoState.progress = 0;
+    cartoonVideoState.cycleDuration = getExerciseCycleDuration(key, name);
+    cartoonVideoState.speed = 1.0;
+    cartoonVideoState.lastTimestamp = 0;
+    cartoonVideoState.repCount = 1;
+
+    const canvas = containerEl.querySelector("#cartoonExerciseCanvas");
+    if (!canvas) return;
+
+    const progressFill = containerEl.querySelector("#cartoonScrubberProgress");
+    const timerDisplay = containerEl.querySelector("#cartoonTimeDisplay");
+    const phaseCue = containerEl.querySelector("#cartoonPhaseCue");
+    const playPauseBtn = containerEl.querySelector("#cartoonPlayPauseBtn");
+    const bigPlayBtn = containerEl.querySelector("#cartoonBigPlayBtn");
+
+    if (playPauseBtn) playPauseBtn.textContent = "⏸";
+    if (bigPlayBtn) bigPlayBtn.classList.remove("visible");
+
+    const ctx = canvas.getContext("2d");
+
+    function loop(timestamp) {
+        if (!cartoonVideoState.lastTimestamp) cartoonVideoState.lastTimestamp = timestamp;
+        const dt = Math.min((timestamp - cartoonVideoState.lastTimestamp) / 1000, 0.1);
+        cartoonVideoState.lastTimestamp = timestamp;
+
+        if (cartoonVideoState.isPlaying) {
+            cartoonVideoState.progress += (dt * cartoonVideoState.speed) / cartoonVideoState.cycleDuration;
+            if (cartoonVideoState.progress >= 1) {
+                cartoonVideoState.progress %= 1;
+                cartoonVideoState.repCount++;
+            }
+        }
+
+        // Measure live bounding box for responsive high-DPI scaling
+        const rect = canvas.getBoundingClientRect();
+        const curW = Math.round(rect.width) || 560;
+        const curH = Math.round(rect.height) || 240;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        const targetPixelW = Math.floor(curW * dpr);
+        const targetPixelH = Math.floor(curH * dpr);
+        if (canvas.width !== targetPixelW || canvas.height !== targetPixelH) {
+            canvas.width = targetPixelW;
+            canvas.height = targetPixelH;
+        }
+
+        ctx.save();
+        ctx.scale(dpr, dpr);
+
+        const p = cartoonVideoState.progress;
+        const curSec = (p * cartoonVideoState.cycleDuration).toFixed(1);
+        const totSec = cartoonVideoState.cycleDuration.toFixed(0);
+
+        if (progressFill) progressFill.style.width = `${Math.min(100, Math.max(0, p * 100))}%`;
+        if (timerDisplay) timerDisplay.textContent = `00:0${Math.floor(curSec)} / 00:0${totSec} · REP ${cartoonVideoState.repCount}`;
+
+        renderCartoonScene(ctx, cartoonVideoState.key, cartoonVideoState.name, p, curW, curH, phaseCue);
+
+        ctx.restore();
+
+        currentCartoonAnimationId = requestAnimationFrame(loop);
+    }
+
+    currentCartoonAnimationId = requestAnimationFrame(loop);
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+    ctx.beginPath();
+    ctx.moveTo(x + r.tl, y);
+    ctx.lineTo(x + w - r.tr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+    ctx.lineTo(x + w, y + h - r.br);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+    ctx.lineTo(x + r.bl, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+    ctx.lineTo(x, y + r.tl);
+    ctx.quadraticCurveTo(x, y, x + r.tl, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
+
+function drawCartoonHead(ctx, hx, hy, angle, blink, smile) {
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(angle || 0);
+
+    // Head base
+    ctx.fillStyle = "#FBBF24";
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Rosy cheeks
+    ctx.fillStyle = "rgba(244, 63, 94, 0.4)";
+    ctx.beginPath();
+    ctx.arc(-8, 4, 3.5, 0, Math.PI * 2);
+    ctx.arc(8, 4, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cyan Headband
+    ctx.fillStyle = "#06B6D4";
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 2;
+    roundRect(ctx, -17, -8, 34, 6, 2, true, true);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(-17, -6, 34, 1.5);
+
+    // Hair
+    ctx.fillStyle = "#0F172A";
+    ctx.beginPath();
+    ctx.arc(0, -6, 17, Math.PI * 0.95, Math.PI * 2.05);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = "#0F172A";
+    if (blink) {
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-7, 0); ctx.lineTo(-3, 0);
+        ctx.moveTo(3, 0); ctx.lineTo(7, 0);
+        ctx.stroke();
+    } else {
+        ctx.beginPath();
+        ctx.arc(-5, 0, 2.5, 0, Math.PI * 2);
+        ctx.arc(5, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.beginPath();
+        ctx.arc(-6, -1, 1, 0, Math.PI * 2);
+        ctx.arc(4, -1, 1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Mouth
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (smile) {
+        ctx.arc(0, 4, 4, 0.2 * Math.PI, 0.8 * Math.PI);
+    } else {
+        ctx.arc(0, 6, 3, 0, Math.PI);
+    }
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function renderCartoonScene(ctx, key, name, t, w, h, cueEl) {
+    ctx.clearRect(0, 0, w, h);
+
+    const k = (key || "").toLowerCase();
+    const n = (name || "").toLowerCase();
+
+    // Background Gradient
+    const bgGrad = ctx.createRadialGradient(w / 2, h * 0.35, 10, w / 2, h * 0.35, w * 0.65);
+    bgGrad.addColorStop(0, "#1d103b");
+    bgGrad.addColorStop(0.55, "#0d061f");
+    bgGrad.addColorStop(1, "#04020a");
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Floor Line & Grid
+    const floorY = h - 42;
+    ctx.strokeStyle = "rgba(168, 85, 247, 0.18)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, floorY);
+    ctx.lineTo(w, floorY);
+    ctx.stroke();
+
+    for (let x = -w * 0.3; x <= w * 1.3; x += 36) {
+        ctx.beginPath();
+        ctx.moveTo(w / 2 + (x - w / 2) * 0.35, floorY);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+    }
+
+    // Workout Mat
+    const matW = Math.min(360, w - 40);
+    const matH = 22;
+    const matX = (w - matW) / 2;
+    const matY = floorY - 5;
+    ctx.fillStyle = "rgba(30, 58, 138, 0.8)";
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.7)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, matX, matY, matW, matH, 8, true, true);
+
+    const cx = w / 2;
+    const cy = floorY;
+
+    if (k.includes("squat") || n.includes("squat") || n.includes("lunge")) {
+        drawCartoonSquat(ctx, t, cx, cy, cueEl);
+    } else if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio")) {
+        drawCartoonJumpingJacks(ctx, t, cx, cy, cueEl);
+    } else if (k.includes("pushup") || n.includes("push-up") || n.includes("push up") || n.includes("mountain")) {
+        drawCartoonPushup(ctx, t, cx, cy, cueEl);
+    } else if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("spine")) {
+        drawCartoonCatCow(ctx, t, cx, cy, cueEl);
+    } else if (k.includes("plank") || n.includes("plank")) {
+        drawCartoonPlank(ctx, t, cx, cy, cueEl);
+    } else if (k.includes("glute") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
+        drawCartoonGluteBridge(ctx, t, cx, cy, cueEl);
+    } else if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) {
+        drawCartoonSurya(ctx, t, cx, cy, cueEl);
+    } else if (k.includes("child") || n.includes("child") || n.includes("hip opener")) {
+        drawCartoonChildPose(ctx, t, cx, cy, cueEl);
+    } else {
+        drawCartoonMobility(ctx, t, cx, cy, cueEl);
+    }
+}
+
+// 1. CARTOON SQUAT
+function drawCartoonSquat(ctx, t, cx, cy, cueEl) {
+    const ease = (1 - Math.cos(t * Math.PI * 2)) / 2; // 0 standing -> 1 deep squat
+    const drop = 38 * ease;
+
+    if (cueEl) {
+        if (ease > 0.85) cueEl.textContent = "✓ 90° PARALLEL DEPTH · PAUSE";
+        else if (t < 0.5) cueEl.textContent = "⬇️ LOWERING CONTROLLED (INHALE)";
+        else cueEl.textContent = "⬆️ DRIVE THROUGH HEELS (EXHALE)";
+    }
+
+    // Shadow
+    ctx.fillStyle = `rgba(0, 0, 0, ${0.4 + 0.35 * ease})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 3, 34 + 14 * ease, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const hipY = cy - 70 + drop;
+    const torsoY = hipY - 26;
+
+    // Feet planted
+    ctx.fillStyle = "#10B981";
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 2;
+    roundRect(ctx, cx - 36, cy - 8, 22, 7, 3, true, true);
+    roundRect(ctx, cx + 14, cy - 8, 22, 7, 3, true, true);
+
+    // Legs
+    const kneeSpread = 26 + 16 * ease;
+    const kneeY = cy - 34 + drop * 0.45;
+
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 8;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    // Left leg
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, hipY);
+    ctx.lineTo(cx - kneeSpread, kneeY);
+    ctx.lineTo(cx - 26, cy - 6);
+    ctx.stroke();
+
+    // Right leg
+    ctx.beginPath();
+    ctx.moveTo(cx + 12, hipY);
+    ctx.lineTo(cx + kneeSpread, kneeY);
+    ctx.lineTo(cx + 26, cy - 6);
+    ctx.stroke();
+
+    // Torso / Jersey
+    ctx.fillStyle = "#7C3AED";
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 2.5;
+    roundRect(ctx, cx - 16, torsoY, 32, 38, 8, true, true);
+
+    // Aeriva Jersey Emblem
+    ctx.fillStyle = "#22D3EE";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("AERIVA", cx, torsoY + 22);
+
+    // Arms raising forward for balance
+    const armY = torsoY + 12;
+    const reachOut = 32 * ease;
+    ctx.strokeStyle = "#FBBF24";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, armY);
+    ctx.lineTo(cx - 28 - reachOut, armY + 12 - 14 * ease);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cx + 14, armY);
+    ctx.lineTo(cx + 28 + reachOut, armY + 12 - 14 * ease);
+    ctx.stroke();
+
+    // Head
+    const blink = (t > 0.46 && t < 0.54);
+    drawCartoonHead(ctx, cx, torsoY - 14, ease * 0.08, blink, ease < 0.3);
+
+    // 90° Guide Line when at bottom
+    if (ease > 0.8) {
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.85)";
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 50, hipY);
+        ctx.lineTo(cx + 50, hipY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+}
+
+// 2. CARTOON JUMPING JACKS
+function drawCartoonJumpingJacks(ctx, t, cx, cy, cueEl) {
+    // Jump trajectory
+    const jump = Math.sin(t * Math.PI) > 0 ? Math.sin(t * Math.PI) * 28 : 0;
+    const armProgress = (1 - Math.cos(t * Math.PI * 2)) / 2; // 0 down -> 1 up
+
+    if (cueEl) {
+        if (armProgress > 0.85) cueEl.textContent = "⭐ STAR JUMP · CLAP OVERHEAD";
+        else if (t < 0.5) cueEl.textContent = "⚡ EXPLODING UPWARD CADENCE";
+        else cueEl.textContent = "⬇️ SOFT LANDING ON BALLS OF FEET";
+    }
+
+    // Shadow
+    ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0.15, 0.55 - jump * 0.015)})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 3, 30 - jump * 0.35, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const charY = cy - jump;
+    const hipY = charY - 68;
+    const torsoY = hipY - 26;
+
+    // Legs spread
+    const legSpread = 16 + 28 * armProgress;
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 8;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, hipY);
+    ctx.lineTo(cx - legSpread, charY - 8);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cx + 10, hipY);
+    ctx.lineTo(cx + legSpread, charY - 8);
+    ctx.stroke();
+
+    // Sneakers
+    ctx.fillStyle = "#06B6D4";
+    roundRect(ctx, cx - legSpread - 10, charY - 9, 18, 6, 2.5, true, true);
+    roundRect(ctx, cx + legSpread - 8, charY - 9, 18, 6, 2.5, true, true);
+
+    // Torso
+    ctx.fillStyle = "#7C3AED";
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 2.5;
+    roundRect(ctx, cx - 15, torsoY, 30, 36, 8, true, true);
+
+    ctx.fillStyle = "#22D3EE";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("AERIVA", cx, torsoY + 20);
+
+    // Arms swinging overhead
+    const armAngle = 0.2 + armProgress * 2.6; // from down to up overhead
+    ctx.strokeStyle = "#FBBF24";
+    ctx.lineWidth = 6;
+
+    // Left arm
+    const lax = cx - 14 - Math.sin(armAngle) * 32;
+    const lay = torsoY + 12 - Math.cos(armAngle) * 32;
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, torsoY + 12);
+    ctx.lineTo(lax, lay);
+    ctx.stroke();
+
+    // Right arm
+    const rax = cx + 14 + Math.sin(armAngle) * 32;
+    const ray = torsoY + 12 - Math.cos(armAngle) * 32;
+    ctx.beginPath();
+    ctx.moveTo(cx + 14, torsoY + 12);
+    ctx.lineTo(rax, ray);
+    ctx.stroke();
+
+    // Star sparkle at clap overhead
+    if (armProgress > 0.88) {
+        ctx.fillStyle = "#FBBF24";
+        ctx.beginPath();
+        const starY = torsoY - 32;
+        ctx.arc(cx, starY, 6, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Head
+    drawCartoonHead(ctx, cx, torsoY - 14, 0, t > 0.45 && t < 0.55, true);
+}
+
+// 3. CARTOON PUSH-UP
+function drawCartoonPushup(ctx, t, cx, cy, cueEl) {
+    const dip = (1 - Math.cos(t * Math.PI * 2)) / 2; // 0 top -> 1 bottom
+    const drop = 22 * dip;
+
+    if (cueEl) {
+        if (dip > 0.85) cueEl.textContent = "✓ CHEST 2\" FROM MAT · HOLD";
+        else if (t < 0.5) cueEl.textContent = "⬇️ LOWER SMOOTHLY (INHALE)";
+        else cueEl.textContent = "⬆️ PRESS UP EXPLOSIVELY (EXHALE)";
+    }
+
+    const feetX = cx - 95;
+    const feetY = cy - 12;
+    const handX = cx + 45;
+    const handY = cy - 8;
+    const shoulderY = cy - 48 + drop;
+    const shoulderX = cx + 35;
+
+    // Hands & Feet planted on mat
+    ctx.fillStyle = "#10B981";
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 2;
+    roundRect(ctx, feetX - 8, feetY, 16, 7, 3, true, true);
+    roundRect(ctx, handX - 8, handY, 18, 6, 3, true, true);
+
+    // Torso & Body plank line
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 14;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(feetX, feetY);
+    ctx.lineTo(shoulderX, shoulderY);
+    ctx.stroke();
+
+    // Jersey overlay on body
+    ctx.strokeStyle = "#7C3AED";
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(feetX + 35, feetY - (feetY - shoulderY) * 0.35);
+    ctx.lineTo(shoulderX, shoulderY);
+    ctx.stroke();
+
+    // Arms pressing
+    ctx.strokeStyle = "#FBBF24";
+    ctx.lineWidth = 7;
+    const elbowX = shoulderX + (dip * 12);
+    const elbowY = shoulderY + (handY - shoulderY) * 0.55 + (dip * 6);
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shoulderY);
+    ctx.lineTo(elbowX, elbowY);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+
+    // Core alignment guide
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.7)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(feetX, feetY);
+    ctx.lineTo(shoulderX + 16, shoulderY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Head
+    drawCartoonHead(ctx, shoulderX + 18, shoulderY - 8, dip * 0.1, t > 0.45 && t < 0.55, false);
+}
+
+// 4. CARTOON CAT-COW
+function drawCartoonCatCow(ctx, t, cx, cy, cueEl) {
+    const wave = Math.sin(t * Math.PI * 2); // > 0 Cow, < 0 Cat
+
+    if (cueEl) {
+        if (wave > 0.2) cueEl.textContent = "🌬️ INHALE: DROP BELLY & LIFT CHIN (COW)";
+        else if (wave < -0.2) cueEl.textContent = "💨 EXHALE: ROUND SPINE TO CEILING (CAT)";
+        else cueEl.textContent = "🔄 TRANSITION WITH BREATHING";
+    }
+
+    const matY = cy - 8;
+    const kneeX = cx - 55;
+    const handX = cx + 55;
+
+    // Hands and knees on mat
+    ctx.fillStyle = "#10B981";
+    roundRect(ctx, kneeX - 8, matY - 4, 18, 6, 3, true, false);
+    roundRect(ctx, handX - 8, matY - 4, 18, 6, 3, true, false);
+
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+    // Thighs
+    ctx.beginPath();
+    ctx.moveTo(kneeX, matY);
+    ctx.lineTo(kneeX, matY - 40);
+    ctx.stroke();
+    // Arms
+    ctx.beginPath();
+    ctx.moveTo(handX, matY);
+    ctx.lineTo(handX, matY - 40);
+    ctx.stroke();
+
+    // Torso / Jersey undulating spine
+    const archY = (matY - 42) + (wave * 18); // dip down or arch up
+    ctx.strokeStyle = "#7C3AED";
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.moveTo(kneeX, matY - 40);
+    ctx.quadraticCurveTo(cx, archY, handX, matY - 40);
+    ctx.stroke();
+
+    // Cyan spinal alignment accent
+    ctx.strokeStyle = wave > 0 ? "#10B981" : "#06B6D4";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(kneeX, matY - 40);
+    ctx.quadraticCurveTo(cx, archY, handX, matY - 40);
+    ctx.stroke();
+
+    // Head tilting
+    const headAngle = wave > 0 ? -0.25 : 0.25;
+    const headY = (matY - 48) - (wave * 10);
+    drawCartoonHead(ctx, handX + 16, headY, headAngle, false, wave > 0);
+
+    // Floating breathing bubbles
+    const bubbleP = (t * 2) % 1;
+    ctx.fillStyle = "rgba(34, 211, 238, " + (0.5 * (1 - bubbleP)) + ")";
+    ctx.beginPath();
+    ctx.arc(handX + 32, headY - 10 - bubbleP * 24, 3 + bubbleP * 3, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// 5. CARTOON PLANK
+function drawCartoonPlank(ctx, t, cx, cy, cueEl) {
+    if (cueEl) {
+        cueEl.textContent = "🔒 LOCK ABDOMINALS · NO SAGGING HIPS";
+    }
+
+    const feetX = cx - 90;
+    const feetY = cy - 12;
+    const elbowX = cx + 45;
+    const elbowY = cy - 8;
+    const tremor = Math.sin(t * Math.PI * 12) * 0.7;
+
+    // Feet & Forearms on mat
+    ctx.fillStyle = "#10B981";
+    roundRect(ctx, feetX - 8, feetY, 16, 6, 3, true, false);
+    roundRect(ctx, elbowX - 8, elbowY, 26, 6, 3, true, false);
+
+    // Straight Body line
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 13;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(feetX, feetY + tremor);
+    ctx.lineTo(elbowX, cy - 42 + tremor);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#7C3AED";
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(feetX + 30, feetY - 8 + tremor);
+    ctx.lineTo(elbowX, cy - 42 + tremor);
+    ctx.stroke();
+
+    // Forearm vertical support
+    ctx.strokeStyle = "#FBBF24";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(elbowX, cy - 42 + tremor);
+    ctx.lineTo(elbowX, elbowY);
+    ctx.stroke();
+
+    // Core Glowing Shield
+    const corePulse = (1 + Math.sin(t * Math.PI * 4)) * 4;
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.85)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(cx - 15, cy - 25 + tremor, 14 + corePulse, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Head
+    drawCartoonHead(ctx, elbowX + 18, cy - 42 + tremor, 0.05, false, false);
+}
+
+// 6. CARTOON GLUTE BRIDGES
+function drawCartoonGluteBridge(ctx, t, cx, cy, cueEl) {
+    const lift = (1 - Math.cos(t * Math.PI * 2)) / 2;
+    const pelvisLift = 34 * lift;
+
+    if (cueEl) {
+        if (lift > 0.85) cueEl.textContent = "▲ SQUEEZE GLUTES & HOLD AT TOP";
+        else if (t < 0.5) cueEl.textContent = "⬆️ DRIVE PELVIS UPWARD (EXHALE)";
+        else cueEl.textContent = "⬇️ LOWER SLOWLY TO MAT (INHALE)";
+    }
+
+    const headX = cx - 85;
+    const headY = cy - 14;
+    const feetX = cx + 55;
+    const feetY = cy - 10;
+    const hipX = cx;
+    const hipY = cy - 20 - pelvisLift;
+
+    // Feet planted
+    ctx.fillStyle = "#10B981";
+    roundRect(ctx, feetX - 6, feetY, 20, 6, 3, true, false);
+
+    // Torso ramp to bridge
+    ctx.strokeStyle = "#0F172A";
+    ctx.lineWidth = 11;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(headX + 20, cy - 14);
+    ctx.lineTo(hipX, hipY);
+    ctx.lineTo(feetX, feetY);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#10B981";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(headX + 20, cy - 14);
+    ctx.lineTo(hipX, hipY);
+    ctx.lineTo(feetX, feetY);
+    ctx.stroke();
+
+    // Glute pulse at peak
+    if (lift > 0.75) {
+        ctx.fillStyle = "rgba(16, 185, 129, 0.8)";
+        ctx.beginPath();
+        ctx.arc(hipX, hipY, 12, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawCartoonHead(ctx, headX, headY, -0.15, false, lift > 0.8);
+}
+
+// 7. CARTOON SURYA NAMASKAR (SUN SALUTATIONS)
+function drawCartoonSurya(ctx, t, cx, cy, cueEl) {
+    const phase = (t * 4) % 4;
+    const stage = Math.floor(phase);
+    const subT = phase - stage;
+
+    // Radiant Sun with rotating rays in background
+    const sunAngle = t * Math.PI * 2;
+    ctx.save();
+    ctx.translate(cx, cy - 105);
+    const sunGlow = ctx.createRadialGradient(0, 0, 8, 0, 0, 48);
+    sunGlow.addColorStop(0, "rgba(251, 191, 36, 0.45)");
+    sunGlow.addColorStop(1, "rgba(251, 191, 36, 0)");
+    ctx.fillStyle = sunGlow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 48, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(245, 158, 11, 0.35)";
+    ctx.strokeStyle = "#F59E0B";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    for (let i = 0; i < 8; i++) {
+        const ang = sunAngle + (i * Math.PI / 4);
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ang) * 26, Math.sin(ang) * 26);
+        ctx.lineTo(Math.cos(ang) * 36, Math.sin(ang) * 36);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    if (stage === 0) {
+        // 1. PRANAMASANA (Prayer Posture)
+        if (cueEl) cueEl.textContent = "1. PRANAMASANA · PRAYER POSTURE (MEDITATION)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 3, 26, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Feet planted together
+        ctx.fillStyle = "#10B981";
+        roundRect(ctx, cx - 14, cy - 8, 12, 6, 2, true, false);
+        roundRect(ctx, cx + 2, cy - 8, 12, 6, 2, true, false);
+
+        // Legs standing straight
+        ctx.strokeStyle = "#0F172A";
+        ctx.lineWidth = 7;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, cy - 68); ctx.lineTo(cx - 7, cy - 6);
+        ctx.moveTo(cx + 7, cy - 68); ctx.lineTo(cx + 7, cy - 6);
+        ctx.stroke();
+
+        // Torso / Jersey
+        ctx.fillStyle = "#7C3AED";
+        ctx.strokeStyle = "#0F172A";
+        ctx.lineWidth = 2.5;
+        roundRect(ctx, cx - 14, cy - 96, 28, 32, 6, true, true);
+
+        // Arms folded in prayer at heart
+        ctx.strokeStyle = "#FBBF24";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, cy - 90);
+        ctx.lineTo(cx - 3, cy - 80);
+        ctx.lineTo(cx, cy - 84);
+        ctx.moveTo(cx + 12, cy - 90);
+        ctx.lineTo(cx + 3, cy - 80);
+        ctx.lineTo(cx, cy - 84);
+        ctx.stroke();
+
+        drawCartoonHead(ctx, cx, cy - 108, 0, subT > 0.4 && subT < 0.6, true);
+
+    } else if (stage === 1) {
+        // 2. HASTAUTTANASANA (Raised Arms Arch)
+        if (cueEl) cueEl.textContent = "2. HASTAUTTANASANA · RAISED ARMS ARCH (INHALE)";
+        const arch = Math.sin(subT * Math.PI) * 0.12;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 3, 26, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#10B981";
+        roundRect(ctx, cx - 14, cy - 8, 12, 6, 2, true, false);
+        roundRect(ctx, cx + 2, cy - 8, 12, 6, 2, true, false);
+
+        ctx.strokeStyle = "#0F172A";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, cy - 68); ctx.lineTo(cx - 7, cy - 6);
+        ctx.moveTo(cx + 7, cy - 68); ctx.lineTo(cx + 7, cy - 6);
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx, cy - 68);
+        ctx.rotate(-arch);
+        ctx.fillStyle = "#7C3AED";
+        ctx.strokeStyle = "#0F172A";
+        ctx.lineWidth = 2.5;
+        roundRect(ctx, -14, -28, 28, 32, 6, true, true);
+
+        ctx.strokeStyle = "#FBBF24";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-11, -22); ctx.lineTo(-14, -55);
+        ctx.moveTo(11, -22); ctx.lineTo(14, -55);
+        ctx.stroke();
+
+        drawCartoonHead(ctx, 0, -40, -arch, false, true);
+        ctx.restore();
+
+    } else if (stage === 2) {
+        // 3. PADAHASTASANA (Forward Fold)
+        if (cueEl) cueEl.textContent = "3. PADAHASTASANA · FORWARD FOLD (EXHALE)";
+        const foldDepth = 0.8 + Math.sin(subT * Math.PI) * 0.2;
+
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 3, 26, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#10B981";
+        roundRect(ctx, cx - 14, cy - 8, 12, 6, 2, true, false);
+        roundRect(ctx, cx + 2, cy - 8, 12, 6, 2, true, false);
+
+        ctx.strokeStyle = "#0F172A";
+        ctx.lineWidth = 8;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 68);
+        ctx.lineTo(cx, cy - 6);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#7C3AED";
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 68);
+        ctx.lineTo(cx - 18 * foldDepth, cy - 22);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#FBBF24";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, cy - 35);
+        ctx.lineTo(cx - 2, cy - 8);
+        ctx.stroke();
+
+        drawCartoonHead(ctx, cx - 22, cy - 18, 1.4, false, false);
+
+    } else {
+        // 4. BHUJANGASANA (Cobra Pose)
+        if (cueEl) cueEl.textContent = "4. BHUJANGASANA · COBRA POSE (INHALE)";
+        const archPulse = Math.sin(subT * Math.PI) * 8;
+
+        const feetX = cx - 90;
+        const chestX = cx + 30;
+        const handX = cx + 25;
+
+        ctx.fillStyle = "#10B981";
+        roundRect(ctx, feetX - 10, cy - 10, 18, 6, 3, true, false);
+        roundRect(ctx, handX - 8, cy - 8, 18, 6, 3, true, false);
+
+        ctx.strokeStyle = "#0F172A";
+        ctx.lineWidth = 9;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(feetX, cy - 8);
+        ctx.lineTo(cx - 10, cy - 8);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#7C3AED";
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, cy - 8);
+        ctx.quadraticCurveTo(cx + 8, cy - 12, chestX, cy - 42 - archPulse);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#FBBF24";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(chestX - 5, cy - 35 - archPulse);
+        ctx.lineTo(handX, cy - 6);
+        ctx.stroke();
+
+        drawCartoonHead(ctx, chestX + 16, cy - 50 - archPulse, -0.3, false, true);
+    }
+}
+
+// 8. CARTOON CHILD'S POSE
+function drawCartoonChildPose(ctx, t, cx, cy, cueEl) {
+    if (cueEl) cueEl.textContent = "🧘 REST HIPS ON HEELS · DECOMPRESS SPINE";
+
+    const breath = Math.sin(t * Math.PI * 2) * 3;
+    const matY = cy - 8;
+
+    // Knees & Feet folded
+    ctx.fillStyle = "#0F172A";
+    roundRect(ctx, cx - 70, matY - 8, 28, 10, 4, true, false);
+
+    // Torso resting forward in purple jersey
+    ctx.strokeStyle = "#7C3AED";
+    ctx.lineWidth = 14;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - 55, matY - 14);
+    ctx.quadraticCurveTo(cx - 10, matY - 30 + breath, cx + 35, matY - 10);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#22D3EE";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx - 55, matY - 14);
+    ctx.quadraticCurveTo(cx - 10, matY - 30 + breath, cx + 35, matY - 10);
+    ctx.stroke();
+
+    // Arms stretching forward
+    ctx.strokeStyle = "#FBBF24";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(cx + 25, matY - 18);
+    ctx.lineTo(cx + 85, matY - 6);
+    ctx.stroke();
+
+    drawCartoonHead(ctx, cx + 45, matY - 16, 0.8, false, false);
+}
+
+// 9. CARTOON MOBILITY
+function drawCartoonMobility(ctx, t, cx, cy, cueEl) {
+    if (cueEl) cueEl.textContent = "🔄 FULL RANGE SHOULDER & MOBILITY ROTATION";
+    drawCartoonSquat(ctx, 0, cx, cy, null);
+
+    // Circular arm trail
+    const armAngle = t * Math.PI * 2;
+    ctx.strokeStyle = "#C084FC";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(cx - 15, cy - 70);
+    ctx.lineTo(cx - 15 + Math.cos(armAngle) * 32, cy - 70 + Math.sin(armAngle) * 32);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(cx + 15, cy - 70);
+    ctx.lineTo(cx + 15 + Math.cos(armAngle + Math.PI) * 32, cy - 70 + Math.sin(armAngle + Math.PI) * 32);
+    ctx.stroke();
+}
+
 
 /* =====================================================
    POPUP EXERCISE MODE & SEQUENTIAL STEP PROGRESSION
@@ -2958,6 +3722,7 @@ function openExerciseModePopup(targetStepIndex = null) {
 }
 
 function closeExerciseModePopup() {
+    stopCartoonVideoPlayer();
     stopPopupStepTimer();
     const modal = document.getElementById("exerciseModePopupModal");
     if (modal) {
@@ -2989,6 +3754,7 @@ function renderPopupExerciseStep() {
 
     // If all completed, show celebration view inside popup
     if (isFinished) {
+        stopCartoonVideoPlayer();
         if (activeSection) activeSection.classList.add("hidden");
         if (celebSection) celebSection.classList.remove("hidden");
         if (counterEl) counterEl.textContent = `ALL ${total} STEPS COMPLETED`;
@@ -3033,7 +3799,9 @@ function renderPopupExerciseStep() {
 
     if (badgeEl) badgeEl.textContent = `⚡ ${ordinal.toUpperCase()} EXERCISE · ACTIVE`;
     if (timingEl) timingEl.textContent = `${curEx.duration} · ${curEx.reps}`;
-    if (diagramEl) diagramEl.innerHTML = getExerciseIllustrationSVG(curEx.key, curEx.name);
+    if (diagramEl) {
+        mountCartoonVideoPlayer(diagramEl, curEx.key, curEx.name);
+    }
     if (nameEl) nameEl.textContent = curEx.name;
 
     if (pillsEl) {
