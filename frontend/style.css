@@ -5677,3 +5677,385 @@ h2 {
 }
 
 
+/* =========================================================
+   CARTOON EXERCISE VIDEO PLAYER & 60FPS MOTION ANIMATIONS
+========================================================= */
+
+.exercise-popup-diagram-box,
+.active-exercise-diagram-box {
+    width: 100% !important;
+    min-height: 250px !important;
+    max-height: 300px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 14px !important;
+    overflow: hidden !important;
+}
+
+.cartoon-video-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+    background: radial-gradient(circle at 50% 35%, #1c0e3a 0%, #0d061f 55%, #05020c 100%);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    user-select: none;
+    box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.8), 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 25px rgba(168, 85, 247, 0.2);
+}
+
+/* Video Topbar */
+.cartoon-video-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: linear-gradient(180deg, rgba(12, 6, 26, 0.88), transparent);
+    z-index: 5;
+}
+
+.video-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #F8FAFC;
+    letter-spacing: 0.08em;
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.live-dot {
+    width: 6.5px;
+    height: 6.5px;
+    border-radius: 50%;
+    background: #EF4444;
+    box-shadow: 0 0 8px #EF4444;
+    animation: liveBlink 1.4s infinite ease-in-out;
+}
+
+@keyframes liveBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.25; transform: scale(0.8); }
+}
+
+.video-speed-group {
+    display: flex;
+    gap: 5px;
+}
+
+.video-speed-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #CBD5E1;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.video-speed-btn:hover,
+.video-speed-btn.active {
+    background: rgba(168, 85, 247, 0.35);
+    border-color: #C084FC;
+    color: #FFFFFF;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+}
+
+/* Video Stage */
+.cartoon-video-stage {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.cartoon-video-stage svg {
+    width: 100%;
+    height: 195px;
+    max-height: 205px;
+    display: block;
+}
+
+/* Video Bottom Controls */
+.cartoon-video-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 14px;
+    background: linear-gradient(0deg, rgba(8, 3, 18, 0.94), transparent);
+    z-index: 5;
+    border-top: 1px solid rgba(168, 85, 247, 0.18);
+}
+
+.cartoon-play-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A855F7, #06B6D4);
+    border: none;
+    color: #FFFFFF;
+    font-size: 11px;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+    transition: all 0.2s ease;
+}
+
+.cartoon-play-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 18px rgba(168, 85, 247, 0.7);
+}
+
+.cartoon-progress-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.cartoon-progress-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #A855F7, #22D3EE);
+    border-radius: 999px;
+    animation: scrubberCycle 3s infinite linear;
+}
+
+@keyframes scrubberCycle {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.cartoon-cue-badge {
+    font-size: 10px;
+    font-weight: 800;
+    color: #22D3EE;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+    white-space: nowrap;
+}
+
+/* PAUSED STATE */
+.video-paused .anim-character,
+.video-paused .cartoon-progress-fill {
+    animation-play-state: paused !important;
+}
+
+/* SPEED MODIFIERS */
+.video-speed-075 .anim-character,
+.video-speed-075 .cartoon-progress-fill {
+    animation-duration: 4.2s !important;
+}
+
+.video-speed-125 .anim-character,
+.video-speed-125 .cartoon-progress-fill {
+    animation-duration: 2.1s !important;
+}
+
+
+/* =========================================================
+   CARTOON CHARACTER MOVEMENT KEYFRAME ANIMATIONS
+========================================================= */
+
+/* 1. SQUAT ANIMATION */
+@keyframes squatMove {
+    0%, 100% { transform: translateY(0); }
+    45%, 55% { transform: translateY(32px); }
+}
+
+@keyframes squatArmSwing {
+    0%, 100% { transform: rotate(0deg); transform-origin: 150px 75px; }
+    45%, 55% { transform: rotate(-55deg); transform-origin: 150px 75px; }
+}
+
+@keyframes squatKneeFlex {
+    0%, 100% { transform: scaleX(1); transform-origin: 150px 120px; }
+    45%, 55% { transform: scaleX(1.35); transform-origin: 150px 120px; }
+}
+
+@keyframes squatShadow {
+    0%, 100% { transform: scaleX(1); opacity: 0.4; }
+    45%, 55% { transform: scaleX(1.3); opacity: 0.75; }
+}
+
+.anim-squat-body {
+    animation: squatMove 2.8s infinite ease-in-out;
+}
+
+.anim-squat-arms {
+    animation: squatArmSwing 2.8s infinite ease-in-out;
+}
+
+.anim-squat-knees {
+    animation: squatKneeFlex 2.8s infinite ease-in-out;
+}
+
+.anim-squat-shadow {
+    animation: squatShadow 2.8s infinite ease-in-out;
+}
+
+/* 2. JUMPING JACKS ANIMATION */
+@keyframes jackJumpLoop {
+    0%, 100% { transform: translateY(0) scaleY(0.95); }
+    15% { transform: translateY(4px) scaleY(0.92); } /* dip before jump */
+    45%, 55% { transform: translateY(-26px) scaleY(1.05); } /* peak jump */
+    85% { transform: translateY(2px) scaleY(0.94); } /* landing absorb */
+}
+
+@keyframes jackLeftArm {
+    0%, 100% { transform: rotate(12deg); transform-origin: 140px 65px; }
+    45%, 55% { transform: rotate(162deg); transform-origin: 140px 65px; }
+}
+
+@keyframes jackRightArm {
+    0%, 100% { transform: rotate(-12deg); transform-origin: 160px 65px; }
+    45%, 55% { transform: rotate(-162deg); transform-origin: 160px 65px; }
+}
+
+@keyframes jackLeftLeg {
+    0%, 100% { transform: rotate(0deg); transform-origin: 145px 105px; }
+    45%, 55% { transform: rotate(-24deg); transform-origin: 145px 105px; }
+}
+
+@keyframes jackRightLeg {
+    0%, 100% { transform: rotate(0deg); transform-origin: 155px 105px; }
+    45%, 55% { transform: rotate(24deg); transform-origin: 155px 105px; }
+}
+
+@keyframes jackClapStar {
+    0%, 35%, 65%, 100% { opacity: 0; transform: scale(0.4); }
+    48%, 52% { opacity: 1; transform: scale(1.3); }
+}
+
+.anim-jack-jump {
+    animation: jackJumpLoop 1.6s infinite ease-in-out;
+}
+
+.anim-jack-leftarm {
+    animation: jackLeftArm 1.6s infinite ease-in-out;
+}
+
+.anim-jack-rightarm {
+    animation: jackRightArm 1.6s infinite ease-in-out;
+}
+
+.anim-jack-leftleg {
+    animation: jackLeftLeg 1.6s infinite ease-in-out;
+}
+
+.anim-jack-rightleg {
+    animation: jackRightLeg 1.6s infinite ease-in-out;
+}
+
+.anim-jack-star {
+    animation: jackClapStar 1.6s infinite ease-in-out;
+    transform-origin: 150px 22px;
+}
+
+/* 3. PUSH-UP ANIMATION */
+@keyframes pushupTorso {
+    0%, 100% { transform: translateY(0) rotate(0deg); transform-origin: 65px 125px; }
+    45%, 55% { transform: translateY(22px) rotate(2deg); transform-origin: 65px 125px; }
+}
+
+@keyframes pushupArms {
+    0%, 100% { transform: scaleY(1); transform-origin: 215px 130px; }
+    45%, 55% { transform: scaleY(0.48); transform-origin: 215px 130px; }
+}
+
+@keyframes pushupCoreGlow {
+    0%, 100% { opacity: 0.3; stroke: #06B6D4; }
+    45%, 55% { opacity: 1; stroke: #10B981; filter: drop-shadow(0 0 6px #10B981); }
+}
+
+.anim-pushup-body {
+    animation: pushupTorso 2.4s infinite ease-in-out;
+}
+
+.anim-pushup-arms {
+    animation: pushupArms 2.4s infinite ease-in-out;
+}
+
+.anim-pushup-core {
+    animation: pushupCoreGlow 2.4s infinite ease-in-out;
+}
+
+/* 4. CAT-COW ANIMATION */
+@keyframes catCowSpineLoop {
+    0%, 100% {
+        d: path("M 85 96 Q 145 60 205 82");
+    }
+    50% {
+        d: path("M 85 96 Q 145 118 205 82");
+    }
+}
+
+@keyframes catCowHead {
+    0%, 100% { transform: translateY(8px) rotate(-15deg); transform-origin: 215px 75px; }
+    50% { transform: translateY(-8px) rotate(18deg); transform-origin: 215px 75px; }
+}
+
+.anim-catcow-spine {
+    animation: catCowSpineLoop 3.6s infinite ease-in-out;
+}
+
+.anim-catcow-head {
+    animation: catCowHead 3.6s infinite ease-in-out;
+}
+
+/* 5. GLUTE BRIDGE ANIMATION */
+@keyframes gluteHips {
+    0%, 100% { transform: translateY(0); transform-origin: 75px 125px; }
+    45%, 55% { transform: translateY(-32px); transform-origin: 75px 125px; }
+}
+
+.anim-glute-hips {
+    animation: gluteHips 3s infinite ease-in-out;
+}
+
+/* 6. PLANK ANIMATION */
+@keyframes plankTremorLoop {
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(0.8px); }
+    50% { transform: translateY(-0.8px); }
+    75% { transform: translateY(0.5px); }
+}
+
+@keyframes corePulseRing {
+    0%, 100% { transform: scale(0.9); opacity: 0.35; }
+    50% { transform: scale(1.15); opacity: 0.95; filter: drop-shadow(0 0 8px #06B6D4); }
+}
+
+.anim-plank-body {
+    animation: plankTremorLoop 1.8s infinite ease-in-out;
+}
+
+.anim-core-ring {
+    animation: corePulseRing 1.8s infinite ease-in-out;
+    transform-origin: 145px 105px;
+}
+
+
+

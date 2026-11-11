@@ -2524,183 +2524,263 @@ function getWorkoutProgressStorageKey() {
     return `aeriva_workout_step_prog_${userId}_${dateKey}`;
 }
 
-function getExerciseIllustrationSVG(key, name) {
+function toggleCartoonVideo(btn) {
+    const wrapper = btn.closest('.cartoon-video-wrapper');
+    if (!wrapper) return;
+    wrapper.classList.toggle('video-paused');
+    const isPaused = wrapper.classList.contains('video-paused');
+    btn.innerHTML = isPaused ? '▶' : '⏸';
+    btn.title = isPaused ? 'Play Cartoon Video' : 'Pause Cartoon Video';
+}
+
+function setCartoonSpeed(btn, speed) {
+    const wrapper = btn.closest('.cartoon-video-wrapper');
+    if (!wrapper) return;
+    wrapper.classList.remove('video-speed-075', 'video-speed-125');
+    wrapper.querySelectorAll('.video-speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (speed === 0.75) wrapper.classList.add('video-speed-075');
+    if (speed === 1.25) wrapper.classList.add('video-speed-125');
+}
+
+function getExerciseCartoonVideoHTML(key, name) {
     const k = (key || "").toLowerCase();
     const n = (name || "").toLowerCase();
 
-    if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("cat cow") || n.includes("spine")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <rect x="25" y="125" width="250" height="4" rx="2" fill="rgba(6,182,212,0.25)" stroke="#06B6D4" stroke-width="1"/>
-            <circle cx="210" cy="72" r="10" fill="#67E8F9"/>
-            <line x1="200" y1="80" x2="200" y2="125" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <line x1="90" y1="95" x2="90" y2="125" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <line x1="90" y1="125" x2="60" y2="125" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
-            <!-- Cow belly drop curve -->
-            <path d="M 90 95 Q 145 106 200 80" fill="none" stroke="#10B981" stroke-width="4" stroke-linecap="round"/>
-            <!-- Cat back arch curve (dashed) -->
-            <path d="M 90 95 Q 145 52 200 80" fill="none" stroke="#67E8F9" stroke-width="3" stroke-dasharray="5 4" stroke-linecap="round"/>
-            <path d="M 145 68 L 145 56 M 141 60 L 145 56 L 149 60" stroke="#67E8F9" stroke-width="2" fill="none" stroke-linecap="round"/>
-            <path d="M 145 88 L 145 100 M 141 96 L 145 100 L 149 96" stroke="#10B981" stroke-width="2" fill="none" stroke-linecap="round"/>
-            <text x="145" y="44" fill="#67E8F9" font-size="9" font-weight="900" text-anchor="middle">▲ EXHALE: ROUND SPINE (CAT POSE)</text>
-            <text x="145" y="118" fill="#10B981" font-size="9" font-weight="900" text-anchor="middle">▼ INHALE: DROP BELLY & LIFT CHIN (COW)</text>
-        </svg>`;
-    }
+    let cue = "FORM & MOVEMENT GUIDE";
+    let svgContent = "";
 
-    if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <circle cx="150" cy="30" r="14" fill="rgba(245,158,11,0.25)" stroke="#F59E0B" stroke-width="1.5"/>
-            <path d="M 150 10 L 150 6 M 150 50 L 150 54 M 130 30 L 126 30 M 170 30 L 174 30" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"/>
-            <rect x="25" y="130" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
-            <!-- 1. Prayer -->
-            <circle cx="65" cy="55" r="8" fill="#F8FAFC"/>
-            <line x1="65" y1="63" x2="65" y2="102" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="65" y1="102" x2="60" y2="130" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
-            <line x1="65" y1="102" x2="70" y2="130" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
-            <path d="M 65 72 L 72 78 L 72 70" stroke="#67E8F9" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <text x="65" y="144" fill="#94A3B8" font-size="8.5" font-weight="bold" text-anchor="middle">1. PRAYER</text>
-            <!-- Flow 1 -->
-            <path d="M 90 85 Q 115 75 135 90" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
-            <!-- 2. Forward Fold -->
-            <circle cx="155" cy="100" r="8" fill="#F8FAFC"/>
-            <line x1="170" y1="130" x2="160" y2="90" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="160" y1="90" x2="155" y2="105" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="160" y1="90" x2="168" y2="128" stroke="#67E8F9" stroke-width="2.5" stroke-linecap="round"/>
-            <text x="160" y="144" fill="#94A3B8" font-size="8.5" font-weight="bold" text-anchor="middle">2. FORWARD FOLD</text>
-            <!-- Flow 2 -->
-            <path d="M 185 95 Q 205 80 220 100" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
-            <!-- 3. Cobra Pose -->
-            <circle cx="260" cy="80" r="8" fill="#67E8F9"/>
-            <line x1="255" y1="88" x2="255" y2="130" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
-            <path d="M 255 95 Q 240 120 205 130" fill="none" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
-            <text x="245" y="144" fill="#10B981" font-size="8.5" font-weight="bold" text-anchor="middle">3. COBRA</text>
-        </svg>`;
-    }
-
-    if (k.includes("glute") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <rect x="20" y="128" width="260" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
-            <circle cx="55" cy="120" r="9" fill="#67E8F9"/>
-            <line x1="55" y1="124" x2="85" y2="120" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <line x1="80" y1="124" x2="130" y2="126" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"/>
-            <!-- Elevated hips -->
-            <line x1="85" y1="120" x2="160" y2="78" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
-            <line x1="160" y1="78" x2="215" y2="78" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
-            <line x1="215" y1="78" x2="215" y2="128" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <!-- Upward force arrows -->
-            <path d="M 160 115 L 160 88 M 155 94 L 160 88 L 165 94" stroke="#10B981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <path d="M 185 115 L 185 88 M 180 94 L 185 88 L 190 94" stroke="#10B981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            <text x="175" y="60" fill="#10B981" font-size="9.5" font-weight="900" text-anchor="middle">▲ DRIVE HIPS & SQUEEZE GLUTES ▲</text>
-            <text x="150" y="143" fill="#94A3B8" font-size="8.5" text-anchor="middle">Hold 2s at peak elevation · Keep feet flat & knees stable</text>
-        </svg>`;
-    }
-
-    if (k.includes("child") || n.includes("child") || n.includes("hip opener")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <rect x="20" y="125" width="260" height="4" rx="2" fill="rgba(6,182,212,0.2)"/>
-            <line x1="50" y1="125" x2="80" y2="125" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="80" y1="125" x2="105" y2="110" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <path d="M 75 105 Q 120 90 170 112" fill="none" stroke="#67E8F9" stroke-width="4.5" stroke-linecap="round"/>
-            <circle cx="185" cy="115" r="8" fill="#67E8F9"/>
-            <line x1="140" y1="102" x2="245" y2="123" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
-            <path d="M 230 112 L 255 112 M 250 108 L 255 112 L 250 116" stroke="#10B981" stroke-width="2" fill="none" stroke-linecap="round"/>
-            <text x="150" y="55" fill="#67E8F9" font-size="9.5" font-weight="900" text-anchor="middle">REST HIPS ON HEELS · REACH FINGERS FORWARD</text>
-            <text x="150" y="75" fill="#94A3B8" font-size="8.5" text-anchor="middle">Slow diaphragmatic breathing decompresses lumbar spine</text>
-        </svg>`;
-    }
-
+    // 1. SQUATS & LUNGES
     if (k.includes("squat") || n.includes("squat") || n.includes("lunge")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <rect x="25" y="132" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
-            <!-- Standing -->
-            <circle cx="80" cy="38" r="8" fill="#94A3B8"/>
-            <line x1="80" y1="46" x2="80" y2="85" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="80" y1="85" x2="75" y2="132" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
-            <line x1="80" y1="85" x2="85" y2="132" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
-            <path d="M 105 75 Q 140 65 170 80" fill="none" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4 3"/>
-            <!-- Deep Squat -->
-            <circle cx="210" cy="58" r="9" fill="#67E8F9"/>
-            <line x1="210" y1="67" x2="185" y2="100" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <line x1="205" y1="75" x2="245" y2="75" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
-            <line x1="185" y1="100" x2="230" y2="100" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
-            <line x1="230" y1="100" x2="225" y2="132" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
-            <text x="200" y="40" fill="#10B981" font-size="9.5" font-weight="900" text-anchor="middle">THIGHS PARALLEL · WEIGHT ON HEELS</text>
-            <text x="200" y="145" fill="#67E8F9" font-size="8.5" text-anchor="middle">Knees track over toes · Chest stays upright</text>
+        cue = "⬇️ INHALE DOWN (2s) · ⬆️ EXHALE DRIVE (1s)";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="gymMatGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.8"/>
+                    <stop offset="100%" stop-color="#06B6D4" stop-opacity="0.8"/>
+                </linearGradient>
+            </defs>
+            <rect x="20" y="162" width="280" height="6" rx="3" fill="url(#gymMatGrad)"/>
+            <ellipse cx="160" cy="162" rx="42" ry="7" fill="rgba(0,0,0,0.6)" class="anim-character anim-squat-shadow"/>
+            <g class="anim-character anim-squat-body">
+                <rect x="145" y="72" width="30" height="42" rx="10" fill="#1E293B" stroke="#38BDF8" stroke-width="2.5"/>
+                <rect x="146" y="106" width="28" height="6" rx="2" fill="#06B6D4"/>
+                <circle cx="160" cy="50" r="18" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+                <rect x="142" y="44" width="36" height="6" rx="2" fill="#06B6D4"/>
+                <circle cx="155" cy="50" r="2.5" fill="#0F172A"/>
+                <circle cx="165" cy="50" r="2.5" fill="#0F172A"/>
+                <path d="M 155 58 Q 160 62 165 58" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
+                <g class="anim-character anim-squat-arms">
+                    <line x1="145" y1="80" x2="115" y2="92" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="115" y1="92" x2="90" y2="92" stroke="#FDE047" stroke-width="5.5" stroke-linecap="round"/>
+                    <circle cx="90" cy="92" r="5" fill="#38BDF8"/>
+                    <line x1="175" y1="80" x2="205" y2="92" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="205" y1="92" x2="230" y2="92" stroke="#FDE047" stroke-width="5.5" stroke-linecap="round"/>
+                    <circle cx="230" cy="92" r="5" fill="#38BDF8"/>
+                </g>
+                <g class="anim-character anim-squat-knees">
+                    <line x1="150" y1="112" x2="132" y2="138" stroke="#38BDF8" stroke-width="7" stroke-linecap="round"/>
+                    <line x1="132" y1="138" x2="135" y2="162" stroke="#0F172A" stroke-width="6.5" stroke-linecap="round"/>
+                    <rect x="126" y="158" width="18" height="6" rx="3" fill="#10B981"/>
+                    <line x1="170" y1="112" x2="188" y2="138" stroke="#38BDF8" stroke-width="7" stroke-linecap="round"/>
+                    <line x1="188" y1="138" x2="185" y2="162" stroke="#0F172A" stroke-width="6.5" stroke-linecap="round"/>
+                    <rect x="176" y="158" width="18" height="6" rx="3" fill="#10B981"/>
+                </g>
+            </g>
+            <text x="160" y="24" fill="#38BDF8" font-size="10" font-weight="900" text-anchor="middle">✓ CHEST PROUD · THIGHS PARALLEL</text>
+        </svg>`;
+    }
+    // 2. JUMPING JACKS & CARDIO
+    else if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio")) {
+        cue = "⭐ EXPLOSIVE STAR JUMP · ⚡ SOFT LANDING";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <rect x="25" y="166" width="270" height="6" rx="3" fill="rgba(168,85,247,0.4)"/>
+            <g class="anim-character anim-jack-jump">
+                <path class="anim-character anim-jack-star" d="M 160 12 L 163 22 L 173 22 L 165 28 L 168 38 L 160 32 L 152 38 L 155 28 L 147 22 L 157 22 Z" fill="#FBBF24"/>
+                <rect x="146" y="74" width="28" height="38" rx="8" fill="#7E22CE" stroke="#C084FC" stroke-width="2.5"/>
+                <circle cx="160" cy="52" r="17" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+                <rect x="144" y="46" width="32" height="5" rx="2" fill="#A855F7"/>
+                <circle cx="155" cy="52" r="2.5" fill="#0F172A"/>
+                <circle cx="165" cy="52" r="2.5" fill="#0F172A"/>
+                <path d="M 155 60 Q 160 64 165 60" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
+                <line x1="148" y1="78" x2="115" y2="40" stroke="#FDE047" stroke-width="6" stroke-linecap="round" class="anim-character anim-jack-leftarm"/>
+                <line x1="172" y1="78" x2="205" y2="40" stroke="#FDE047" stroke-width="6" stroke-linecap="round" class="anim-character anim-jack-rightarm"/>
+                <line x1="152" y1="112" x2="130" y2="164" stroke="#A855F7" stroke-width="7" stroke-linecap="round" class="anim-character anim-jack-leftleg"/>
+                <line x1="168" y1="112" x2="190" y2="164" stroke="#A855F7" stroke-width="7" stroke-linecap="round" class="anim-character anim-jack-rightleg"/>
+            </g>
+            <text x="160" y="24" fill="#C084FC" font-size="10" font-weight="900" text-anchor="middle">⚡ RHYTHMIC FULL-BODY CARDIO CADENCE</text>
+        </svg>`;
+    }
+    // 3. PUSH-UPS & MOUNTAIN CLIMBERS
+    else if (k.includes("pushup") || n.includes("push-up") || n.includes("push up") || n.includes("mountain")) {
+        cue = "⬇️ LOWER TO 90° ELBOWS · ⬆️ PRESS UP EXPLOSIVELY";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(6,182,212,0.35)"/>
+            <g class="anim-character anim-pushup-body">
+                <circle cx="65" cy="156" r="6" fill="#10B981"/>
+                <line x1="65" y1="154" x2="235" y2="108" stroke="#0F172A" stroke-width="12" stroke-linecap="round"/>
+                <line x1="65" y1="154" x2="235" y2="108" stroke="#10B981" stroke-width="6" stroke-linecap="round" class="anim-character anim-pushup-core"/>
+                <circle cx="250" cy="100" r="16" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+                <rect x="236" y="94" width="28" height="5" rx="2" fill="#06B6D4"/>
+                <circle cx="256" cy="100" r="2.5" fill="#0F172A"/>
+                <g class="anim-character anim-pushup-arms">
+                    <line x1="220" y1="114" x2="220" y2="158" stroke="#FDE047" stroke-width="7" stroke-linecap="round"/>
+                    <rect x="212" y="156" width="18" height="5" rx="2.5" fill="#06B6D4"/>
+                </g>
+            </g>
+            <text x="160" y="32" fill="#10B981" font-size="10" font-weight="900" text-anchor="middle">✓ KEEP NECK NEUTRAL · ELBOWS AT 45°</text>
+        </svg>`;
+    }
+    // 4. CAT-COW & SPINE MOBILITY
+    else if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("cat cow") || n.includes("spine")) {
+        cue = "🌬️ INHALE: DROP BELLY (COW) · 💨 EXHALE: ROUND SPINE (CAT)";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <rect x="25" y="158" width="270" height="6" rx="3" fill="rgba(6,182,212,0.3)"/>
+            <circle cx="85" cy="154" r="6" fill="#10B981"/>
+            <line x1="85" y1="154" x2="85" y2="110" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="215" cy="154" r="6" fill="#10B981"/>
+            <line x1="215" y1="154" x2="215" y2="110" stroke="#FDE047" stroke-width="7" stroke-linecap="round"/>
+            <path class="anim-character anim-catcow-spine" d="M 85 106 Q 150 75 215 95" fill="none" stroke="#22D3EE" stroke-width="9" stroke-linecap="round"/>
+            <g class="anim-character anim-catcow-head">
+                <circle cx="232" cy="85" r="16" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+                <rect x="220" y="79" width="24" height="4" rx="2" fill="#06B6D4"/>
+                <circle cx="238" cy="85" r="2.5" fill="#0F172A"/>
+            </g>
+            <text x="160" y="32" fill="#22D3EE" font-size="10" font-weight="900" text-anchor="middle">DECOMPRESS VERTEBRAE WITH BREATH</text>
+        </svg>`;
+    }
+    // 5. GLUTE BRIDGES & CORE
+    else if (k.includes("glute") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
+        cue = "▲ SQUEEZE GLUTES AT PEAK ELEVATION (2s)";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="158" width="280" height="6" rx="3" fill="rgba(16,185,129,0.3)"/>
+            <circle cx="65" cy="148" r="15" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+            <line x1="65" y1="154" x2="95" y2="154" stroke="#0F172A" stroke-width="8" stroke-linecap="round"/>
+            <line x1="230" y1="154" x2="230" y2="120" stroke="#0F172A" stroke-width="7" stroke-linecap="round"/>
+            <rect x="220" y="152" width="20" height="6" rx="3" fill="#10B981"/>
+            <g class="anim-character anim-glute-hips">
+                <line x1="95" y1="154" x2="175" y2="105" stroke="#10B981" stroke-width="8.5" stroke-linecap="round"/>
+                <line x1="175" y1="105" x2="230" y2="120" stroke="#10B981" stroke-width="8.5" stroke-linecap="round"/>
+                <circle cx="175" cy="105" r="7" fill="#FBBF24"/>
+            </g>
+            <text x="160" y="32" fill="#10B981" font-size="10" font-weight="900" text-anchor="middle">DRIVE THROUGH HEELS · LEVEL PELVIS</text>
+        </svg>`;
+    }
+    // 6. PLANK
+    else if (k.includes("plank") || n.includes("plank")) {
+        cue = "🔒 LOCK ABDOMINALS · NO SAGGING HIPS";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(6,182,212,0.3)"/>
+            <g class="anim-character anim-plank-body">
+                <circle cx="65" cy="155" r="6" fill="#10B981"/>
+                <line x1="65" y1="154" x2="235" y2="118" stroke="#10B981" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="145" cy="136" r="14" fill="none" stroke="#22D3EE" stroke-width="2.5" stroke-dasharray="4 3" class="anim-core-ring"/>
+                <circle cx="250" cy="112" r="16" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+                <rect x="236" y="106" width="28" height="5" rx="2" fill="#06B6D4"/>
+                <line x1="225" y1="124" x2="225" y2="158" stroke="#FDE047" stroke-width="7" stroke-linecap="round"/>
+                <line x1="225" y1="158" x2="245" y2="158" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
+            </g>
+            <text x="160" y="32" fill="#22D3EE" font-size="10" font-weight="900" text-anchor="middle">STRICT ISOMETRIC HOLLOW-BODY TENSION</text>
+        </svg>`;
+    }
+    // 7. SURYA NAMASKAR (SUN SALUTATIONS)
+    else if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) {
+        cue = "☀️ 12-STEP MEDITATIVE FULL-BODY FLOW";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="160" cy="45" r="28" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" stroke-width="2"/>
+            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(245,158,11,0.3)"/>
+            <g transform="translate(45, 0)">
+                <circle cx="30" cy="65" r="12" fill="#FDE047"/>
+                <line x1="30" y1="77" x2="30" y2="125" stroke="#F59E0B" stroke-width="5" stroke-linecap="round"/>
+                <line x1="30" y1="125" x2="25" y2="160" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+                <text x="30" y="178" fill="#FBBF24" font-size="8" font-weight="800" text-anchor="middle">1. PRAYER</text>
+            </g>
+            <g transform="translate(130, 0)">
+                <circle cx="30" cy="95" r="12" fill="#FDE047"/>
+                <line x1="30" y1="107" x2="30" y2="135" stroke="#06B6D4" stroke-width="5" stroke-linecap="round"/>
+                <line x1="30" y1="135" x2="25" y2="160" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+                <text x="30" y="178" fill="#38BDF8" font-size="8" font-weight="800" text-anchor="middle">2. FOLD</text>
+            </g>
+            <g transform="translate(215, 0)">
+                <circle cx="30" cy="115" r="12" fill="#FDE047"/>
+                <path d="M 10 160 Q 30 145 45 130" stroke="#10B981" stroke-width="5" fill="none" stroke-linecap="round"/>
+                <text x="30" y="178" fill="#34D399" font-size="8" font-weight="800" text-anchor="middle">3. COBRA</text>
+            </g>
+            <text x="160" y="24" fill="#FBBF24" font-size="10" font-weight="900" text-anchor="middle">SYNCHRONIZE EACH TRANSITION WITH BREATH</text>
+        </svg>`;
+    }
+    // 8. CHILD'S POSE & RESTORATIVE
+    else if (k.includes("child") || n.includes("child") || n.includes("hip opener")) {
+        cue = "🧘 REST HIPS ON HEELS · DECOMPRESS";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="160" width="280" height="6" rx="3" fill="rgba(6,182,212,0.3)"/>
+            <ellipse cx="80" cy="155" rx="16" ry="7" fill="#0F172A"/>
+            <path d="M 80 150 Q 130 120 190 145" stroke="#22D3EE" stroke-width="8" fill="none" stroke-linecap="round"/>
+            <circle cx="205" cy="148" r="14" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+            <line x1="165" y1="135" x2="270" y2="157" stroke="#10B981" stroke-width="5.5" stroke-linecap="round"/>
+            <circle cx="272" cy="157" r="4" fill="#38BDF8"/>
+            <text x="160" y="35" fill="#67E8F9" font-size="10" font-weight="900" text-anchor="middle">SLOW DIAPHRAGMATIC BREATHING</text>
+        </svg>`;
+    }
+    // 9. DEFAULT ACTIVE MOBILITY & WORKOUT
+    else {
+        cue = "🔄 CONTROLLED FULL RANGE OF MOTION";
+        svgContent = `
+        <svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg">
+            <rect x="25" y="162" width="270" height="6" rx="3" fill="rgba(168,85,247,0.35)"/>
+            <g class="anim-character anim-squat-body">
+                <rect x="146" y="74" width="28" height="40" rx="8" fill="#1E293B" stroke="#A855F7" stroke-width="2.5"/>
+                <circle cx="160" cy="50" r="17" fill="#FDE047" stroke="#0F172A" stroke-width="2"/>
+                <rect x="144" y="44" width="32" height="5" rx="2" fill="#A855F7"/>
+                <circle cx="155" cy="50" r="2.5" fill="#0F172A"/>
+                <circle cx="165" cy="50" r="2.5" fill="#0F172A"/>
+                <line x1="146" y1="80" x2="110" y2="70" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
+                <line x1="174" y1="80" x2="210" y2="70" stroke="#FDE047" stroke-width="6" stroke-linecap="round"/>
+                <line x1="152" y1="114" x2="140" y2="162" stroke="#A855F7" stroke-width="7" stroke-linecap="round"/>
+                <line x1="168" y1="114" x2="180" y2="162" stroke="#A855F7" stroke-width="7" stroke-linecap="round"/>
+            </g>
+            <text x="160" y="24" fill="#C084FC" font-size="10" font-weight="900" text-anchor="middle">ACTIVE BIOMECHANICAL ALIGNMENT</text>
         </svg>`;
     }
 
-    if (k.includes("pushup") || n.includes("push-up") || n.includes("push up") || n.includes("mountain")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <rect x="25" y="130" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
-            <circle cx="230" cy="85" r="9" fill="#67E8F9"/>
-            <line x1="60" y1="128" x2="225" y2="87" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
-            <line x1="205" y1="92" x2="195" y2="110" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="195" y1="110" x2="205" y2="130" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
-            <path d="M 205 60 L 205 78 M 201 74 L 205 78 L 209 74" stroke="#67E8F9" stroke-width="2" fill="none" stroke-linecap="round"/>
-            <path d="M 220 78 L 220 60 M 216 64 L 220 60 L 224 64" stroke="#10B981" stroke-width="2" fill="none" stroke-linecap="round"/>
-            <text x="150" y="42" fill="#10B981" font-size="9.5" font-weight="900" text-anchor="middle">STRICT PLANK LINE · ELBOWS AT 45°</text>
-            <text x="150" y="144" fill="#94A3B8" font-size="8.5" text-anchor="middle">Lower chest 2 inches from floor, then press up explosively</text>
-        </svg>`;
-    }
-
-    if (k.includes("plank") || n.includes("plank")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <rect x="25" y="128" width="250" height="4" rx="2" fill="rgba(6,182,212,0.2)"/>
-            <line x1="210" y1="128" x2="235" y2="128" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <line x1="210" y1="98" x2="210" y2="128" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <circle cx="230" cy="92" r="9" fill="#67E8F9"/>
-            <line x1="55" y1="126" x2="222" y2="98" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
-            <line x1="45" y1="128" x2="245" y2="92" stroke="#67E8F9" stroke-width="1.5" stroke-dasharray="4 3"/>
-            <text x="150" y="50" fill="#67E8F9" font-size="9.5" font-weight="900" text-anchor="middle">NO SAGGING HIPS · SQUEEZE GLUTES & CORE</text>
-            <text x="150" y="70" fill="#94A3B8" font-size="8.5" text-anchor="middle">Keep neck neutral gazing directly between your thumbs</text>
-        </svg>`;
-    }
-
-    if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio")) {
-        return `
-        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="#020617"/>
-            <rect x="25" y="132" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
-            <circle cx="150" cy="38" r="9" fill="#67E8F9"/>
-            <line x1="150" y1="47" x2="150" y2="90" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-            <line x1="150" y1="58" x2="115" y2="28" stroke="#67E8F9" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="150" y1="58" x2="185" y2="28" stroke="#67E8F9" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="150" y1="90" x2="115" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
-            <line x1="150" y1="90" x2="185" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
-            <text x="150" y="18" fill="#FBBF24" font-size="9.5" font-weight="900" text-anchor="middle">EXPLOSIVE STAR JUMP · LAND SOFTLY</text>
-            <text x="150" y="145" fill="#94A3B8" font-size="8.5" text-anchor="middle">Rhythmic cadence · Stay light on the balls of your feet</text>
-        </svg>`;
-    }
-
-    // Default universal mobility & posture diagram
     return `
-    <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="#020617"/>
-        <rect x="25" y="132" width="250" height="4" rx="2" fill="rgba(6,182,212,0.2)"/>
-        <circle cx="150" cy="40" r="9" fill="#67E8F9"/>
-        <line x1="150" y1="49" x2="150" y2="92" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
-        <line x1="150" y1="92" x2="135" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
-        <line x1="150" y1="92" x2="165" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
-        <line x1="150" y1="58" x2="110" y2="58" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
-        <line x1="150" y1="58" x2="190" y2="58" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
-        <ellipse cx="108" cy="58" rx="10" ry="16" stroke="#FBBF24" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
-        <ellipse cx="192" cy="58" rx="10" ry="16" stroke="#FBBF24" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
-        <text x="150" y="24" fill="#FBBF24" font-size="9.5" font-weight="900" text-anchor="middle">ACTIVE MOVEMENT & POSTURE ALIGNMENT</text>
-        <text x="150" y="145" fill="#94A3B8" font-size="8.5" text-anchor="middle">Breathe rhythmically · Move with full range of motion</text>
-    </svg>`;
+    <div class="cartoon-video-wrapper" id="cartoonVideoBox">
+        <div class="cartoon-video-topbar">
+            <span class="video-live-badge">
+                <span class="live-dot"></span>
+                <span>CARTOON VIDEO DEMO</span>
+            </span>
+            <div class="video-speed-group">
+                <button type="button" class="video-speed-btn" onclick="setCartoonSpeed(this, 0.75)" title="Slow Motion">0.75x</button>
+                <button type="button" class="video-speed-btn active" onclick="setCartoonSpeed(this, 1)" title="Normal Speed">1x</button>
+                <button type="button" class="video-speed-btn" onclick="setCartoonSpeed(this, 1.25)" title="Fast Speed">1.25x</button>
+            </div>
+        </div>
+
+        <div class="cartoon-video-stage">
+            ${svgContent}
+        </div>
+
+        <div class="cartoon-video-controls">
+            <button type="button" class="cartoon-play-btn" onclick="toggleCartoonVideo(this)" title="Pause / Play Video">⏸</button>
+            <div class="cartoon-progress-track">
+                <div class="cartoon-progress-fill"></div>
+            </div>
+            <span class="cartoon-cue-badge">${cue}</span>
+        </div>
+    </div>`;
+}
+
+function getExerciseIllustrationSVG(key, name) {
+    return getExerciseCartoonVideoHTML(key, name);
 }
 
 /* =====================================================
