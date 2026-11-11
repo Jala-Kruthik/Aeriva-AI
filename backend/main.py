@@ -6,7 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Header, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 import base64
+import uuid
+import time
+import io
+from PIL import Image
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import IntegrityError
@@ -47,12 +52,15 @@ from services.calorie_service import (
 
 
 # =========================================
-# PATHS
+# PATHS & STORAGE
 # =========================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 FRONTEND_DIR = BASE_DIR / "frontend"
+UPLOADS_DIR = BASE_DIR / "uploads"
+FOOD_IMAGES_DIR = UPLOADS_DIR / "food_images"
+FOOD_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # =========================================
@@ -65,12 +73,113 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # =========================================
-# DATABASE
+# DATABASE & MIGRATIONS
 # =========================================
 
 Base.metadata.create_all(bind=engine)
+
+def ensure_db_migrations():
+    """Ensures food_logs has the image_url column in SQLite."""
+    try:
+        import sqlite3
+        db_path = BASE_DIR / "database" / "aeriva.db"
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(food_logs)")
+            cols = [r[1] for r in cursor.fetchall()]
+            if "image_url" not in cols:
+                cursor.execute("ALTER TABLE food_logs ADD COLUMN image_url VARCHAR")
+                conn.commit()
+            conn.close()
+    except Exception as e:
+        print("Database migration check note:", e)
+
+ensure_db_migrations()
+
+
+# =========================================
+# 7-DAY FOOD IMAGE RETENTION CLEANUP
+# =========================================
+
+def cleanup_old_food_images(max_age_days: int = 7):
+    """
+    Cleans up food images older than max_age_days (1 week).
+    Removes files from uploads/food_images/ and clears image_url in database.
+    """
+    try:
+        cutoff_date = date.today() - timedelta(days=max_age_days)
+        cutoff_seconds = time.time() - (max_age_days * 86400)
+
+        # Clear expired references from database
+        db = SessionLocal()
+        try:
+            old_logs = (
+                db.query(FoodLog)
+                .filter(FoodLog.log_date < cutoff_date, FoodLog.image_url.isnot(None))
+                .all()
+            )
+            for item in old_logs:
+                if item.image_url:
+                    rel_path = item.image_url.lstrip("/")
+                    target_file = BASE_DIR / rel_path
+                    if target_file.exists() and target_file.is_file():
+                        try:
+                            target_file.unlink()
+                        except Exception:
+                            pass
+                item.image_url = None
+            if old_logs:
+                db.commit()
+        finally:
+            db.close()
+
+        # Delete any orphaned image files in FOOD_IMAGES_DIR older than 7 days
+        if FOOD_IMAGES_DIR.exists():
+            for f in FOOD_IMAGES_DIR.iterdir():
+                if f.is_file() and not f.name.startswith("."):
+                    stat = f.stat()
+                    if stat.st_mtime < cutoff_seconds:
+                        try:
+                            f.unlink()
+                        except Exception:
+                            pass
+    except Exception as err:
+        print("Old food images cleanup note:", err)
+
+# Auto cleanup images older than 7 days on startup
+cleanup_old_food_images(7)
+
+
+def save_food_image_file(image_bytes: bytes) -> str:
+    """Saves image bytes to uploads/food_images and returns the relative URL."""
+    FOOD_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"food_{int(time.time())}_{uuid.uuid4().hex[:8]}.jpg"
+    target_path = FOOD_IMAGES_DIR / filename
+
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        img = img.convert("RGB")
+        img.thumbnail((1600, 1600))
+        img.save(target_path, format="JPEG", quality=85, optimize=True)
+    except Exception:
+        with open(target_path, "wb") as f:
+            f.write(image_bytes)
+
+    # Clean up older images (7-day retention)
+    cleanup_old_food_images(max_age_days=7)
+
+    return f"/uploads/food_images/{filename}"
 
 
 # =========================================
@@ -82,6 +191,13 @@ app.mount(
     StaticFiles(directory=str(FRONTEND_DIR)),
     name="static"
 )
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory=str(UPLOADS_DIR)),
+    name="uploads"
+)
+
 
 
 # =========================================
@@ -440,7 +556,8 @@ def log_food(
             meal_type=food.meal_type,
             food_name=food.food_name,
             quantity=str(food.quantity),
-            calories=calculated_calories
+            calories=calculated_calories,
+            image_url=food.image_url
         )
 
         db.add(food_log)
@@ -453,7 +570,8 @@ def log_food(
             "meal_type": food_log.meal_type,
             "food_name": food_log.food_name,
             "quantity": food.quantity,
-            "calories": calculated_calories
+            "calories": calculated_calories,
+            "image_url": food_log.image_url
         }
 
     finally:
@@ -497,6 +615,20 @@ def get_food_estimate(data: dict):
 # AI FOOD IMAGE SCANNING & VISION
 # =========================================
 
+@app.post("/food/upload-image")
+async def upload_food_image(
+    file: UploadFile = File(...),
+    authorization: str | None = Header(default=None)
+):
+    """Directly uploads a food photo and stores it for up to 1 week."""
+    user = get_current_user(authorization)
+    image_bytes = await file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Empty image file")
+    image_url = save_food_image_file(image_bytes)
+    return {"image_url": image_url, "message": "Photo stored successfully for 7 days."}
+
+
 @app.post("/food/scan-image")
 async def scan_food_image(
     file: UploadFile = File(None),
@@ -528,13 +660,34 @@ async def scan_food_image(
     if not image_bytes:
         raise HTTPException(status_code=400, detail="Please upload a food image or pass base64 image data")
 
+    # Store the photo securely in uploads/food_images (retained for up to 1 week)
+    saved_image_url = save_food_image_file(image_bytes)
+
     try:
         result = analyze_food_image_langgraph(image_bytes, mime_type=mime_type)
+        result["image_url"] = saved_image_url
+        result["is_recognized"] = True
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print("Vision scan error details:", e)
+        # Check if filename offers any helpful hint
+        inferred_name = ""
+        if file and file.filename:
+            raw_fn = os.path.splitext(file.filename)[0].replace("_", " ").replace("-", " ")
+            if not re.match(r"^(?:img|image|photo|screenshot|camera|\d+)", raw_fn.lower()):
+                inferred_name = raw_fn.title()
 
-
+        return {
+            "food_name": inferred_name,
+            "portion_description": "1 standard serving",
+            "quantity": 1.0,
+            "calories": 250.0 if inferred_name else 0.0,
+            "macros": {"protein": 8.0, "carbs": 32.0, "fat": 9.0} if inferred_name else {"protein": 0.0, "carbs": 0.0, "fat": 0.0},
+            "explanation": f"Photo saved to food logs. AI Vision Note: {str(e)}",
+            "image_url": saved_image_url,
+            "is_recognized": bool(inferred_name),
+            "error_detail": str(e)
+        }
 
 
 # =========================================
@@ -549,6 +702,7 @@ def log_food_batch(
     user = get_current_user(authorization)
     items = payload.get("items", [])
     meal_type = payload.get("meal_type", "Snack")
+    batch_image_url = payload.get("image_url") or None
 
     if not items:
         raise HTTPException(status_code=400, detail="No food items provided")
@@ -557,11 +711,12 @@ def log_food_batch(
     logged_records = []
 
     try:
-        for item in items:
+        for idx, item in enumerate(items):
             name = str(item.get("food_name", "")).strip()
             if not name:
                 continue
             qty = float(item.get("quantity", 1.0))
+            item_image_url = item.get("image_url") or batch_image_url
             cal_data = estimate_calories(name, qty)
             cals = float(cal_data.get("calories", 0.0))
 
@@ -571,7 +726,8 @@ def log_food_batch(
                 meal_type=meal_type,
                 food_name=name,
                 quantity=str(qty),
-                calories=cals
+                calories=cals,
+                image_url=item_image_url
             )
             db.add(food_log)
             db.flush()
@@ -581,7 +737,8 @@ def log_food_batch(
                 "meal_type": food_log.meal_type,
                 "food_name": food_log.food_name,
                 "quantity": qty,
-                "calories": cals
+                "calories": cals,
+                "image_url": food_log.image_url
             })
 
         db.commit()
@@ -600,6 +757,7 @@ def log_food_batch(
 @app.get("/food/log/today")
 def get_today_food_logs(authorization: str | None = Header(default=None)):
     user = get_current_user(authorization)
+    cleanup_old_food_images(max_age_days=7)
     db = SessionLocal()
 
     try:
@@ -627,10 +785,86 @@ def get_today_food_logs(authorization: str | None = Header(default=None)):
                 "meal_type": item.meal_type,
                 "food_name": item.food_name,
                 "quantity": qty,
-                "calories": float(item.calories) if item.calories is not None else 0.0
+                "calories": float(item.calories) if item.calories is not None else 0.0,
+                "image_url": item.image_url,
+                "created_at": item.created_at.strftime("%I:%M %p") if item.created_at else ""
             })
         return result
 
+    finally:
+        db.close()
+
+
+# =========================================
+# 7-DAY (1 WEEK) FOOD & PHOTO HISTORY
+# =========================================
+
+@app.get("/food/log/week")
+def get_week_food_logs(authorization: str | None = Header(default=None)):
+    """
+    Returns food logs and photos for up to 7 days (1 week).
+    Automatically runs 7-day retention cleanup.
+    """
+    user = get_current_user(authorization)
+    cleanup_old_food_images(max_age_days=7)
+
+    today = date.today()
+    start_date = today - timedelta(days=6)
+
+    db = SessionLocal()
+    try:
+        logs = (
+            db.query(FoodLog)
+            .filter(
+                FoodLog.user_id == user.id,
+                FoodLog.log_date >= start_date,
+                FoodLog.log_date <= today
+            )
+            .order_by(FoodLog.log_date.desc(), FoodLog.created_at.desc())
+            .all()
+        )
+
+        # Build 7-day chronological buckets
+        days_map = {}
+        for d in range(7):
+            cur_date = today - timedelta(days=d)
+            d_str = str(cur_date)
+            label = "Today" if d == 0 else ("Yesterday" if d == 1 else cur_date.strftime("%a, %b %d"))
+            days_map[d_str] = {
+                "date": d_str,
+                "label": label,
+                "total_calories": 0.0,
+                "meals": []
+            }
+
+        for item in logs:
+            d_str = str(item.log_date)
+            if d_str in days_map:
+                cals = float(item.calories) if item.calories is not None else 0.0
+                days_map[d_str]["total_calories"] += cals
+                qty = 1.0
+                try:
+                    if item.quantity:
+                        qty = float(item.quantity)
+                except Exception:
+                    qty = 1.0
+                days_map[d_str]["meals"].append({
+                    "id": item.id,
+                    "meal_type": item.meal_type,
+                    "food_name": item.food_name,
+                    "quantity": qty,
+                    "calories": round(cals, 1),
+                    "image_url": item.image_url,
+                    "time": item.created_at.strftime("%I:%M %p") if item.created_at else ""
+                })
+
+        for d_str in days_map:
+            days_map[d_str]["total_calories"] = round(days_map[d_str]["total_calories"])
+
+        return {
+            "retention": "Images are stored up to 1 week (7 days) and auto-purged.",
+            "days": list(days_map.values())
+        }
     finally:
         db.close()
 
@@ -641,7 +875,13 @@ def get_today_food_logs(authorization: str | None = Header(default=None)):
 
 @app.get("/food/suggestions/next-day")
 def get_next_day_food_suggestions(authorization: str | None = Header(default=None)):
-    user = get_current_user(authorization)
+    user = None
+    if authorization:
+        try:
+            user = get_current_user(authorization)
+        except Exception:
+            user = None
+
     db = SessionLocal()
 
     today = date.today()
@@ -650,16 +890,19 @@ def get_next_day_food_suggestions(authorization: str | None = Header(default=Non
 
     try:
         # 1. Fetch Today and Yesterday Food Logs
-        today_logs = (
-            db.query(FoodLog)
-            .filter(FoodLog.user_id == user.id, FoodLog.log_date == today)
-            .all()
-        )
-        yesterday_logs = (
-            db.query(FoodLog)
-            .filter(FoodLog.user_id == user.id, FoodLog.log_date == yesterday)
-            .all()
-        )
+        today_logs = []
+        yesterday_logs = []
+        if user:
+            today_logs = (
+                db.query(FoodLog)
+                .filter(FoodLog.user_id == user.id, FoodLog.log_date == today)
+                .all()
+            )
+            yesterday_logs = (
+                db.query(FoodLog)
+                .filter(FoodLog.user_id == user.id, FoodLog.log_date == yesterday)
+                .all()
+            )
 
         today_calories = sum(float(l.calories or 0.0) for l in today_logs)
         yesterday_calories = sum(float(l.calories or 0.0) for l in yesterday_logs)
@@ -669,8 +912,8 @@ def get_next_day_food_suggestions(authorization: str | None = Header(default=Non
         all_recent_foods = today_foods + yesterday_foods
 
         # Calorie Baseline
-        weight = float(user.weight or 68.0)
-        goal = (user.health_goal or "Maintain weight").lower()
+        weight = float(user.weight or 68.0) if (user and user.weight) else 68.0
+        goal = (user.health_goal or "Maintain weight").lower() if (user and user.health_goal) else "maintain weight"
 
         # Determine target daily calories based on user goal
         if "loss" in goal or "lose" in goal:
@@ -923,7 +1166,13 @@ def get_exercise_recommendation(
     payload: dict,
     authorization: str | None = Header(default=None)
 ):
-    user = get_current_user(authorization)
+    user = None
+    if authorization:
+        try:
+            user = get_current_user(authorization)
+        except Exception:
+            user = None
+
     db = SessionLocal()
 
     steps = int(payload.get("steps", 0))
@@ -932,20 +1181,23 @@ def get_exercise_recommendation(
     try:
         # 1. Calculate calories consumed today if not passed
         if calories_input is None:
-            today_logs = (
-                db.query(FoodLog)
-                .filter(FoodLog.user_id == user.id, FoodLog.log_date == date.today())
-                .all()
-            )
-            daily_calories = sum(float(l.calories or 0.0) for l in today_logs)
+            if user:
+                today_logs = (
+                    db.query(FoodLog)
+                    .filter(FoodLog.user_id == user.id, FoodLog.log_date == date.today())
+                    .all()
+                )
+                daily_calories = sum(float(l.calories or 0.0) for l in today_logs)
+            else:
+                daily_calories = 610.0
         else:
             daily_calories = float(calories_input)
 
         # 2. User metrics & Basal Metabolic Rate
-        weight_kg = float(user.weight or 68.0)
-        height_cm = float(user.height or 172.0)
-        age = int(user.age or 25)
-        goal = str(user.health_goal or "Maintain health").lower()
+        weight_kg = float(user.weight or 68.0) if (user and user.weight) else 68.0
+        height_cm = float(user.height or 172.0) if (user and user.height) else 172.0
+        age = int(user.age or 25) if (user and user.age) else 25
+        goal = str(user.health_goal or "Maintain health").lower() if (user and user.health_goal) else "maintain health"
 
         # Mifflin-St Jeor Basal Metabolic Rate estimate
         bmr = (10 * weight_kg) + (6.25 * height_cm) - (5 * age) + 5
@@ -961,14 +1213,16 @@ def get_exercise_recommendation(
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         today_weekday = days[date.today().weekday()]
 
-        schedule = (
-            db.query(DailySchedule)
-            .filter(
-                DailySchedule.user_id == user.id,
-                DailySchedule.day_of_week.ilike(today_weekday)
+        schedule = None
+        if user:
+            schedule = (
+                db.query(DailySchedule)
+                .filter(
+                    DailySchedule.user_id == user.id,
+                    DailySchedule.day_of_week.ilike(today_weekday)
+                )
+                .first()
             )
-            .first()
-        )
 
         free_start = schedule.free_start_time if schedule and schedule.free_start_time else "17:30"
         free_end = schedule.free_end_time if schedule and schedule.free_end_time else "18:30"
@@ -996,12 +1250,78 @@ def get_exercise_recommendation(
                 f"To offset the net surplus and accelerate lipid oxidation, dedicate {recommended_mins} minutes during your free window."
             )
             exercises = [
-                {"name": "Dynamic Warmup & Arm Circles", "duration": "3 mins", "reps": "Continuous movement"},
-                {"name": "Jumping Jacks & High Knees", "duration": "8 mins", "reps": "4 sets × 45s work / 15s rest"},
-                {"name": "Bodyweight Air Squats & Alternating Lunges", "duration": "10 mins", "reps": "4 sets × 15 reps each"},
-                {"name": "Mountain Climbers & Push-Ups", "duration": "8 mins", "reps": "3 sets × 12 reps"},
-                {"name": "Forearm Plank Holds", "duration": "4 mins", "reps": "3 sets × 45s hold"},
-                {"name": "Full Body Hamstring & Quad Stretch", "duration": "3 mins", "reps": "Cool-down recovery"}
+                {
+                    "name": "Dynamic Warmup & Arm Circles",
+                    "key": "warmup",
+                    "duration": "3 mins",
+                    "reps": "Continuous movement",
+                    "target_muscles": "Shoulders, Upper Back & Chest",
+                    "instructions": [
+                        "Stand upright with feet shoulder-width apart and extend arms straight out to sides.",
+                        "Make controlled circular motions with arms, gradually increasing circle size for 30s.",
+                        "Reverse circle direction, then add gentle torso rotations to awaken your spine."
+                    ]
+                },
+                {
+                    "name": "Jumping Jacks & High Knees",
+                    "key": "jumping_jacks",
+                    "duration": "8 mins",
+                    "reps": "4 sets × 45s work / 15s rest",
+                    "target_muscles": "Full Body Cardio & Calves",
+                    "instructions": [
+                        "Start with feet together and arms at sides. Jump feet wide while bringing arms overhead.",
+                        "Land softly on the balls of your feet and immediately jump back to starting position.",
+                        "Switch to high knees: drive knees upward alternately toward chest at a rapid pace."
+                    ]
+                },
+                {
+                    "name": "Bodyweight Air Squats & Alternating Lunges",
+                    "key": "squats",
+                    "duration": "10 mins",
+                    "reps": "4 sets × 15 reps each",
+                    "target_muscles": "Quadriceps, Glutes & Hamstrings",
+                    "instructions": [
+                        "Stand with feet shoulder-width apart, chest upright, and toes pointed slightly out.",
+                        "Hinge hips backward and bend knees until thighs are at least parallel to floor.",
+                        "Drive through heels to stand. Step forward into a lunge, bending both knees to 90 degrees."
+                    ]
+                },
+                {
+                    "name": "Mountain Climbers & Push-Ups",
+                    "key": "pushups",
+                    "duration": "8 mins",
+                    "reps": "3 sets × 12 reps",
+                    "target_muscles": "Chest, Triceps & Core",
+                    "instructions": [
+                        "Assume a high plank position with wrists directly under shoulders and body straight.",
+                        "Drive one knee toward chest and switch legs rapidly in a rhythmic running cadence.",
+                        "For push-ups: lower chest until 2 inches from floor, elbows at 45°, then press up explosively."
+                    ]
+                },
+                {
+                    "name": "Forearm Plank Holds",
+                    "key": "plank",
+                    "duration": "4 mins",
+                    "reps": "3 sets × 45s hold",
+                    "target_muscles": "Deep Abdominal Wall & Lower Back",
+                    "instructions": [
+                        "Rest forearms on the floor with elbows directly under shoulders, hands separated.",
+                        "Extend legs back, tuck pelvis slightly, and brace your core as if anticipating impact.",
+                        "Maintain a continuous straight line from crown of head to heels without sagging hips."
+                    ]
+                },
+                {
+                    "name": "Full Body Hamstring & Quad Stretch",
+                    "key": "stretching",
+                    "duration": "3 mins",
+                    "reps": "Cool-down recovery",
+                    "target_muscles": "Hamstrings, Quads & Lower Back",
+                    "instructions": [
+                        "Stand tall, bend one knee and grasp ankle behind you to stretch front of thigh for 30s.",
+                        "Extend one heel forward, hinge at the waist, and reach toward toes to stretch hamstring.",
+                        "Breathe deeply and smoothly to allow muscle fibers to relax and recover."
+                    ]
+                }
             ]
         elif steps >= 10000 or (daily_calories < 1400 and daily_calories > 0):
             needed_burn = 140
@@ -1013,10 +1333,54 @@ def get_exercise_recommendation(
                 f"A gentle {recommended_mins}-minute mobility and core routine during your free window will flush lactic acid and protect posture."
             )
             exercises = [
-                {"name": "Cat-Cow & Spine Decompression", "duration": "4 mins", "reps": "Controlled breathing"},
-                {"name": "Surya Namaskar (Sun Salutations)", "duration": "8 mins", "reps": "6 slow rounds"},
-                {"name": "Glute Bridges & Bird-Dog Core", "duration": "5 mins", "reps": "3 sets × 12 reps"},
-                {"name": "Child's Pose & Deep Hip Openers", "duration": "3 mins", "reps": "Restorative stretches"}
+                {
+                    "name": "Cat-Cow & Spine Decompression",
+                    "key": "cat_cow",
+                    "duration": "4 mins",
+                    "reps": "Controlled breathing",
+                    "target_muscles": "Erector Spinae & Thoracic Mobility",
+                    "instructions": [
+                        "Begin on all fours in tabletop position, wrists under shoulders and knees under hips.",
+                        "Inhale: Drop your belly toward the mat, lift your chest, chin, and tailbone (Cow Pose).",
+                        "Exhale: Pull your navel firmly to your spine, rounding back toward ceiling and tucking chin (Cat Pose)."
+                    ]
+                },
+                {
+                    "name": "Surya Namaskar (Sun Salutations)",
+                    "key": "surya_namaskar",
+                    "duration": "8 mins",
+                    "reps": "6 slow rounds",
+                    "target_muscles": "Full Body Mobility & Core",
+                    "instructions": [
+                        "Stand tall with palms joined in prayer position at chest (Pranamasana).",
+                        "Inhale: Raise arms overhead and gently arch backward (Hastauttanasana).",
+                        "Exhale: Fold forward from hips to touch feet, flowing through plank, cobra, and downward dog."
+                    ]
+                },
+                {
+                    "name": "Glute Bridges & Bird-Dog Core",
+                    "key": "glute_bridge",
+                    "duration": "5 mins",
+                    "reps": "3 sets × 12 reps",
+                    "target_muscles": "Gluteus Maximus, Hamstrings & Core",
+                    "instructions": [
+                        "Lie on your back with knees bent and feet flat on the floor hip-width apart.",
+                        "Drive through heels to lift hips until thighs and torso align; squeeze glutes at the top for 2s.",
+                        "For Bird-Dog: on all fours, simultaneously extend right arm forward and left leg backward."
+                    ]
+                },
+                {
+                    "name": "Child's Pose & Deep Hip Openers",
+                    "key": "child_pose",
+                    "duration": "3 mins",
+                    "reps": "Restorative stretches",
+                    "target_muscles": "Hips, Groin & Latissimus",
+                    "instructions": [
+                        "Kneel on the floor with big toes touching, spreading your knees wide apart.",
+                        "Lower your hips all the way back onto your heels and fold torso forward between thighs.",
+                        "Extend arms out on floor in front of you, rest forehead down, and take slow calming breaths."
+                    ]
+                }
             ]
         else:
             needed_burn = 210
@@ -1028,11 +1392,61 @@ def get_exercise_recommendation(
                 f"Completing this {recommended_mins}-minute session during your free window ({free_start} – {free_end}) keeps your metabolism firing at peak efficiency."
             )
             exercises = [
-                {"name": "Brisk Pace Warmup & Torso Twists", "duration": "3 mins", "reps": "Warmup"},
-                {"name": "Bodyweight Squats to Overhead Reach", "duration": "7 mins", "reps": "3 sets × 15 reps"},
-                {"name": "Incline Push-Ups / Knee Push-Ups", "duration": "6 mins", "reps": "3 sets × 10 reps"},
-                {"name": "Brisk Walk-Jog Intervals or Skipping", "duration": "8 mins", "reps": "30s sprint / 30s walk"},
-                {"name": "Full Body Spine & Shoulder Release", "duration": "3 mins", "reps": "Cool-down"}
+                {
+                    "name": "Brisk Pace Warmup & Torso Twists",
+                    "key": "warmup",
+                    "duration": "3 mins",
+                    "reps": "Warmup",
+                    "target_muscles": "Spine Rotators & Dynamic Joints",
+                    "instructions": [
+                        "March briskly in place, swinging arms to increase blood circulation and body temperature.",
+                        "Plant feet shoulder-width and gently rotate torso left and right with relaxed arms."
+                    ]
+                },
+                {
+                    "name": "Bodyweight Squats to Overhead Reach",
+                    "key": "squats",
+                    "duration": "7 mins",
+                    "reps": "3 sets × 15 reps",
+                    "target_muscles": "Legs, Glutes & Shoulders",
+                    "instructions": [
+                        "Lower into a steady squat, keeping knees behind toes and chest lifted.",
+                        "As you push back up to standing, extend both arms straight overhead toward the sky."
+                    ]
+                },
+                {
+                    "name": "Incline Push-Ups / Knee Push-Ups",
+                    "key": "pushups",
+                    "duration": "6 mins",
+                    "reps": "3 sets × 10 reps",
+                    "target_muscles": "Pectorals & Triceps",
+                    "instructions": [
+                        "Place hands on an elevated ledge or keep knees grounded to maintain strict horizontal posture.",
+                        "Lower chest with control until elbows form a 90° angle, then push back to starting extension."
+                    ]
+                },
+                {
+                    "name": "Brisk Walk-Jog Intervals or Skipping",
+                    "key": "jumping_jacks",
+                    "duration": "8 mins",
+                    "reps": "30s sprint / 30s walk",
+                    "target_muscles": "Cardiovascular Endurance & Calves",
+                    "instructions": [
+                        "Alternate between 30 seconds of high-intensity jogging or skipping and 30 seconds of brisk walking.",
+                        "Maintain a steady rhythmic breath and land softly on the balls of your feet."
+                    ]
+                },
+                {
+                    "name": "Full Body Spine & Shoulder Release",
+                    "key": "stretching",
+                    "duration": "3 mins",
+                    "reps": "Cool-down",
+                    "target_muscles": "Full Body Posterior Chain",
+                    "instructions": [
+                        "Interlace fingers and stretch arms upward, taking deep diaphragmatic inhales.",
+                        "Bend softly from side to side to elongate the ribcage and decompress spine."
+                    ]
+                }
             ]
 
         # Calculate exact free time schedule window
@@ -1109,6 +1523,299 @@ def analyze_health(
             "exercise_minutes": exercise_minutes,
             "error": str(error)
         }
+
+
+# =========================================
+# AI HEALTH PRECAUTIONS & LIVE SHIELD
+# =========================================
+
+@app.get("/health/precautions")
+def get_health_precautions(
+    steps: int = 0,
+    exercise_minutes: int = 0,
+    authorization: str | None = Header(default=None)
+):
+    user = get_current_user(authorization)
+    db = SessionLocal()
+
+    try:
+        from datetime import datetime, time
+
+        today = date.today()
+        # 1. Fetch today's food logs
+        food_logs = (
+            db.query(FoodLog)
+            .filter(FoodLog.user_id == user.id, FoodLog.log_date == today)
+            .all()
+        )
+
+        total_cals = sum([float(f.calories or 0.0) for f in food_logs])
+        logged_meals = set([f.meal_type.lower() for f in food_logs if f.meal_type])
+        has_junk = any([bool(f.is_junk) for f in food_logs])
+
+        # 2. Fetch user's schedule for today
+        day_name = today.strftime("%A")
+        schedule = (
+            db.query(DailySchedule)
+            .filter(
+                DailySchedule.user_id == user.id,
+                DailySchedule.day_of_week.ilike(day_name)
+            )
+            .first()
+        )
+        if not schedule:
+            schedule = db.query(DailySchedule).filter(DailySchedule.user_id == user.id).first()
+
+        now = datetime.now()
+        current_hour = now.hour + (now.minute / 60.0)
+
+        # ---------------------------------------------
+        # A. FOOD / NUTRITION PRECAUTIONS
+        # ---------------------------------------------
+        food_status = "OPTIMAL"
+        food_badge = "PROPER FOOD & BALANCED FUEL"
+        food_color = "#10B981"
+        food_icon = "🥗"
+        food_msg = "Your nutrition logs indicate consistent, healthy fueling today."
+        food_rec = "Keep maintaining regular meal intervals and stay well hydrated with water."
+        food_action = "+ LOG MEAL"
+
+        missing_meals = []
+        if current_hour >= 11.5 and "breakfast" not in logged_meals:
+            missing_meals.append("Breakfast")
+        if current_hour >= 15.5 and "lunch" not in logged_meals:
+            missing_meals.append("Lunch")
+        if current_hour >= 21.0 and "dinner" not in logged_meals:
+            missing_meals.append("Dinner")
+
+        if len(food_logs) == 0:
+            food_status = "CRITICAL"
+            food_badge = "NO FOOD LOGGED TODAY"
+            food_color = "#EF4444"
+            food_icon = "⚠️"
+            food_msg = "You have not logged any meals today! Skipping food leads to acute hypoglycemia, cognitive fog, and metabolic slowdown."
+            food_rec = "Eat a balanced meal containing complex carbs, lean protein (dal, paneer, eggs), and fresh vegetables right now."
+            food_action = "+ LOG MEAL NOW"
+        elif len(missing_meals) > 0:
+            food_status = "WARNING"
+            food_badge = f"MISSED {', '.join(missing_meals).upper()}"
+            food_color = "#F59E0B"
+            food_icon = "⚠️"
+            food_msg = f"You appear to have missed your regular {', '.join(missing_meals)}! Irregular meal timing causes energy dips and digestive stress."
+            food_rec = f"Prioritize having your {missing_meals[0]} immediately. Do not substitute meals with caffeine or sugary snacks."
+            food_action = f"+ LOG {missing_meals[0].upper()}"
+        elif total_cals < 800 and current_hour >= 16.0:
+            food_status = "WARNING"
+            food_badge = "SEVERE CALORIE DEFICIT"
+            food_color = "#F59E0B"
+            food_icon = "⚠️"
+            food_msg = f"Your logged intake is only {int(total_cals)} kcal so far. Under-fueling puts stress on your nervous system and causes muscle breakdown."
+            food_rec = "Add nutrient-dense whole foods like nuts, curd, lentils, and bananas to safely meet your daily energy floor."
+            food_action = "+ ADD NOURISHING FOOD"
+        elif has_junk:
+            food_status = "CAUTION"
+            food_badge = "JUNK FOOD NEUTRALIZATION NEEDED"
+            food_color = "#F59E0B"
+            food_icon = "🍟"
+            food_msg = "You logged high-oil or processed items today. High sodium and trans fats can trigger inflammation and lethargy."
+            food_rec = "Drink 2 extra glasses of water, consume antioxidant-rich green tea or cucumber slices, and keep dinner light and fiber-rich."
+            food_action = "+ LOG HEALTHY MEAL"
+
+        # ---------------------------------------------
+        # B. REST & SLEEP PRECAUTIONS
+        # ---------------------------------------------
+        rest_status = "OPTIMAL"
+        rest_badge = "REST & SLEEP ON TRACK"
+        rest_color = "#10B981"
+        rest_icon = "🌙"
+        rest_msg = "Your routine schedule provides adequate sleep and recovery periods."
+        rest_rec = "Maintain a consistent sleep window and avoid stimulating screens 30 minutes before sleep."
+        rest_action = "VIEW ROUTINE"
+
+        sleep_duration = 8.0
+        if schedule and schedule.wake_up_time and schedule.sleep_time:
+            try:
+                wt_parts = [int(p) for p in schedule.wake_up_time.split(":")[:2]]
+                st_parts = [int(p) for p in schedule.sleep_time.split(":")[:2]]
+                wake_dec = wt_parts[0] + (wt_parts[1] / 60.0)
+                sleep_dec = st_parts[0] + (st_parts[1] / 60.0)
+                if wake_dec <= sleep_dec:
+                    sleep_duration = (24.0 - sleep_dec) + wake_dec
+                else:
+                    sleep_duration = wake_dec - sleep_dec
+            except Exception:
+                sleep_duration = 8.0
+
+        if sleep_duration < 6.5:
+            rest_status = "CRITICAL"
+            rest_badge = f"SEVERE SLEEP DEFICIT ({round(sleep_duration, 1)} HRS)"
+            rest_color = "#EF4444"
+            rest_icon = "🛑"
+            rest_msg = f"Your daily schedule allocates only {round(sleep_duration, 1)} hours of sleep. Chronic sleep restriction impairs insulin sensitivity, heart health, and mental acuity."
+            rest_rec = "Adjust your bedtime at least 60 minutes earlier. Adults require a minimum of 7 to 8 hours of uninterrupted rest."
+            rest_action = "ADJUST SLEEP SCHEDULE"
+        elif sleep_duration < 7.5:
+            rest_status = "CAUTION"
+            rest_badge = f"BORDERLINE REST ({round(sleep_duration, 1)} HRS)"
+            rest_color = "#F59E0B"
+            rest_icon = "🌙"
+            rest_msg = f"You are averaging {round(sleep_duration, 1)} hours of rest. While functional, it is on the low end for optimal muscle and cognitive recovery."
+            rest_rec = "Plan a 20-minute mid-day power rest or wind down 30 minutes earlier tonight."
+            rest_action = "OPTIMIZE ROUTINE"
+
+        # Check late-night active status
+        if current_hour >= 23.5 or current_hour < 4.5:
+            rest_status = "WARNING"
+            rest_badge = "LATE NIGHT SCREEN HAZARD"
+            rest_color = "#EF4444"
+            rest_icon = "💤"
+            rest_msg = "It is past midnight! Using digital devices right now suppresses melatonin production and damages deep REM sleep architecture."
+            rest_rec = "Shut down screens, turn off blue light, practice slow 4-7-8 breathing, and go to sleep immediately."
+            rest_action = "ENABLE SLEEP MODE"
+
+        # ---------------------------------------------
+        # C. EXERCISE & ACTIVITY PRECAUTIONS
+        # ---------------------------------------------
+        ex_status = "OPTIMAL"
+        ex_badge = "ACTIVE & MOVING WELL"
+        ex_color = "#10B981"
+        ex_icon = "⚡"
+        ex_msg = "Great movement today! Physical activity is protecting your metabolic rate and cardiovascular endurance."
+        ex_rec = "Do post-workout static stretches and maintain adequate hydration with electrolytes."
+        ex_action = "VIEW EXERCISES"
+
+        if steps < 2500 and exercise_minutes == 0 and current_hour >= 15.0:
+            ex_status = "CRITICAL"
+            ex_badge = "SEDENTARY DANGER ALERT"
+            ex_color = "#EF4444"
+            ex_icon = "⚠️"
+            ex_msg = f"You have only walked {steps} steps and logged 0 exercise minutes today. Prolonged sitting causes vascular stiffness, low back pain, and energy stagnation."
+            ex_rec = "Stand up right now! Complete a 15-minute brisk walk or execute 2 rounds of our guided mobility exercises."
+            ex_action = "START 10-MIN WORKOUT"
+        elif steps < 5000 and exercise_minutes < 15 and current_hour >= 18.0:
+            ex_status = "WARNING"
+            ex_badge = "EXERCISE DEFICIT"
+            ex_color = "#F59E0B"
+            ex_icon = "⚡"
+            ex_msg = f"Your daily activity is lagging ({steps} steps, {exercise_minutes} active mins). Daily movement is crucial for burning glucose and reducing stress hormones."
+            ex_rec = "Complete at least one short exercise session (Surya Namaskar or Glute Bridges) before dinner."
+            ex_action = "START WORKOUT QUEST"
+        elif steps < 6000 and current_hour < 15.0:
+            ex_status = "CAUTION"
+            ex_badge = "MID-DAY MOVEMENT NEEDED"
+            ex_color = "#38BDF8"
+            ex_icon = "🚶"
+            ex_msg = f"You have logged {steps} steps so far. Aim to take micro-walk breaks during work to reach your 10,000 steps goal."
+            ex_rec = "Take a 5-minute walk break every 60 minutes of sitting."
+            ex_action = "LOG STEPS"
+
+        # ---------------------------------------------
+        # OVERALL SHIELD SUMMARY
+        # ---------------------------------------------
+        overall_severity = "HEALTHY"
+        overall_score = 92
+        if "CRITICAL" in [food_status, rest_status, ex_status]:
+            overall_severity = "CRITICAL"
+            overall_score = 52
+            overall_title = "CRITICAL HEALTH PRECAUTIONS DETECTED"
+            overall_summary = "AI Health Monitor identified urgent gaps in your daily regimen. Immediate attention required on food intake, sleep, or physical activity."
+        elif "WARNING" in [food_status, rest_status, ex_status] or "CAUTION" in [food_status, rest_status, ex_status]:
+            overall_severity = "CAUTION"
+            overall_score = 72
+            overall_title = "ACTIONABLE HEALTH PRECAUTIONS"
+            overall_summary = "Your daily habits are moderately steady, but AI detected precautions regarding meals, rest, or movement that should be addressed today."
+        else:
+            overall_title = "ALL HEALTH SHIELDS OPTIMAL"
+            overall_summary = "Exceptional balance across nutrition, sleep schedule, and physical activity today. Keep up this championship routine!"
+
+        action_bullets = []
+        if food_status != "OPTIMAL":
+            action_bullets.append(food_rec)
+        if rest_status != "OPTIMAL":
+            action_bullets.append(rest_rec)
+        if ex_status != "OPTIMAL":
+            action_bullets.append(ex_rec)
+        if not action_bullets:
+            action_bullets.append("Stay hydrated with 2.5-3L water today.")
+            action_bullets.append("Keep consistent with your sleep and wake schedule.")
+
+        return {
+            "overall_severity": overall_severity,
+            "overall_score": overall_score,
+            "overall_title": overall_title,
+            "overall_summary": overall_summary,
+            "food": {
+                "status": food_status,
+                "badge": food_badge,
+                "icon": food_icon,
+                "color": food_color,
+                "message": food_msg,
+                "recommendation": food_rec,
+                "action_label": food_action
+            },
+            "rest": {
+                "status": rest_status,
+                "badge": rest_badge,
+                "icon": rest_icon,
+                "color": rest_color,
+                "message": rest_msg,
+                "recommendation": rest_rec,
+                "action_label": rest_action
+            },
+            "exercise": {
+                "status": ex_status,
+                "badge": ex_badge,
+                "icon": ex_icon,
+                "color": ex_color,
+                "message": ex_msg,
+                "recommendation": ex_rec,
+                "action_label": ex_action
+            },
+            "action_bullets": action_bullets
+        }
+
+    except Exception as e:
+        print("Error calculating precautions:", e)
+        return {
+            "overall_severity": "CAUTION",
+            "overall_score": 75,
+            "overall_title": "AI HEALTH PRECAUTIONS MONITOR",
+            "overall_summary": "Make sure to take proper balanced food, get 7-8 hours of sleep, and engage in daily physical exercise.",
+            "food": {
+                "status": "WARNING",
+                "badge": "EAT PROPER MEALS",
+                "icon": "🥗",
+                "color": "#F59E0B",
+                "message": "Do not skip meals. Ensure you take nutritious breakfast, lunch, and dinner.",
+                "recommendation": "Fuel with balanced Indian meals rich in fiber, dal, vegetables, and complex grains.",
+                "action_label": "+ LOG MEAL"
+            },
+            "rest": {
+                "status": "CAUTION",
+                "badge": "MAINTAIN PROPER REST",
+                "icon": "🌙",
+                "color": "#F59E0B",
+                "message": "Adequate sleep (7-8 hours) is vital for your immune system and recovery.",
+                "recommendation": "Avoid late night screens and sleep at a consistent hour.",
+                "action_label": "VIEW ROUTINE"
+            },
+            "exercise": {
+                "status": "WARNING",
+                "badge": "DAILY EXERCISE NEEDED",
+                "icon": "⚡",
+                "color": "#38BDF8",
+                "message": "Sedentary routine harms posture and heart health. Ensure regular movement.",
+                "recommendation": "Complete at least 20-30 minutes of physical exercise or 8,000 steps today.",
+                "action_label": "START EXERCISE"
+            },
+            "action_bullets": [
+                "Take proper balanced food on time",
+                "Get 7-8 hours of deep restful sleep",
+                "Engage in 20+ minutes of physical activity or walking"
+            ]
+        }
+    finally:
+        db.close()
 
 
 # =========================================

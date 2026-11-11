@@ -27,6 +27,11 @@ database/*.db
 ._*
 Thumbs.db
 
+# User Uploaded Photos
+uploads/
+!uploads/.gitkeep
+
+
 # IDE & Editor files
 .vscode/
 .idea/

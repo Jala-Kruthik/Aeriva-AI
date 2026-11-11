@@ -200,6 +200,11 @@ class FoodLog(Base):
         default=0
     )
 
+    image_url = Column(
+        String,
+        nullable=True
+    )
+
     created_at = Column(
         DateTime,
         default=datetime.utcnow

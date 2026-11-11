@@ -120,6 +120,8 @@ class FoodLogCreate(BaseModel):
         gt=0
     )
 
+    image_url: str | None = None
+
 
 # =========================================================
 # FOOD LOG RESPONSE
@@ -137,3 +139,5 @@ class FoodLogResponse(BaseModel):
     quantity: float | None
 
     calories: float
+
+    image_url: str | None = None

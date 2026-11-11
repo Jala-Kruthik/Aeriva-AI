@@ -7,7 +7,7 @@
 
     <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
 
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=2.4">
 </head>
 
 <body>
@@ -461,6 +461,38 @@
                         </span>
                     </h1>
                 </div>
+
+                <!-- LEFT SIDE CORNER DASHBOARD SWITCHER (1 - DAILY ROUTINE / 2 - WHAT TO DO / 3 - PRECAUTIONS) -->
+                <div class="left-corner-switcher" id="leftCornerDashboardSwitcher" role="navigation" aria-label="Dashboard Switcher">
+                    <span class="left-corner-switcher-label">DASHBOARD:</span>
+                    <button
+                        id="cornerTab1Btn"
+                        class="corner-dash-btn active"
+                        type="button"
+                        onclick="switchDashboardTab('routine')"
+                        title="Switch to Dashboard 1: Daily Routine">
+                        <span class="dash-num-tag">1</span>
+                        <span>Daily Routine</span>
+                    </button>
+                    <button
+                        id="cornerTab2Btn"
+                        class="corner-dash-btn"
+                        type="button"
+                        onclick="switchDashboardTab('fitness')"
+                        title="Switch to Dashboard 2: What To Do">
+                        <span class="dash-num-tag">2</span>
+                        <span>What To Do</span>
+                    </button>
+                    <button
+                        id="cornerTab3Btn"
+                        class="corner-dash-btn"
+                        type="button"
+                        onclick="switchDashboardTab('precautions')"
+                        title="Switch to Dashboard 3: Precautions & Guidance">
+                        <span class="dash-num-tag">3</span>
+                        <span>Precautions</span>
+                    </button>
+                </div>
             </div>
 
             <div class="hud-meta">
@@ -493,12 +525,13 @@
                 </div>
 
                 <button
-                    class="icon-button"
+                    class="hud-logout-btn"
                     type="button"
                     onclick="logoutUser()"
-                    title="Logout"
+                    title="Logout from Aeriva"
                     aria-label="Logout">
-                    LOGOUT
+                    <span class="logout-icon">⏻</span>
+                    <span class="logout-text">LOGOUT</span>
                 </button>
             </div>
         </header>
@@ -546,13 +579,13 @@
                     <span class="section-kicker">
                         HEALTH SCORE ♥
                     </span>
-                    <span class="vital-status">
+                    <span class="vital-status" id="healthStatusText">
                         GOOD
                     </span>
                 </div>
 
                 <div class="radial-wrap">
-                    <div id="healthRadial" class="radial" style="--progress:259deg">
+                    <div id="healthRadial" class="radial" style="--progress:270deg">
                         <div>
                             <strong id="healthValue">
                                 75
@@ -578,14 +611,14 @@
                     <span class="section-kicker">
                         ENERGY LEVEL ⚡
                     </span>
-                    <span class="vital-status cyan-text">
+                    <span class="vital-status cyan-text" id="energyStatusText">
                         ACTIVE
                     </span>
                 </div>
 
                 <div class="energy-meter">
                     <div class="battery">
-                        <div id="energyFill" class="battery-fill"></div>
+                        <div id="energyFill" class="battery-fill" style="width: 75%;"></div>
                     </div>
                     <strong id="energyValue">
                         75%
@@ -644,74 +677,523 @@
         </section>
 
 
-        <!-- MAIN CONTENT (SCHEDULE + LOGS) -->
-        <div class="main-grid">
+        <!-- DASHBOARD NAVIGATION SWITCHER -->
+        <nav class="dashboard-nav-container">
+            <div class="dashboard-nav-switcher">
+                <button
+                    id="tabDashboard1Btn"
+                    class="dashboard-nav-tab active"
+                    type="button"
+                    onclick="switchDashboardTab('routine')">
+                    <span class="dashboard-nav-icon">📋</span>
+                    <div class="dashboard-nav-content">
+                        <span class="dashboard-nav-title">1 · DAILY ROUTINE</span>
+                        <span class="dashboard-nav-subtitle">Daily Routine · What Food We Eat · Steps Walked · Water We Drank</span>
+                    </div>
+                </button>
 
-            <!-- LEFT COLUMN: TIMELINE + NEXT-DAY MEAL PLANNER -->
-            <div class="timeline-column" style="display: flex; flex-direction: column; gap: 16px;">
+                <button
+                    id="tabDashboard2Btn"
+                    class="dashboard-nav-tab"
+                    type="button"
+                    onclick="switchDashboardTab('fitness')">
+                    <span class="dashboard-nav-icon">⚡</span>
+                    <div class="dashboard-nav-content">
+                        <span class="dashboard-nav-title">2 · WHAT TO DO</span>
+                        <span class="dashboard-nav-subtitle">Exercise Mode (Popup Image Guide) · Fitness & Movement Quests</span>
+                    </div>
+                </button>
 
-                <!-- TIMELINE -->
-                <section class="glass-panel timeline-panel">
+                <button
+                    id="tabDashboard3Btn"
+                    class="dashboard-nav-tab"
+                    type="button"
+                    onclick="switchDashboardTab('precautions')">
+                    <span class="dashboard-nav-icon">🛡️</span>
+                    <div class="dashboard-nav-content">
+                        <span class="dashboard-nav-title">3 · PRECAUTIONS & GUIDANCE</span>
+                        <span class="dashboard-nav-subtitle">AI Health Precautions (Food, Rest & Exercise Alerts) · Next-Day Meals</span>
+                    </div>
+                </button>
+            </div>
+        </nav>
+
+
+        <!-- =====================================================
+             DASHBOARD 1: DAILY ROUTINE, FOOD, STEPS & WATER
+        ===================================================== -->
+        <div id="dashboardView1" class="dashboard-view-panel">
+            <div class="main-grid">
+
+                <!-- LEFT COLUMN: DAILY ROUTINE (SCHEDULE TIMELINE) -->
+                <div class="timeline-column" style="display: flex; flex-direction: column; gap: 16px;">
+                    <section class="glass-panel timeline-panel">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-kicker">
+                                    TODAY'S SCHEDULE
+                                </p>
+                                <h2>
+                                    Daily Routine
+                                </h2>
+                            </div>
+                            <span class="date-badge" id="timelineDate">
+                                TODAY
+                            </span>
+                        </div>
+
+                        <div id="routineList" class="routine-list"></div>
+
+                        <div class="action-dock">
+                            <button
+                                class="neon-button primary"
+                                type="button"
+                                onclick="openFoodModal()">
+                                + LOG FOOD
+                            </button>
+
+                            <button
+                                class="neon-button secondary"
+                                type="button"
+                                onclick="openWaterModal()">
+                                + LOG WATER
+                            </button>
+
+                            <button
+                                class="neon-button outline"
+                                type="button"
+                                style="border-color: rgba(245, 158, 11, 0.4); color: #FCD34D;"
+                                onclick="openStepModal()">
+                                + LOG STEPS
+                            </button>
+
+                            <button
+                                class="neon-button outline"
+                                type="button"
+                                onclick="openRoutineModal()">
+                                EDIT SCHEDULE
+                            </button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- RIGHT COLUMN: FOOD WE EAT, STEPS & WATER -->
+                <aside class="side-stack">
+
+                    <!-- WHAT FOOD WE EAT & NUTRITION -->
+                    <section class="glass-panel stat-panel">
+                        <div class="panel-header compact">
+                            <div>
+                                <p class="section-kicker">
+                                    NUTRITION &amp; CALORIES
+                                </p>
+                                <h2>
+                                    What Food We Eat
+                                </h2>
+                            </div>
+                            <span class="stat-number">
+                                <span id="calorieStat">
+                                    0
+                                </span>
+                                <small>
+                                    kcal
+                                </small>
+                            </span>
+                        </div>
+
+                        <div id="foodList" class="food-list"></div>
+
+                        <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
+                            <button
+                                class="mini-button full"
+                                type="button"
+                                style="border-color: rgba(6, 182, 212, 0.4); color: #67E8F9; background: rgba(6, 182, 212, 0.1); font-weight: 800; font-size: 11px;"
+                                onclick="openFoodModal(null, true)">
+                                📸 SNAP FOOD PHOTO
+                            </button>
+                            <button
+                                class="text-button"
+                                type="button"
+                                style="margin-bottom: 0; white-space: nowrap;"
+                                onclick="openFoodModal()">
+                                + LOG MEAL →
+                            </button>
+                        </div>
+
+                        <!-- SMART DIET & JUNK FOOD ADVISOR -->
+                        <div id="dietAdvisorContainer"></div>
+                    </section>
+
+                    <!-- OUR STEPS (DAILY STEP COUNTER) -->
+                    <section class="glass-panel stat-panel">
+                        <div class="panel-header compact">
+                            <div>
+                                <p class="section-kicker">
+                                    DAILY STEP COUNTER
+                                </p>
+                                <h2>
+                                    Steps Walked
+                                </h2>
+                            </div>
+                            <span class="stat-number">
+                                <span id="stepStat">
+                                    0
+                                </span>
+                                <small>
+                                    / 10,000
+                                </small>
+                            </span>
+                        </div>
+
+                        <div style="height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 99px; overflow: hidden; margin-bottom: 12px;">
+                            <div id="stepProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #F59E0B, #FBBF24); border-radius: 99px; transition: width 400ms ease;"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 11px;">
+                            <span id="stepDistance" style="color: #94A3B8;">0.0 km</span>
+                            <span id="stepCalories" style="color: #FCD34D; font-weight: 700;">~0 kcal burned</span>
+                        </div>
+
+                        <button
+                            class="mini-button full"
+                            style="border-color: rgba(245, 158, 11, 0.4); color: #FCD34D; background: rgba(245, 158, 11, 0.1);"
+                            type="button"
+                            onclick="openStepModal()">
+                            + LOG / UPDATE TODAY'S STEPS
+                        </button>
+                    </section>
+
+                    <!-- WATER WE DRANK (HYDRATION TRACKER) -->
+                    <section class="glass-panel stat-panel">
+                        <div class="panel-header compact">
+                            <div>
+                                <p class="section-kicker">
+                                    HYDRATION TRACKER
+                                </p>
+                                <h2>
+                                    Water We Drank
+                                </h2>
+                            </div>
+                            <span class="stat-number">
+                                <span id="waterPanelStat">
+                                    0.00 L
+                                </span>
+                                <small>
+                                    / 2.5 L
+                                </small>
+                            </span>
+                        </div>
+
+                        <div style="height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 99px; overflow: hidden; margin-bottom: 12px;">
+                            <div id="waterPanelProgress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #06B6D4, #38BDF8); border-radius: 99px; transition: width 400ms ease;"></div>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button
+                                class="mini-button cyan full"
+                                type="button"
+                                style="font-weight: 800; font-size: 11px;"
+                                onclick="addWater()">
+                                +250 ML QUICK ADD
+                            </button>
+                            <button
+                                class="text-button"
+                                type="button"
+                                style="margin-bottom: 0; white-space: nowrap;"
+                                onclick="openWaterModal()">
+                                + CUSTOM ML →
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- SLEEP STAT -->
+                    <section class="glass-panel stat-panel">
+                        <div class="panel-header compact">
+                            <div>
+                                <p class="section-kicker">
+                                    SLEEP &amp; REST
+                                </p>
+                                <h2>
+                                    Sleep Duration
+                                </h2>
+                            </div>
+                            <span class="stat-number">
+                                <span id="sleepStat">
+                                    --
+                                </span>
+                            </span>
+                        </div>
+
+                        <div class="recovery-visual">
+                            <div class="recovery-orbit">
+                                ☾
+                            </div>
+                            <div>
+                                <p>
+                                    Healthy Target
+                                </p>
+                                <strong>
+                                    Aim for 7 to 9 hours of quality sleep.
+                                </strong>
+                            </div>
+                        </div>
+                    </section>
+
+                </aside>
+
+            </div>
+        </div>
+
+
+        <!-- =====================================================
+             DASHBOARD 2: 2 - WHAT TO DO (EXERCISE MODE & NEXT-DAY NUTRITION)
+        ===================================================== -->
+        <div id="dashboardView2" class="dashboard-view-panel hidden">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+
+                <!-- SCHEDULED EXERCISE MODE (TRIGGER TO OPEN POPUP) -->
+                <section class="glass-panel">
                     <div class="panel-header">
                         <div>
-                            <p class="section-kicker">
-                                TODAY'S SCHEDULE
+                            <p class="section-kicker" style="color: #67E8F9;">
+                                2 · WHAT TO DO
                             </p>
-                            <h2>
-                                Daily Routine
+                            <h2 style="font-size: 20px; font-weight: 800; color: #F8FAFC;">
+                                Exercise Mode &amp; Movement
                             </h2>
                         </div>
-                        <span class="date-badge" id="timelineDate">
-                            TODAY
-                        </span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 11px; color: #94A3B8;">ACTIVITY TIME:</span>
+                            <span class="date-badge" id="exerciseStat" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #6EE7B7; font-size: 13px;">
+                                0 min
+                            </span>
+                        </div>
                     </div>
 
-                    <div id="routineList" class="routine-list"></div>
+                    <div style="background: rgba(2, 6, 23, 0.65); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 6px;">
+                            <span style="font-size: 10.5px; font-weight: 900; letter-spacing: 0.1em; color: #67E8F9; text-transform: uppercase;">
+                                🕒 FREE SCHEDULE WINDOW
+                            </span>
+                            <span id="scheduledWorkoutTime" style="font-size: 12px; font-weight: 800; color: #F8FAFC; background: rgba(255, 255, 255, 0.06); padding: 3px 10px; border-radius: 8px;">
+                                Loading window...
+                            </span>
+                        </div>
 
-                    <div class="action-dock">
-                        <button
-                            class="neon-button primary"
-                            type="button"
-                            onclick="openFoodModal()">
-                            + LOG FOOD
-                        </button>
+                        <!-- LIVE METRICS: CALORIES IN vs STEP BURN vs TARGET BURN -->
+                        <div class="exercise-meta-stats" style="margin-bottom: 14px;">
+                            <div class="exercise-meta-box">
+                                <span class="meta-label">Food Intake</span>
+                                <span class="meta-val" id="exerciseMetaFood" style="color: #FDA4AF;">0 kcal</span>
+                            </div>
+                            <div class="exercise-meta-box">
+                                <span class="meta-label">Steps Burn</span>
+                                <span class="meta-val" id="exerciseMetaSteps" style="color: #FCD34D;">0 kcal</span>
+                            </div>
+                            <div class="exercise-meta-box">
+                                <span class="meta-label">Target Burn</span>
+                                <span class="meta-val" id="exerciseMetaBurn" style="color: #34D399;">-- kcal</span>
+                            </div>
+                        </div>
 
-                        <button
-                            class="neon-button secondary"
-                            type="button"
-                            onclick="openWaterModal()">
-                            + LOG WATER
-                        </button>
+                        <div id="scheduledWorkoutRoutine" style="font-size: 16px; font-weight: 900; color: #F8FAFC; margin-bottom: 6px;">
+                            Prescribed Workout Routine
+                        </div>
+                        <div id="scheduledWorkoutDesc" style="font-size: 12px; color: #94A3B8; margin-bottom: 16px; line-height: 1.5;">
+                            Calculated dynamically according to your food intake and steps walked.
+                        </div>
 
-                        <button
-                            class="neon-button outline"
-                            type="button"
-                            style="border-color: rgba(245, 158, 11, 0.4); color: #FCD34D;"
-                            onclick="openStepModal()">
-                            + LOG STEPS
-                        </button>
+                        <!-- EXERCISES OVERVIEW PREVIEW -->
+                        <div id="exerciseBreakdownList" style="margin-bottom: 16px;">
+                            <!-- Populated with tailored sets and reps -->
+                        </div>
 
+                        <!-- BIG PROMINENT EXERCISE MODE BUTTON -->
                         <button
-                            class="neon-button outline"
+                            id="launchExerciseModeBtn"
+                            class="neon-button primary large full"
                             type="button"
-                            onclick="openRoutineModal()">
-                            EDIT SCHEDULE
+                            style="font-size: 14px; font-weight: 900; padding: 16px; box-shadow: 0 0 25px rgba(6, 182, 212, 0.45); letter-spacing: 0.05em;"
+                            onclick="openExerciseModePopup()">
+                            ⚡ START EXERCISE MODE (OPEN STEP-BY-STEP POPUP)
                         </button>
                     </div>
                 </section>
 
-                <!-- AI NEXT-DAY MEAL PLANNER (ACCORDING TO PRESENT & BEFORE DAY) -->
+            </div>
+        </div>
+
+
+        <!-- =====================================================
+             DASHBOARD 3: 3 - PRECAUTIONS & GUIDANCE (AI HEALTH PRECAUTIONS & NEXT-DAY MEALS)
+        ===================================================== -->
+        <div id="dashboardView3" class="dashboard-view-panel hidden">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+
+                <!-- AI HEALTH PRECAUTIONS HERO SHIELD -->
+                <section class="glass-panel precautions-hero-card" id="precautionsHeroCard">
+                    <div class="precautions-hero-header">
+                        <div>
+                            <p class="section-kicker" style="color: #67E8F9; display: flex; align-items: center; gap: 6px;">
+                                <span class="live-dot" style="background: #10B981;"></span>
+                                AI CLINICAL SAFETY INTELLIGENCE
+                            </p>
+                            <h2 style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin: 4px 0 6px;">
+                                Health Precautions & Smart Guidance
+                            </h2>
+                            <p style="font-size: 12.5px; color: #94A3B8; margin: 0; line-height: 1.45;">
+                                Real-time AI precautions monitoring whether you are eating proper food, getting adequate rest, and maintaining daily physical exercise.
+                            </p>
+                        </div>
+                        <div class="precautions-score-box">
+                            <span class="precautions-score-label">HEALTH SAFETY SHIELD</span>
+                            <div class="precautions-score-badge" id="precautionsOverallBadge">
+                                <span id="precautionsShieldIcon">🛡️</span>
+                                <span id="precautionsOverallText">ANALYZING STATUS</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI DIAGNOSIS SUMMARY BANNER -->
+                    <div class="precautions-summary-banner" id="precautionsSummaryBanner">
+                        <div class="summary-banner-icon" id="precautionsBannerIcon">💡</div>
+                        <div class="summary-banner-body">
+                            <h3 id="precautionsBannerTitle" style="font-size: 14px; font-weight: 800; color: #F8FAFC; margin: 0 0 4px;">
+                                Initializing Real-time Health Diagnostics...
+                            </h3>
+                            <p id="precautionsBannerText" style="font-size: 12px; color: #CBD5E1; margin: 0; line-height: 1.4;">
+                                Examining your daily food logs, routine rest schedule, and physical activity to formulate personalized precautions.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 3-PILLAR PRECAUTIONS GRID: FOOD, REST, EXERCISE -->
+                    <div class="precautions-grid">
+
+                        <!-- 1. FOOD & NUTRITION PRECAUTION CARD -->
+                        <div class="precaution-pillar-card" id="precautionFoodCard">
+                            <div class="pillar-header">
+                                <div class="pillar-title-wrap">
+                                    <span class="pillar-icon">🥗</span>
+                                    <div>
+                                        <h4 class="pillar-name">Food & Nutrition</h4>
+                                        <span class="pillar-sub">Daily Meal Intake</span>
+                                    </div>
+                                </div>
+                                <span class="pillar-status-tag" id="precautionFoodTag">CHECKING...</span>
+                            </div>
+
+                            <p class="pillar-diagnosis" id="precautionFoodMsg">
+                                Analyzing today's meals and checking for skipped food or calorie deficits...
+                            </p>
+
+                            <div class="pillar-rec-box">
+                                <div class="rec-label">💡 AI PRECAUTION & GUIDANCE:</div>
+                                <div class="rec-text" id="precautionFoodRec">
+                                    Ensure balanced nutrition with healthy proteins, fiber, and whole foods.
+                                </div>
+                            </div>
+
+                            <button
+                                class="pillar-action-btn"
+                                id="precautionFoodActionBtn"
+                                type="button"
+                                onclick="openFoodModal()">
+                                + LOG MEAL NOW
+                            </button>
+                        </div>
+
+                        <!-- 2. REST & SLEEP PRECAUTION CARD -->
+                        <div class="precaution-pillar-card" id="precautionRestCard">
+                            <div class="pillar-header">
+                                <div class="pillar-title-wrap">
+                                    <span class="pillar-icon">🌙</span>
+                                    <div>
+                                        <h4 class="pillar-name">Rest & Recovery</h4>
+                                        <span class="pillar-sub">Sleep & Downtime</span>
+                                    </div>
+                                </div>
+                                <span class="pillar-status-tag" id="precautionRestTag">CHECKING...</span>
+                            </div>
+
+                            <p class="pillar-diagnosis" id="precautionRestMsg">
+                                Analyzing your scheduled sleep hours and rest intervals...
+                            </p>
+
+                            <div class="pillar-rec-box">
+                                <div class="rec-label">💡 AI PRECAUTION & GUIDANCE:</div>
+                                <div class="rec-text" id="precautionRestRec">
+                                    Aim for 7 to 8 hours of uninterrupted rest to support cellular recovery.
+                                </div>
+                            </div>
+
+                            <button
+                                class="pillar-action-btn"
+                                id="precautionRestActionBtn"
+                                type="button"
+                                onclick="openRoutineModal()">
+                                ⚙️ OPTIMIZE ROUTINE REST
+                            </button>
+                        </div>
+
+                        <!-- 3. EXERCISE & MOVEMENT PRECAUTION CARD -->
+                        <div class="precaution-pillar-card" id="precautionExerciseCard">
+                            <div class="pillar-header">
+                                <div class="pillar-title-wrap">
+                                    <span class="pillar-icon">⚡</span>
+                                    <div>
+                                        <h4 class="pillar-name">Physical Exercise</h4>
+                                        <span class="pillar-sub">Steps & Workouts</span>
+                                    </div>
+                                </div>
+                                <span class="pillar-status-tag" id="precautionExerciseTag">CHECKING...</span>
+                            </div>
+
+                            <p class="pillar-diagnosis" id="precautionExerciseMsg">
+                                Checking steps walked and workout activity logged today...
+                            </p>
+
+                            <div class="pillar-rec-box">
+                                <div class="rec-label">💡 AI PRECAUTION & GUIDANCE:</div>
+                                <div class="rec-text" id="precautionExerciseRec">
+                                    Stay active with daily movement to protect heart health and posture.
+                                </div>
+                            </div>
+
+                            <button
+                                class="pillar-action-btn"
+                                id="precautionExerciseActionBtn"
+                                type="button"
+                                onclick="switchDashboardTab('fitness'); openExerciseModePopup();">
+                                ⚡ START 10-MIN WORKOUT
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- QUICK ACTION BULLETS -->
+                    <div class="precautions-checklist-box">
+                        <div class="checklist-title">📋 TODAY'S ESSENTIAL PRECAUTION CHECKLIST:</div>
+                        <ul class="checklist-items" id="precautionsChecklist">
+                            <li>Take proper balanced food on time and avoid skipping meals</li>
+                            <li>Protect your recovery with 7-8 hours of sleep tonight</li>
+                            <li>Engage in regular physical activity or brisk walking</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- MOVED SECTION: AI NEXT-DAY MEAL SUGGESTIONS (ACCORDING TO TODAY) -->
                 <section id="nextDayMealSection" class="glass-panel next-day-planner-panel">
                     <div class="next-day-header">
                         <div>
                             <p class="section-kicker" style="color: #67E8F9;">
                                 MULTI-DAY NUTRITION INTELLIGENCE
                             </p>
-                            <h2 style="font-size: 19px; font-weight: 800; color: #F8FAFC; margin-bottom: 4px;">
-                                Next-Day Meal Suggestions
+                            <h2 style="font-size: 20px; font-weight: 800; color: #F8FAFC; margin-bottom: 4px;">
+                                Next-Day Meal Suggestions (According to Today)
                             </h2>
-                            <p style="font-size: 11.5px; color: #94A3B8; margin: 0;">
-                                Curated Indian meals for tomorrow based on your today &amp; yesterday food logs.
+                            <p style="font-size: 12px; color: #94A3B8; margin: 0;">
+                                Curated Indian meals for tomorrow specifically balanced based on your food logs from today.
                             </p>
                         </div>
                         <div id="nextDayBadgeContainer">
@@ -733,7 +1215,7 @@
                     </div>
 
                     <!-- SUMMARY FOOTER -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px;">
                         <span style="color: #94A3B8;">
                             Total Target: <strong id="nextDayTotalCals" style="color: #10B981; font-weight: 800;">~1,850 kcal</strong>
                         </span>
@@ -748,201 +1230,14 @@
                             <button 
                                 class="mini-button green" 
                                 type="button" 
-                                onclick="openFoodModal('Breakfast')">
-                                + LOG A MEAL NOW
+                                onclick="openFoodModal()">
+                                + LOG A MEAL
                             </button>
                         </div>
                     </div>
                 </section>
 
             </div>
-
-            <!-- SIDE PANELS (FOOD, SLEEP, EXERCISE) -->
-            <aside class="side-stack">
-
-                <!-- FOOD LOG & DIET ADVISOR -->
-                <section class="glass-panel stat-panel">
-                    <div class="panel-header compact">
-                        <div>
-                            <p class="section-kicker">
-                                NUTRITION & CALORIES
-                            </p>
-                            <h2>
-                                Today's Meals
-                            </h2>
-                        </div>
-                        <span class="stat-number">
-                            <span id="calorieStat">
-                                0
-                            </span>
-                            <small>
-                                kcal
-                            </small>
-                        </span>
-                    </div>
-
-                    <div id="foodList" class="food-list"></div>
-
-                    <div style="display: flex; gap: 8px; margin-bottom: 12px; align-items: center;">
-                        <button
-                            class="mini-button full"
-                            type="button"
-                            style="border-color: rgba(6, 182, 212, 0.4); color: #67E8F9; background: rgba(6, 182, 212, 0.1); font-weight: 800; font-size: 11px;"
-                            onclick="openFoodModal(null, true)">
-                            📸 SNAP FOOD PHOTO
-                        </button>
-                        <button
-                            class="text-button"
-                            type="button"
-                            style="margin-bottom: 0; white-space: nowrap;"
-                            onclick="openFoodModal()">
-                            + LOG MEAL →
-                        </button>
-                    </div>
-
-                    <!-- SMART DIET & JUNK FOOD ADVISOR -->
-                    <div id="dietAdvisorContainer"></div>
-                </section>
-
-                <!-- STEPS STAT -->
-                <section class="glass-panel stat-panel">
-                    <div class="panel-header compact">
-                        <div>
-                            <p class="section-kicker">
-                                DAILY STEP COUNTER
-                            </p>
-                            <h2>
-                                Steps Walked
-                            </h2>
-                        </div>
-                        <span class="stat-number">
-                            <span id="stepStat">
-                                0
-                            </span>
-                            <small>
-                                / 10,000
-                            </small>
-                        </span>
-                    </div>
-
-                    <div style="height: 8px; background: rgba(255, 255, 255, 0.08); border-radius: 99px; overflow: hidden; margin-bottom: 12px;">
-                        <div id="stepProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #F59E0B, #FBBF24); border-radius: 99px; transition: width 400ms ease;"></div>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 11px;">
-                        <span id="stepDistance" style="color: #94A3B8;">0.0 km</span>
-                        <span id="stepCalories" style="color: #FCD34D; font-weight: 700;">~0 kcal burned</span>
-                    </div>
-
-                    <button
-                        class="mini-button full"
-                        style="border-color: rgba(245, 158, 11, 0.4); color: #FCD34D; background: rgba(245, 158, 11, 0.1);"
-                        type="button"
-                        onclick="openStepModal()">
-                        + LOG / UPDATE TODAY'S STEPS
-                    </button>
-                </section>
-
-                <!-- EXERCISE & SCHEDULED WORKOUT -->
-                <section class="glass-panel stat-panel">
-                    <div class="panel-header compact">
-                        <div>
-                            <p class="section-kicker">
-                                SCHEDULED EXERCISE
-                            </p>
-                            <h2>
-                                Activity Time
-                            </h2>
-                        </div>
-                        <span class="stat-number">
-                            <span id="exerciseStat">
-                                0 min
-                            </span>
-                        </span>
-                    </div>
-
-                    <!-- SMART EXERCISE & FREE-TIME BURN RECOMMENDER -->
-                    <div id="workoutScheduleCard" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px; margin-bottom: 12px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 4px;">
-                            <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: #67E8F9;">FREE SCHEDULE WINDOW</span>
-                            <span id="scheduledWorkoutTime" style="font-size: 11px; font-weight: 800; color: #E2E8F0;">Loading...</span>
-                        </div>
-
-                        <!-- LIVE METRICS: CALORIES IN vs STEP BURN vs TARGET BURN -->
-                        <div class="exercise-meta-stats">
-                            <div class="exercise-meta-box">
-                                <span class="meta-label">Food Intake</span>
-                                <span class="meta-val" id="exerciseMetaFood" style="color: #FDA4AF;">0 kcal</span>
-                            </div>
-                            <div class="exercise-meta-box">
-                                <span class="meta-label">Steps Burn</span>
-                                <span class="meta-val" id="exerciseMetaSteps" style="color: #FCD34D;">0 kcal</span>
-                            </div>
-                            <div class="exercise-meta-box">
-                                <span class="meta-label">Target Burn</span>
-                                <span class="meta-val" id="exerciseMetaBurn" style="color: #34D399;">-- kcal</span>
-                            </div>
-                        </div>
-
-                        <div id="scheduledWorkoutRoutine" style="font-size: 13.5px; font-weight: 800; color: #F8FAFC; margin-bottom: 4px;">
-                            Prescribed Workout Routine
-                        </div>
-                        <div id="scheduledWorkoutDesc" style="font-size: 11px; color: #94A3B8; margin-bottom: 12px; line-height: 1.4;">
-                            Calculated dynamically according to your food intake and steps walked.
-                        </div>
-
-                        <!-- DYNAMIC EXERCISE BREAKDOWN LIST -->
-                        <div id="exerciseBreakdownList" style="margin-bottom: 12px;">
-                            <!-- Populated with tailored sets and reps -->
-                        </div>
-
-                        <div id="workoutCompleteArea">
-                            <button
-                                id="workoutCompleteBtn"
-                                class="mini-button green full"
-                                type="button"
-                                onclick="toggleWorkoutComplete()">
-                                ✓ COMPLETED WORKOUT (+25 XP)
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- SLEEP STAT -->
-                <section class="glass-panel stat-panel">
-                    <div class="panel-header compact">
-                        <div>
-                            <p class="section-kicker">
-                                SLEEP & REST
-                            </p>
-                            <h2>
-                                Sleep Duration
-                            </h2>
-                        </div>
-                        <span class="stat-number">
-                            <span id="sleepStat">
-                                --
-                            </span>
-                        </span>
-                    </div>
-
-                    <div class="recovery-visual">
-                        <div class="recovery-orbit">
-                            ☾
-                        </div>
-                        <div>
-                            <p>
-                                Healthy Target
-                            </p>
-                            <strong>
-                                Aim for 7 to 9 hours of quality sleep.
-                            </strong>
-                        </div>
-                    </div>
-                </section>
-
-            </aside>
-
         </div>
 
     </main>
@@ -1096,6 +1391,177 @@
                 ✕ I SKIPPED THIS MEAL
             </button>
         </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     EXERCISE MODE INTERACTIVE POPUP MODAL
+===================================================== -->
+<div id="exerciseModePopupModal" class="modal hidden" aria-hidden="true" style="z-index: 60;">
+
+    <div class="modal-card glass-panel exercise-popup-card" role="dialog" aria-modal="true" style="width: min(640px, 95%); max-height: min(880px, 94vh); padding: 24px; border-radius: 24px;">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="closeExerciseModePopup()"
+            aria-label="Close">
+            ×
+        </button>
+
+        <div style="margin-bottom: 12px;">
+            <p class="section-kicker" style="color: #67E8F9; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 4px;">
+                ⚡ GUIDED EXERCISE MODE
+            </p>
+            <h2 id="popupWorkoutTitle" style="font-size: 20px; font-weight: 900; color: #F8FAFC; margin-bottom: 2px;">
+                Exercise Routine
+            </h2>
+            <p class="modal-subtitle" id="popupWorkoutSubtitle" style="font-size: 11.5px; color: #94A3B8; margin-bottom: 12px;">
+                Follow the posture guide and complete each exercise to advance to the next step.
+            </p>
+        </div>
+
+        <!-- PROGRESS BAR -->
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px;">
+            <span style="font-weight: 800; color: #67E8F9;" id="popupStepCounterText">STEP 1 OF 4</span>
+            <span style="font-weight: 800; color: #10B981;" id="popupProgressPctText">0% COMPLETED</span>
+        </div>
+        <div class="exercise-popup-progress-track">
+            <div id="popupProgressFill" class="exercise-popup-progress-fill" style="width: 0%;"></div>
+        </div>
+
+        <!-- ACTIVE EXERCISE CARD -->
+        <div id="popupActiveExerciseSection">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span class="active-exercise-badge" id="popupStepBadge">⚡ 1ST EXERCISE · ACTIVE</span>
+                <span style="font-size: 11px; color: #FCD34D; font-weight: 800;" id="popupExerciseTiming">4 mins · Controlled breathing</span>
+            </div>
+
+            <!-- ILLUSTRATION IMAGE OF HOW TO DO THAT EXERCISE -->
+            <div id="popupDiagramBox" class="exercise-popup-diagram-box">
+                <!-- SVG diagram inserted dynamically -->
+            </div>
+
+            <h3 id="popupExerciseName" style="font-size: 17px; font-weight: 800; color: #F8FAFC; margin-bottom: 8px;">
+                Exercise Name
+            </h3>
+
+            <div class="active-exercise-pills" id="popupPills">
+                <!-- Duration, Reps, Target muscles -->
+            </div>
+
+            <!-- HOW TO DO IT STEPS -->
+            <div class="active-exercise-how-to" style="margin-bottom: 14px;">
+                <div class="active-exercise-how-to-title">
+                    <span>📋 HOW TO PERFORM THIS EXERCISE (PROPER FORM):</span>
+                </div>
+                <ol class="active-exercise-instructions" id="popupInstructions">
+                    <!-- Steps inserted dynamically -->
+                </ol>
+            </div>
+
+            <!-- EXERCISE TIMER -->
+            <div class="exercise-popup-timer-box">
+                <div>
+                    <span style="font-size: 9.5px; color: #94A3B8; text-transform: uppercase; display: block; font-weight: 800;">EXERCISE TIMER</span>
+                    <span class="exercise-popup-timer-clock" id="popupTimerClock">04:00</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="exercise-timer-btn" id="popupTimerToggleBtn" onclick="togglePopupStepTimer()">▶ START</button>
+                    <button type="button" class="exercise-timer-btn" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); color: #94A3B8;" onclick="resetPopupStepTimer()">RESET</button>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTON: COMPLETE 1ST EXERCISE TO ADVANCE TO NEXT -->
+            <button
+                id="popupCompleteBtn"
+                class="neon-button primary large full"
+                type="button"
+                style="padding: 14px; font-size: 13.5px; font-weight: 800; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);"
+                onclick="handlePopupStepComplete()">
+                ✓ 1ST EXERCISE COMPLETED → NEXT EXERCISE
+            </button>
+
+            <div id="popupNextPreview" style="font-size: 11px; color: #64748B; text-align: center; margin-top: 8px;">
+                <!-- Next exercise preview text -->
+            </div>
+        </div>
+
+        <!-- CELEBRATION CARD (WHEN ALL COMPLETED) -->
+        <div id="popupCelebrationSection" class="hidden">
+            <div class="workout-celebration-card" style="margin-top: 10px; padding: 24px;">
+                <div class="workout-celebration-trophy" style="font-size: 40px; margin-bottom: 8px;">🏆</div>
+                <h3 class="workout-celebration-title" style="font-size: 18px;">Daily Workout Complete!</h3>
+                <p class="workout-celebration-desc" id="popupCelebrationDesc" style="font-size: 12px; margin-bottom: 18px;">
+                    Fantastic effort! You completed all exercises in your scheduled routine today (+25 XP earned).
+                </p>
+                <div style="display: flex; gap: 10px; margin-top: 14px;">
+                    <button type="button" class="neon-button primary full" onclick="closeExerciseModePopup()">
+                        ✓ DONE / RETURN TO DASHBOARD
+                    </button>
+                    <button type="button" class="mini-button outline full" onclick="restartPopupWorkout()">
+                        🔄 RESTART WORKOUT
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     EXERCISE FORM GUIDE & ILLUSTRATION MODAL
+===================================================== -->
+<div id="exerciseGuideModal" class="modal hidden" aria-hidden="true" style="z-index: 55;">
+
+    <div class="modal-card glass-panel" role="dialog" aria-modal="true" style="width: min(600px, 94%); max-height: min(820px, 92vh);">
+
+        <button
+            class="modal-close"
+            type="button"
+            onclick="closeExerciseGuideModal()"
+            aria-label="Close">
+            ×
+        </button>
+
+        <p class="section-kicker">
+            EXERCISE TECHNIQUE & FORM
+        </p>
+        <h2 id="guideModalTitle">
+            Exercise Guide
+        </h2>
+        <p class="modal-subtitle" id="guideModalSubtitle">
+            Correct alignment, target muscles, and execution steps.
+        </p>
+
+        <div id="guideModalDiagramBox" class="active-exercise-diagram-box" style="min-height: 180px; max-height: 220px; margin-bottom: 14px;">
+            <!-- SVG Illustration inserted dynamically -->
+        </div>
+
+        <div class="active-exercise-pills" id="guideModalPills" style="margin-bottom: 14px;">
+            <!-- Duration, reps, target muscles -->
+        </div>
+
+        <div class="active-exercise-how-to" style="padding: 12px 14px; margin-bottom: 16px;">
+            <div class="active-exercise-how-to-title">
+                <span>📋 STEP-BY-STEP FORM GUIDE</span>
+            </div>
+            <ol class="active-exercise-instructions" id="guideModalInstructions">
+                <!-- Instructions inserted dynamically -->
+            </ol>
+        </div>
+
+        <button
+            class="neon-button primary full"
+            type="button"
+            onclick="closeExerciseGuideModal()">
+            GOT IT / RETURN TO WORKOUT
+        </button>
 
     </div>
 
@@ -1358,7 +1824,8 @@
 
 </div>
 
-<script src="/static/app.js"></script>
+
+<script src="/static/app.js?v=2.4"></script>
 
 </body>
 </html>

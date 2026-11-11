@@ -336,30 +336,9 @@ async function loginUser() {
         updateTimeGreeting();
 
 
-        /*
-         * FIRST LOGIN
-         *
-         * User has not created
-         * their BioRhythm yet.
-         */
-
-        if (
-            currentUser.onboarding_completed === false
-        ) {
-
-            showFirstLoginRoutine();
-
-            return;
-        }
-
-
-        /*
-         * EXISTING USER
-         *
-         * User already completed
-         * BioRhythm setup.
-         */
-
+        // Always enter Dashboard 1 (Daily Routine) directly upon login
+        localStorage.setItem("aeriva_active_dashboard_tab", "routine");
+        switchDashboardTab("routine");
         await loadDashboard();
 
 
@@ -408,6 +387,14 @@ async function loadDashboard() {
     if (scheduleSetupScreen) scheduleSetupScreen.classList.add("hidden");
     if (dashboardScreen) dashboardScreen.classList.remove("hidden");
 
+    // Ensure all modals remain closed upon login (no repeat popups)
+    const foodModal = document.getElementById("foodModal");
+    if (foodModal) foodModal.classList.add("hidden");
+    const stepModal = document.getElementById("stepModal");
+    if (stepModal) stepModal.classList.add("hidden");
+    const routineModal = document.getElementById("routineModal");
+    if (routineModal) routineModal.classList.add("hidden");
+
     const userName = document.getElementById("userName");
     if (userName) {
         userName.textContent = currentUser.name || "PLAYER";
@@ -419,13 +406,236 @@ async function loadDashboard() {
     loadStepTracker();
     loadSmartExerciseRecommender();
     loadNextDaySuggestions();
+    loadHealthPrecautions();
     updateSuggestion();
+    updateDynamicVitals();
 
-    // Auto-prompt food log based on current meal time
-    await promptMealOnLogin();
+    // Restore active dashboard tab (Dashboard 1: Routine vs Dashboard 2: Fitness vs Dashboard 3: Precautions)
+    const savedDashboardTab = localStorage.getItem("aeriva_active_dashboard_tab") || "routine";
+    switchDashboardTab(savedDashboardTab);
 
-    // Check evening steps prompt
-    checkNightStepPrompt();
+    // No auto-popups: Never interrupt the user with popups upon login or page load.
+    // Meals and steps are displayed on Dashboard 1 with clean buttons to log whenever desired.
+}
+
+
+/* =========================================
+   TRIPLE DASHBOARD NAVIGATION SWITCHER
+   Dashboard 1: 1 - Daily Routine (Routine, Food, Steps, Water)
+   Dashboard 2: 2 - What To Do (Exercise Mode Popup & Fitness Quests)
+   Dashboard 3: 3 - Precautions & Guidance (AI Health Precautions & Next-Day Meals)
+========================================= */
+
+function switchDashboardTab(tab) {
+    const tab1Btn = document.getElementById("tabDashboard1Btn");
+    const tab2Btn = document.getElementById("tabDashboard2Btn");
+    const tab3Btn = document.getElementById("tabDashboard3Btn");
+    const corner1Btn = document.getElementById("cornerTab1Btn");
+    const corner2Btn = document.getElementById("cornerTab2Btn");
+    const corner3Btn = document.getElementById("cornerTab3Btn");
+    const view1 = document.getElementById("dashboardView1");
+    const view2 = document.getElementById("dashboardView2");
+    const view3 = document.getElementById("dashboardView3");
+
+    // Reset all tabs
+    [tab1Btn, tab2Btn, tab3Btn, corner1Btn, corner2Btn, corner3Btn].forEach(btn => {
+        if (btn) btn.classList.remove("active");
+    });
+    [view1, view2, view3].forEach(view => {
+        if (view) view.classList.add("hidden");
+    });
+
+    if (tab === "fitness" || tab === "dashboard2" || tab === "2") {
+        if (tab2Btn) tab2Btn.classList.add("active");
+        if (corner2Btn) corner2Btn.classList.add("active");
+        if (view2) view2.classList.remove("hidden");
+        localStorage.setItem("aeriva_active_dashboard_tab", "fitness");
+        loadSmartExerciseRecommender();
+    } else if (tab === "precautions" || tab === "dashboard3" || tab === "3" || tab === "guidance") {
+        if (tab3Btn) tab3Btn.classList.add("active");
+        if (corner3Btn) corner3Btn.classList.add("active");
+        if (view3) view3.classList.remove("hidden");
+        localStorage.setItem("aeriva_active_dashboard_tab", "precautions");
+        loadHealthPrecautions();
+        loadNextDaySuggestions();
+    } else {
+        if (tab1Btn) tab1Btn.classList.add("active");
+        if (corner1Btn) corner1Btn.classList.add("active");
+        if (view1) view1.classList.remove("hidden");
+        localStorage.setItem("aeriva_active_dashboard_tab", "routine");
+    }
+}
+
+
+/* =========================================
+   DASHBOARD 3: AI HEALTH PRECAUTIONS ENGINE
+   Food, Rest & Exercise Proactive Warnings
+========================================= */
+
+async function loadHealthPrecautions() {
+    const overallBadge = document.getElementById("precautionsOverallBadge");
+    const overallText = document.getElementById("precautionsOverallText");
+    const shieldIcon = document.getElementById("precautionsShieldIcon");
+    const banner = document.getElementById("precautionsSummaryBanner");
+    const bannerIcon = document.getElementById("precautionsBannerIcon");
+    const bannerTitle = document.getElementById("precautionsBannerTitle");
+    const bannerText = document.getElementById("precautionsBannerText");
+
+    const foodCard = document.getElementById("precautionFoodCard");
+    const foodTag = document.getElementById("precautionFoodTag");
+    const foodMsg = document.getElementById("precautionFoodMsg");
+    const foodRec = document.getElementById("precautionFoodRec");
+    const foodBtn = document.getElementById("precautionFoodActionBtn");
+
+    const restCard = document.getElementById("precautionRestCard");
+    const restTag = document.getElementById("precautionRestTag");
+    const restMsg = document.getElementById("precautionRestMsg");
+    const restRec = document.getElementById("precautionRestRec");
+    const restBtn = document.getElementById("precautionRestActionBtn");
+
+    const exCard = document.getElementById("precautionExerciseCard");
+    const exTag = document.getElementById("precautionExerciseTag");
+    const exMsg = document.getElementById("precautionExerciseMsg");
+    const exRec = document.getElementById("precautionExerciseRec");
+    const exBtn = document.getElementById("precautionExerciseActionBtn");
+
+    const checklist = document.getElementById("precautionsChecklist");
+
+    // Gather client metrics for query
+    let steps = 0;
+    try {
+        steps = parseInt(localStorage.getItem(getStepStorageKey())) || 0;
+    } catch (_) {}
+
+    let exerciseMins = 0;
+    try {
+        const exElem = document.getElementById("exerciseStat");
+        if (exElem) exerciseMins = parseInt(exElem.textContent) || 0;
+    } catch (_) {}
+
+    try {
+        authToken = authToken || localStorage.getItem("aeriva_token");
+        const headers = authToken ? { "Authorization": `Bearer ${authToken}` } : {};
+        const res = await fetch(`${API}/health/precautions?steps=${steps}&exercise_minutes=${exerciseMins}`, { headers });
+
+        if (!res.ok) {
+            fallbackHealthPrecautions(steps, exerciseMins);
+            return;
+        }
+
+        const data = await res.json();
+
+        // 1. Overall Shield Status
+        const sev = (data.overall_severity || "HEALTHY").toLowerCase();
+        if (overallBadge) {
+            overallBadge.className = `precautions-score-badge ${sev}`;
+        }
+        if (overallText) {
+            overallText.textContent = data.overall_severity === "CRITICAL" 
+                ? "CRITICAL PRECAUTION NEEDED" 
+                : (data.overall_severity === "CAUTION" ? "ACTIONABLE PRECAUTIONS" : "HEALTH SHIELD OPTIMAL");
+        }
+        if (shieldIcon) {
+            shieldIcon.textContent = data.overall_severity === "CRITICAL" ? "🛑" : (data.overall_severity === "CAUTION" ? "⚠️" : "🛡️");
+        }
+
+        // 2. Banner
+        if (banner) {
+            banner.className = `precautions-summary-banner ${sev}`;
+        }
+        if (bannerTitle) bannerTitle.textContent = data.overall_title || "AI Health Precautions";
+        if (bannerText) bannerText.textContent = data.overall_summary || "";
+        if (bannerIcon) bannerIcon.textContent = data.overall_severity === "CRITICAL" ? "⚠️" : (data.overall_severity === "CAUTION" ? "💡" : "✅");
+
+        // 3. Food Precaution Pillar
+        const food = data.food || {};
+        const foodSev = (food.status || "OPTIMAL").toLowerCase();
+        if (foodCard) {
+            foodCard.className = `precaution-pillar-card status-${foodSev}`;
+        }
+        if (foodTag) {
+            foodTag.className = `pillar-status-tag ${foodSev}`;
+            foodTag.textContent = food.badge || "PROPER FOOD";
+        }
+        if (foodMsg) foodMsg.textContent = food.message || "Balanced food intake detected.";
+        if (foodRec) foodRec.textContent = food.recommendation || "Maintain wholesome meals.";
+        if (foodBtn && food.action_label) foodBtn.textContent = food.action_label;
+
+        // 4. Rest Precaution Pillar
+        const rest = data.rest || {};
+        const restSev = (rest.status || "OPTIMAL").toLowerCase();
+        if (restCard) {
+            restCard.className = `precaution-pillar-card status-${restSev}`;
+        }
+        if (restTag) {
+            restTag.className = `pillar-status-tag ${restSev}`;
+            restTag.textContent = rest.badge || "REST ON TRACK";
+        }
+        if (restMsg) restMsg.textContent = rest.message || "Adequate sleep schedule maintained.";
+        if (restRec) restRec.textContent = rest.recommendation || "Keep consistent sleep routine.";
+        if (restBtn && rest.action_label) restBtn.textContent = rest.action_label;
+
+        // 5. Exercise Precaution Pillar
+        const ex = data.exercise || {};
+        const exSev = (ex.status || "OPTIMAL").toLowerCase();
+        if (exCard) {
+            exCard.className = `precaution-pillar-card status-${exSev}`;
+        }
+        if (exTag) {
+            exTag.className = `pillar-status-tag ${exSev}`;
+            exTag.textContent = ex.badge || "ACTIVE";
+        }
+        if (exMsg) exMsg.textContent = ex.message || "Good movement logged today.";
+        if (exRec) exRec.textContent = ex.recommendation || "Keep moving regularly.";
+        if (exBtn && ex.action_label) exBtn.textContent = ex.action_label;
+
+        // 6. Checklist
+        if (checklist && Array.isArray(data.action_bullets) && data.action_bullets.length) {
+            checklist.innerHTML = data.action_bullets.map(b => `<li>${escapeHTML(b)}</li>`).join("");
+        }
+
+    } catch (err) {
+        console.warn("Could not fetch remote health precautions, using client calculations:", err);
+        fallbackHealthPrecautions(steps, exerciseMins);
+    }
+}
+
+function fallbackHealthPrecautions(steps, exerciseMins) {
+    const foodMsg = document.getElementById("precautionFoodMsg");
+    const foodTag = document.getElementById("precautionFoodTag");
+    const foodRec = document.getElementById("precautionFoodRec");
+    const restMsg = document.getElementById("precautionRestMsg");
+    const restTag = document.getElementById("precautionRestTag");
+    const restRec = document.getElementById("precautionRestRec");
+    const exMsg = document.getElementById("precautionExerciseMsg");
+    const exTag = document.getElementById("precautionExerciseTag");
+    const exRec = document.getElementById("precautionExerciseRec");
+
+    // Client-side quick calculation
+    const hasFoods = currentTodayFoods && currentTodayFoods.length > 0;
+    if (!hasFoods) {
+        if (foodTag) { foodTag.className = "pillar-status-tag critical"; foodTag.textContent = "NO FOOD LOGGED"; }
+        if (foodMsg) foodMsg.textContent = "You have not logged any food today. Skipping meals causes blood sugar drop and metabolic fatigue.";
+        if (foodRec) foodRec.textContent = "Eat a balanced meal with lentils, vegetables, and complex carbohydrates immediately.";
+    } else {
+        if (foodTag) { foodTag.className = "pillar-status-tag optimal"; foodTag.textContent = "MEALS LOGGED"; }
+        if (foodMsg) foodMsg.textContent = "You have logged meals for today. Keep maintaining balanced portion control.";
+        if (foodRec) foodRec.textContent = "Drink plenty of water and avoid processed sweets.";
+    }
+
+    if (steps < 3500 && exerciseMins === 0) {
+        if (exTag) { exTag.className = "pillar-status-tag critical"; exTag.textContent = "SEDENTARY DANGER"; }
+        if (exMsg) exMsg.textContent = `You have only walked ${steps} steps and logged 0 workout minutes today.`;
+        if (exRec) exRec.textContent = "Stand up and take a 15-minute brisk walk or launch our guided exercise mode.";
+    } else {
+        if (exTag) { exTag.className = "pillar-status-tag optimal"; exTag.textContent = "ACTIVE"; }
+        if (exMsg) exMsg.textContent = `Movement logged: ${steps} steps walked and ${exerciseMins} mins active.`;
+        if (exRec) exRec.textContent = "Great job! Keep muscles flexible with light stretches.";
+    }
+
+    if (restTag) { restTag.className = "pillar-status-tag optimal"; restTag.textContent = "REST CHECKED"; }
+    if (restMsg) restMsg.textContent = "Ensure your bedroom is dark and cool, and target 7 to 8 hours of sleep tonight.";
+    if (restRec) restRec.textContent = "Power down electronic screens at least 30 minutes before sleep.";
 }
 
 
@@ -704,6 +914,11 @@ function updateTimeGreeting() {
 
     }
 
+    // Refresh dynamic vitals (Health Score & Energy Level) with time
+    if (typeof updateDynamicVitals === "function") {
+        updateDynamicVitals();
+    }
+
 }
 
 
@@ -749,7 +964,65 @@ function getCurrentDateKey() {
     return `${year}-${month}-${day}`;
 }
 
-// 1. Time-Based Meal Detection
+// 1. Time-Based Meal Detection & Logged State Tracker
+let currentTodayFoods = [];
+
+function getLoggedMealsSet() {
+    const set = new Set();
+    if (Array.isArray(currentTodayFoods)) {
+        currentTodayFoods.forEach(f => {
+            if (f && f.meal_type) {
+                set.add(f.meal_type.trim().toLowerCase());
+            }
+        });
+    }
+    return set;
+}
+
+function isMealLoggedToday(mealType) {
+    if (!mealType) return false;
+    return getLoggedMealsSet().has(mealType.trim().toLowerCase());
+}
+
+function areAllDailyMealsLogged() {
+    const set = getLoggedMealsSet();
+    return ["breakfast", "lunch", "snack", "dinner"].every(m => set.has(m));
+}
+
+function getNextUnloggedMealType() {
+    const mealOrder = ["Breakfast", "Lunch", "Snack", "Dinner"];
+    const currentMeal = getCurrentMealType();
+    if (!isMealLoggedToday(currentMeal)) {
+        return currentMeal;
+    }
+    for (const m of mealOrder) {
+        if (!isMealLoggedToday(m)) {
+            return m;
+        }
+    }
+    return currentMeal;
+}
+
+function updateMealSelectDropdown(selectedMeal) {
+    const mealSelect = document.getElementById("foodMeal");
+    if (!mealSelect) return;
+
+    const meals = [
+        { type: "Breakfast", icon: "🍳", timeName: "Morning" },
+        { type: "Lunch", icon: "🍛", timeName: "Afternoon" },
+        { type: "Snack", icon: "🍎", timeName: "Evening" },
+        { type: "Dinner", icon: "🍽️", timeName: "Night" }
+    ];
+
+    mealSelect.innerHTML = meals.map(m => {
+        const logged = isMealLoggedToday(m.type);
+        const label = logged 
+            ? `${m.icon} ${m.type} (${m.timeName}) — ✓ Already Filled` 
+            : `${m.icon} ${m.type} (${m.timeName})`;
+        return `<option value="${m.type}" ${m.type === selectedMeal ? "selected" : ""}>${label}</option>`;
+    }).join("");
+}
+
 function getCurrentMealType() {
     const hour = new Date().getHours();
     const minutes = new Date().getMinutes();
@@ -769,11 +1042,15 @@ function getCurrentMealType() {
 function updateFoodModalTitle(meal) {
     const title = document.getElementById("foodModalTitle");
     const subtitle = document.getElementById("foodModalSubtitle");
+    const isLogged = isMealLoggedToday(meal);
+
     if (title) {
-        title.textContent = `Log Your ${meal}`;
+        title.textContent = isLogged ? `${meal} (Already Filled)` : `Fill Your ${meal}`;
     }
     if (subtitle) {
-        subtitle.textContent = `What did you eat for ${meal.toLowerCase()}? Add all items below.`;
+        subtitle.innerHTML = isLogged
+            ? `<span style="color: #10B981; font-weight: 700;">✓ You already filled ${escapeHTML(meal)} for today.</span> Saved in your daily routine. You do not need to fill it again.`
+            : `Add the food you ate for ${meal.toLowerCase()}.`;
     }
 }
 
@@ -1137,6 +1414,8 @@ function initFoodScannerDragDrop() {
     }, false);
 }
 
+let currentFoodModalImageUrl = null;
+
 function resetFoodImageScannerUI() {
     const resultBox = document.getElementById("scannerResultBox");
     const fileInput = document.getElementById("foodImageInput");
@@ -1144,6 +1423,7 @@ function resetFoodImageScannerUI() {
     if (resultBox) resultBox.classList.add("hidden");
     if (scanPulse) scanPulse.classList.remove("hidden");
     if (fileInput) fileInput.value = "";
+    currentFoodModalImageUrl = null;
     initFoodScannerDragDrop();
 }
 
@@ -1198,50 +1478,90 @@ async function handleFoodImageSelected(input) {
         // Hide scanning radar pulse
         if (scanPulse) scanPulse.classList.add("hidden");
 
-        const foodName = data.food_name || "Identified Dish";
+        // Keep stored image url for attaching to meal log (persisted up to 1 week)
+        currentFoodModalImageUrl = data.image_url || null;
+
+        const foodName = data.food_name || "";
+        const isRecognized = data.is_recognized !== false && Boolean(foodName);
         const quantity = parseFloat(data.quantity) || 1.0;
         const portionDesc = data.portion_description || `${quantity} serving`;
         const calories = Math.round(data.calories || 0);
         const macros = data.macros || { protein: 0, carbs: 0, fat: 0 };
         const explanation = data.explanation || "AI vision detected this food item and estimated the serving size.";
+        const itemsBreakdown = Array.isArray(data.items_breakdown) ? data.items_breakdown : [];
 
         if (detailsContainer) {
-            detailsContainer.innerHTML = `
-                <div class="scanner-detected-header">
-                    <div>
-                        <div style="font-size: 9px; font-weight: 900; letter-spacing: 0.08em; color: #10B981;">✓ DISH RECOGNIZED</div>
-                        <h4 class="scanner-dish-name">${escapeHTML(foodName)}</h4>
+            if (isRecognized) {
+                let breakdownHtml = "";
+                if (itemsBreakdown.length > 0) {
+                    breakdownHtml = `
+                        <div style="margin: 8px 0;">
+                            <div style="font-size: 10px; font-weight: 800; color: #67E8F9; margin-bottom: 4px; letter-spacing: 0.05em;">🍽️ DETECTED COMPONENTS:</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${itemsBreakdown.map(it => `
+                                    <span style="background: rgba(6, 182, 212, 0.12); border: 1px solid rgba(6, 182, 212, 0.35); border-radius: 6px; padding: 3px 8px; font-size: 11px; color: #E2E8F0; font-weight: 700;">
+                                        ${escapeHTML(it.item_name)} <span style="color: #10B981; font-weight: 800;">(${escapeHTML(it.portion || "1 serving")} · ${Math.round(it.calories || 0)} kcal)</span>
+                                    </span>
+                                `).join("")}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                detailsContainer.innerHTML = `
+                    <div class="scanner-detected-header">
+                        <div>
+                            <div style="font-size: 9px; font-weight: 900; letter-spacing: 0.08em; color: #10B981;">✓ DISH RECOGNIZED</div>
+                            <h4 class="scanner-dish-name">${escapeHTML(foodName)}</h4>
+                        </div>
+                        <div class="scanner-cal-tag">
+                            ${calories} kcal
+                        </div>
                     </div>
-                    <div class="scanner-cal-tag">
-                        ${calories} kcal
+
+                    <div class="scanner-portion-line">
+                        <span>👁️ Visible Portion:</span>
+                        <strong style="color: #F8FAFC;">${escapeHTML(portionDesc)}</strong>
+                        <span style="color: #64748B;">(Qty: ${quantity})</span>
                     </div>
-                </div>
 
-                <div class="scanner-portion-line">
-                    <span>👁️ Visible Portion:</span>
-                    <strong style="color: #F8FAFC;">${escapeHTML(portionDesc)}</strong>
-                    <span style="color: #64748B;">(Qty: ${quantity})</span>
-                </div>
+                    ${breakdownHtml}
 
-                <div class="scanner-macros-row">
-                    <span class="scanner-macro-pill">Protein: <strong>${macros.protein || 0}g</strong></span>
-                    <span class="scanner-macro-pill">Carbs: <strong>${macros.carbs || 0}g</strong></span>
-                    <span class="scanner-macro-pill">Fat: <strong>${macros.fat || 0}g</strong></span>
-                </div>
+                    <div class="scanner-macros-row">
+                        <span class="scanner-macro-pill">Protein: <strong>${macros.protein || 0}g</strong></span>
+                        <span class="scanner-macro-pill">Carbs: <strong>${macros.carbs || 0}g</strong></span>
+                        <span class="scanner-macro-pill">Fat: <strong>${macros.fat || 0}g</strong></span>
+                    </div>
 
-                <div class="scanner-explanation-text" title="${escapeHTML(explanation)}">
-                    "${escapeHTML(explanation)}"
-                </div>
+                    <div class="scanner-explanation-text" title="${escapeHTML(explanation)}">
+                        "${escapeHTML(explanation)}"
+                    </div>
 
-                <div class="scanner-success-badge">
-                    <span>✓ Added to meal items list below</span>
-                    <button type="button" class="scanner-rescan-btn" onclick="triggerFoodImageUpload()">Scan Another Photo</button>
-                </div>
-            `;
+                    <div class="scanner-success-badge">
+                        <span>✓ Added to meal items list below</span>
+                        <button type="button" class="scanner-rescan-btn" onclick="triggerFoodImageUpload()">Scan Another Photo</button>
+                    </div>
+                `;
+                // Auto-fill or append to meal items with breakdown
+                applyScannedFoodToRows(foodName, quantity, calories, itemsBreakdown);
+            } else {
+                detailsContainer.innerHTML = `
+                    <div style="padding: 10px 0;">
+                        <div style="font-size: 13px; font-weight: 800; color: #F59E0B; margin-bottom: 4px;">
+                            ⚠️ Photo Attached · Manual Entry Needed
+                        </div>
+                        <div style="font-size: 11px; color: #CBD5E1; margin-bottom: 6px; line-height: 1.4;">
+                            ${escapeHTML(explanation || "The photo is attached to your log. Please enter the dish name below.")}
+                        </div>
+                        <div style="font-size: 10px; color: #67E8F9; font-weight: 700;">
+                            👉 Type your food item in the box below to log it.
+                        </div>
+                    </div>
+                `;
+                const firstInput = document.querySelector("#multiFoodContainer .food-item-name");
+                if (firstInput) firstInput.focus();
+            }
         }
-
-        // Auto-fill or append to meal items
-        applyScannedFoodToRows(foodName, quantity, calories);
 
     } catch (error) {
         console.error("AI Food scan error:", error);
@@ -1264,9 +1584,29 @@ async function handleFoodImageSelected(input) {
     }
 }
 
-function applyScannedFoodToRows(foodName, quantity, calories) {
+function applyScannedFoodToRows(foodName, quantity, calories, itemsBreakdown = []) {
     const container = document.getElementById("multiFoodContainer");
     if (!container) return;
+
+    // If AI detected multiple distinct items on the plate (e.g. Poori + Chana + Halwa)
+    if (Array.isArray(itemsBreakdown) && itemsBreakdown.length > 1) {
+        container.innerHTML = "";
+        foodItemCounter = 0;
+        itemsBreakdown.forEach(item => {
+            const itmName = item.item_name || "Food Item";
+            const itmQty = 1.0;
+            const itmCal = Math.round(item.calories || 0);
+            const row = addFoodItemRow(itmName, itmQty);
+            if (row) {
+                const calBadge = row.querySelector(".food-item-cal");
+                if (calBadge && itmCal > 0) {
+                    calBadge.textContent = `${itmCal} kcal`;
+                }
+            }
+        });
+        debouncedUpdateLiveCalories();
+        return;
+    }
 
     let targetRow = null;
     const rows = container.children;
@@ -1298,10 +1638,16 @@ function applyScannedFoodToRows(foodName, quantity, calories) {
 
 
 function openFoodModal(suggestedMeal = null, autoScan = false) {
-    const meal = suggestedMeal || getCurrentMealType();
+    let meal = suggestedMeal;
+    // Once a meal is filled, do not select it again — switch to next unfilled meal
+    if (!meal || isMealLoggedToday(meal)) {
+        meal = getNextUnloggedMealType();
+    }
     const mealSelect = document.getElementById("foodMeal");
     if (mealSelect) {
+        updateMealSelectDropdown(meal);
         mealSelect.value = meal;
+        mealSelect.onchange = () => updateFoodModalTitle(mealSelect.value);
     }
 
     updateFoodModalTitle(meal);
@@ -1336,6 +1682,10 @@ function closeFoodModal() {
     if (modal) {
         modal.classList.add("hidden");
     }
+    const mealSelect = document.getElementById("foodMeal");
+    const currentMeal = mealSelect ? mealSelect.value : getCurrentMealType();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    localStorage.setItem(`aeriva_meal_prompt_dismissed_${todayStr}_${currentMeal.toLowerCase()}`, "true");
 }
 
 // Save Multi-Item Meal
@@ -1392,9 +1742,13 @@ async function saveMultiFood() {
             return;
         }
 
+        const todayStr = new Date().toISOString().slice(0, 10);
+        localStorage.setItem(`aeriva_meal_prompt_dismissed_${todayStr}_${mealType.toLowerCase()}`, "true");
+        currentFoodModalImageUrl = null;
         addXP(15);
         closeFoodModal();
         await loadFood();
+        loadRoutine();
         updateSuggestion();
 
     } catch (error) {
@@ -1438,15 +1792,9 @@ async function skipMeal() {
     }
 }
 
-// Prompt on Login
+// Prompt on Login - Disabled (Never pop up automatically)
 async function promptMealOnLogin() {
-    authToken = authToken || localStorage.getItem("aeriva_token");
-    if (!authToken) return;
-
-    const currentMeal = getCurrentMealType();
-    setTimeout(() => {
-        openFoodModal(currentMeal);
-    }, 600);
+    return;
 }
 
 // Load Today's Food & Calculate Total Calories & Diet Advisor
@@ -1466,10 +1814,12 @@ async function loadFood() {
         }
 
         const foods = await response.json();
+        currentTodayFoods = Array.isArray(foods) ? foods : [];
         const list = document.getElementById("foodList");
         const calorieStat = document.getElementById("calorieStat");
 
         if (!foods.length) {
+            currentTodayFoods = [];
             if (list) {
                 list.innerHTML = `
                     <div class="empty-state">
@@ -1481,6 +1831,7 @@ async function loadFood() {
             updateDietAdvisor([]);
             loadSmartExerciseRecommender(0);
             loadNextDaySuggestions();
+            loadHealthPrecautions();
             return;
         }
 
@@ -1548,10 +1899,142 @@ async function loadFood() {
         // Run smart exercise recommender & next-day suggestions
         loadSmartExerciseRecommender(totalCalories);
         loadNextDaySuggestions();
+        loadHealthPrecautions();
+        updateDynamicVitals();
+        loadRoutine();
 
     } catch (error) {
         console.error("Food loading error:", error);
     }
+}
+
+// =====================================================
+// 7-DAY (1 WEEK) FOOD & PHOTO GALLERY MODAL
+// =====================================================
+async function openWeekFoodGalleryModal() {
+    authToken = authToken || localStorage.getItem("aeriva_token");
+    if (!authToken) return;
+
+    const modal = document.getElementById("weekFoodGalleryModal");
+    const list = document.getElementById("weekFoodGalleryList");
+    if (modal) modal.classList.remove("hidden");
+
+    if (list) {
+        list.innerHTML = `
+            <div style="text-align: center; padding: 36px 0; color: #94A3B8;">
+                <div style="font-size: 26px; margin-bottom: 8px;">🔄</div>
+                <div style="font-weight: 700;">Loading 7-day meal history & stored food photos...</div>
+            </div>
+        `;
+    }
+
+    try {
+        const res = await fetch(`${API}/food/log/week`, {
+            headers: {
+                "Authorization": `Bearer ${authToken}`
+            }
+        });
+
+        if (!res.ok) {
+            if (list) list.innerHTML = `<div class="empty-state">Unable to load 7-day food history.</div>`;
+            return;
+        }
+
+        const data = await res.json();
+        const days = data.days || [];
+
+        if (!days.length) {
+            if (list) list.innerHTML = `<div class="empty-state">No food logged in the past 7 days.</div>`;
+            return;
+        }
+
+        list.innerHTML = days.map(d => {
+            const hasMeals = d.meals && d.meals.length > 0;
+            const mealsHtml = hasMeals ? `
+                <div class="week-meals-grid">
+                    ${d.meals.map(m => {
+                        const hasImg = Boolean(m.image_url);
+                        return `
+                            <div class="week-meal-card">
+                                ${hasImg ? `
+                                    <div class="week-meal-photo-box" title="Click to enlarge" onclick="openPhotoViewerModal('${m.image_url}', '${escapeHTML(m.food_name)}', '${escapeHTML(m.meal_type)}', ${m.calories})">
+                                        <img src="${m.image_url}" alt="${escapeHTML(m.food_name)}" loading="lazy">
+                                        <span class="week-meal-photo-tag">🔍 TAP TO EXPAND</span>
+                                    </div>
+                                ` : `
+                                    <div style="height: 64px; background: rgba(255,255,255,0.03); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                        ${getMealIcon(m.meal_type)}
+                                    </div>
+                                `}
+                                <div class="week-meal-info">
+                                    <div class="week-meal-meta">
+                                        <span>${escapeHTML(m.meal_type)} ${m.time ? `· ${m.time}` : ''}</span>
+                                        <span class="week-meal-cals">${m.calories} kcal</span>
+                                    </div>
+                                    <div class="week-meal-name" title="${escapeHTML(m.food_name)}">
+                                        ${escapeHTML(m.food_name)}
+                                    </div>
+                                    <div style="font-size: 11px; color: #64748B;">
+                                        Qty: ${m.quantity || 1}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join("")}
+                </div>
+            ` : `
+                <div style="font-size: 12px; color: #64748B; padding: 10px 14px; background: rgba(255,255,255,0.02); border-radius: 8px;">
+                    No meals logged on this date.
+                </div>
+            `;
+
+            return `
+                <div class="week-day-group">
+                    <div class="week-day-header">
+                        <div class="week-day-title">
+                            <span>📅 ${escapeHTML(d.label)}</span>
+                            <span style="font-size: 11px; color: #64748B; font-weight: 400;">(${escapeHTML(d.date)})</span>
+                        </div>
+                        <div class="week-day-cals">
+                            ${d.total_calories} kcal
+                        </div>
+                    </div>
+                    ${mealsHtml}
+                </div>
+            `;
+        }).join("");
+
+    } catch (err) {
+        console.error("Week gallery load error:", err);
+        if (list) list.innerHTML = `<div class="empty-state">Error connecting to server.</div>`;
+    }
+}
+
+function closeWeekFoodGalleryModal() {
+    const modal = document.getElementById("weekFoodGalleryModal");
+    if (modal) modal.classList.add("hidden");
+}
+
+function openPhotoViewerModal(imageUrl, foodName, mealType, calories) {
+    const modal = document.getElementById("foodPhotoViewerModal");
+    const img = document.getElementById("photoViewerImg");
+    const nameEl = document.getElementById("photoViewerFoodName");
+    const typeEl = document.getElementById("photoViewerMealType");
+    const calEl = document.getElementById("photoViewerCalories");
+    const timeEl = document.getElementById("photoViewerTime");
+
+    if (img) img.src = imageUrl;
+    if (nameEl) nameEl.textContent = foodName || "Food Photo";
+    if (typeEl) typeEl.textContent = mealType || "Meal";
+    if (calEl) calEl.textContent = `${calories || 0} kcal`;
+    if (timeEl) timeEl.textContent = "Logged meal";
+
+    if (modal) modal.classList.remove("hidden");
+}
+
+function closeFoodPhotoViewerModal() {
+    const modal = document.getElementById("foodPhotoViewerModal");
+    if (modal) modal.classList.add("hidden");
 }
 
 // 2. Smart Diet & Junk Food Health Advisor
@@ -1677,11 +2160,17 @@ function loadWaterTracker() {
     const waterText = document.getElementById("waterText");
     const waterProgress = document.getElementById("waterProgress");
     const modalDisplay = document.getElementById("modalWaterDisplay");
+    const waterPanelStat = document.getElementById("waterPanelStat");
+    const waterPanelProgress = document.getElementById("waterPanelProgress");
 
     if (waterStat) waterStat.textContent = `${currentAmount.toFixed(2)} L`;
     if (waterText) waterText.textContent = `${currentAmount.toFixed(2)} L / 2.5 L`;
     if (waterProgress) waterProgress.style.width = `${percentage}%`;
     if (modalDisplay) modalDisplay.textContent = `${currentAmount.toFixed(2)} L`;
+    if (waterPanelStat) waterPanelStat.textContent = `${currentAmount.toFixed(2)} L`;
+    if (waterPanelProgress) waterPanelProgress.style.width = `${percentage}%`;
+
+    updateDynamicVitals();
 }
 
 function logWaterAmount(litres) {
@@ -1710,8 +2199,16 @@ function resetWaterToday() {
     loadWaterTracker();
 }
 
-function addWater() {
-    openWaterModal();
+function addWater(amountLitres = 0.25) {
+    if (typeof amountLitres === "number" && amountLitres > 0) {
+        logWaterAmount(amountLitres);
+    } else {
+        logWaterAmount(0.25);
+    }
+}
+
+function addWaterQuick(ml = 250) {
+    logWaterAmount(ml / 1000);
 }
 
 // 4. Nighttime Steps Tracker
@@ -1746,6 +2243,7 @@ function saveStepsFromModal() {
         localStorage.setItem(key, steps);
         loadStepTracker();
         loadSmartExerciseRecommender();
+        loadHealthPrecautions();
         addXP(15);
         closeStepModal();
     }
@@ -1772,20 +2270,13 @@ function loadStepTracker() {
     if (stepDistance) stepDistance.textContent = `${km} km walked`;
     if (stepCalories) stepCalories.textContent = `~${kcal} kcal burned`;
     if (modalStepDisplay) modalStepDisplay.textContent = `${steps.toLocaleString()} steps`;
+
+    updateDynamicVitals();
 }
 
-// Prompt steps automatically at night before sleeping
+// Night steps prompt - Disabled (Never pop up automatically)
 function checkNightStepPrompt() {
-    const hour = new Date().getHours();
-    if (hour >= 20 || hour < 4) {
-        const key = getStepStorageKey();
-        const steps = localStorage.getItem(key);
-        if (steps === null) {
-            setTimeout(() => {
-                openStepModal();
-            }, 1200);
-        }
-    }
+    return;
 }
 
 // 5. Scheduled Workout According to Free Time
@@ -1887,11 +2378,19 @@ function loadScheduledWorkout() {
             }
         }
     }
+
+    activeWorkoutExercises = DEFAULT_POPUP_EXERCISES;
+    currentWorkoutName = routine.name;
+    const breakdownList = document.getElementById("exerciseBreakdownList");
+    if (breakdownList) {
+        renderDashboardExerciseOverview(activeWorkoutExercises, breakdownList, btnElem, exerciseStat);
+    }
 }
 
 // SMART EXERCISE & FREE-TIME BURN RECOMMENDER
 // Calculates exact required burn and minutes based on Food Intake + Steps Walked + Schedule Free Window
 let lastRecommendedWorkoutDuration = 30;
+let currentWorkoutName = "Active Recovery & Mobility Flow";
 
 async function loadSmartExerciseRecommender(overrideCalories = null) {
     const timeElem = document.getElementById("scheduledWorkoutTime");
@@ -1931,6 +2430,7 @@ async function loadSmartExerciseRecommender(overrideCalories = null) {
         if (res.ok) {
             const data = await res.json();
             lastRecommendedWorkoutDuration = data.recommended_duration_minutes || 30;
+            currentWorkoutName = data.workout_name || "Daily Exercise Routine";
 
             if (timeElem) timeElem.textContent = `${data.free_time_slot} (Window: ${data.full_free_window})`;
             if (foodVal) foodVal.textContent = `${Number(data.daily_calories).toLocaleString()} kcal`;
@@ -1943,37 +2443,11 @@ async function loadSmartExerciseRecommender(overrideCalories = null) {
             }
             if (descElem) descElem.textContent = data.description;
 
-            // Render tailored exercise breakdown
-            if (breakdownList && data.exercises && data.exercises.length > 0) {
-                breakdownList.innerHTML = data.exercises.map(ex => `
-                    <div class="exercise-step-item">
-                        <span class="exercise-step-name">
-                            <span style="color: #67E8F9;">▸</span> ${escapeHTML(ex.name)}
-                        </span>
-                        <span class="exercise-step-timing">${escapeHTML(ex.duration)} · ${escapeHTML(ex.reps)}</span>
-                    </div>
-                `).join("");
-            }
+            activeWorkoutExercises = (data.exercises && data.exercises.length > 0) ? data.exercises : DEFAULT_POPUP_EXERCISES;
 
-            // Sync completion button
-            const key = getWorkoutStorageKey();
-            const isCompleted = localStorage.getItem(key) === "true";
-            if (btnElem) {
-                if (isCompleted) {
-                    btnElem.style.background = "rgba(16, 185, 129, 0.15)";
-                    btnElem.style.borderColor = "#10B981";
-                    btnElem.style.color = "#6EE7B7";
-                    btnElem.textContent = `✓ COMPLETED TODAY (+25 XP EARNED)`;
-                    if (exerciseStat) exerciseStat.textContent = `${lastRecommendedWorkoutDuration} min`;
-                } else {
-                    btnElem.style.background = "";
-                    btnElem.style.borderColor = "";
-                    btnElem.style.color = "";
-                    btnElem.textContent = `✓ COMPLETE WORKOUT (+25 XP)`;
-                    if (exerciseStat && exerciseStat.textContent === "0 min") {
-                        exerciseStat.textContent = `0 min`;
-                    }
-                }
+            // Render sequential overview on Dashboard 2
+            if (breakdownList) {
+                renderDashboardExerciseOverview(activeWorkoutExercises, breakdownList, btnElem, exerciseStat);
             }
             return;
         }
@@ -1983,6 +2457,626 @@ async function loadSmartExerciseRecommender(overrideCalories = null) {
 
     // Fallback to local routine
     loadScheduledWorkout();
+}
+
+// =====================================================
+// SEQUENTIAL WORKOUT PLAYER & EXERCISE ILLUSTRATIONS
+// =====================================================
+
+let activeWorkoutExercises = [];
+let currentStepTimerInterval = null;
+let currentStepTimerSeconds = 60;
+let isStepTimerRunning = false;
+
+function getWorkoutProgressStorageKey() {
+    const dateKey = getCurrentDateKey();
+    const userId = currentUser ? currentUser.id : "guest";
+    return `aeriva_workout_step_prog_${userId}_${dateKey}`;
+}
+
+function getExerciseIllustrationSVG(key, name) {
+    const k = (key || "").toLowerCase();
+    const n = (name || "").toLowerCase();
+
+    if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("cat cow") || n.includes("spine")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <rect x="25" y="125" width="250" height="4" rx="2" fill="rgba(6,182,212,0.25)" stroke="#06B6D4" stroke-width="1"/>
+            <circle cx="210" cy="72" r="10" fill="#67E8F9"/>
+            <line x1="200" y1="80" x2="200" y2="125" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <line x1="90" y1="95" x2="90" y2="125" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <line x1="90" y1="125" x2="60" y2="125" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
+            <!-- Cow belly drop curve -->
+            <path d="M 90 95 Q 145 106 200 80" fill="none" stroke="#10B981" stroke-width="4" stroke-linecap="round"/>
+            <!-- Cat back arch curve (dashed) -->
+            <path d="M 90 95 Q 145 52 200 80" fill="none" stroke="#67E8F9" stroke-width="3" stroke-dasharray="5 4" stroke-linecap="round"/>
+            <path d="M 145 68 L 145 56 M 141 60 L 145 56 L 149 60" stroke="#67E8F9" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M 145 88 L 145 100 M 141 96 L 145 100 L 149 96" stroke="#10B981" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <text x="145" y="44" fill="#67E8F9" font-size="9" font-weight="900" text-anchor="middle">▲ EXHALE: ROUND SPINE (CAT POSE)</text>
+            <text x="145" y="118" fill="#10B981" font-size="9" font-weight="900" text-anchor="middle">▼ INHALE: DROP BELLY & LIFT CHIN (COW)</text>
+        </svg>`;
+    }
+
+    if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <circle cx="150" cy="30" r="14" fill="rgba(245,158,11,0.25)" stroke="#F59E0B" stroke-width="1.5"/>
+            <path d="M 150 10 L 150 6 M 150 50 L 150 54 M 130 30 L 126 30 M 170 30 L 174 30" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"/>
+            <rect x="25" y="130" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
+            <!-- 1. Prayer -->
+            <circle cx="65" cy="55" r="8" fill="#F8FAFC"/>
+            <line x1="65" y1="63" x2="65" y2="102" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="65" y1="102" x2="60" y2="130" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
+            <line x1="65" y1="102" x2="70" y2="130" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 65 72 L 72 78 L 72 70" stroke="#67E8F9" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <text x="65" y="144" fill="#94A3B8" font-size="8.5" font-weight="bold" text-anchor="middle">1. PRAYER</text>
+            <!-- Flow 1 -->
+            <path d="M 90 85 Q 115 75 135 90" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <!-- 2. Forward Fold -->
+            <circle cx="155" cy="100" r="8" fill="#F8FAFC"/>
+            <line x1="170" y1="130" x2="160" y2="90" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="160" y1="90" x2="155" y2="105" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="160" y1="90" x2="168" y2="128" stroke="#67E8F9" stroke-width="2.5" stroke-linecap="round"/>
+            <text x="160" y="144" fill="#94A3B8" font-size="8.5" font-weight="bold" text-anchor="middle">2. FORWARD FOLD</text>
+            <!-- Flow 2 -->
+            <path d="M 185 95 Q 205 80 220 100" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <!-- 3. Cobra Pose -->
+            <circle cx="260" cy="80" r="8" fill="#67E8F9"/>
+            <line x1="255" y1="88" x2="255" y2="130" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 255 95 Q 240 120 205 130" fill="none" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
+            <text x="245" y="144" fill="#10B981" font-size="8.5" font-weight="bold" text-anchor="middle">3. COBRA</text>
+        </svg>`;
+    }
+
+    if (k.includes("glute") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <rect x="20" y="128" width="260" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
+            <circle cx="55" cy="120" r="9" fill="#67E8F9"/>
+            <line x1="55" y1="124" x2="85" y2="120" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <line x1="80" y1="124" x2="130" y2="126" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"/>
+            <!-- Elevated hips -->
+            <line x1="85" y1="120" x2="160" y2="78" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
+            <line x1="160" y1="78" x2="215" y2="78" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
+            <line x1="215" y1="78" x2="215" y2="128" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <!-- Upward force arrows -->
+            <path d="M 160 115 L 160 88 M 155 94 L 160 88 L 165 94" stroke="#10B981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M 185 115 L 185 88 M 180 94 L 185 88 L 190 94" stroke="#10B981" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <text x="175" y="60" fill="#10B981" font-size="9.5" font-weight="900" text-anchor="middle">▲ DRIVE HIPS & SQUEEZE GLUTES ▲</text>
+            <text x="150" y="143" fill="#94A3B8" font-size="8.5" text-anchor="middle">Hold 2s at peak elevation · Keep feet flat & knees stable</text>
+        </svg>`;
+    }
+
+    if (k.includes("child") || n.includes("child") || n.includes("hip opener")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <rect x="20" y="125" width="260" height="4" rx="2" fill="rgba(6,182,212,0.2)"/>
+            <line x1="50" y1="125" x2="80" y2="125" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="80" y1="125" x2="105" y2="110" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <path d="M 75 105 Q 120 90 170 112" fill="none" stroke="#67E8F9" stroke-width="4.5" stroke-linecap="round"/>
+            <circle cx="185" cy="115" r="8" fill="#67E8F9"/>
+            <line x1="140" y1="102" x2="245" y2="123" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M 230 112 L 255 112 M 250 108 L 255 112 L 250 116" stroke="#10B981" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <text x="150" y="55" fill="#67E8F9" font-size="9.5" font-weight="900" text-anchor="middle">REST HIPS ON HEELS · REACH FINGERS FORWARD</text>
+            <text x="150" y="75" fill="#94A3B8" font-size="8.5" text-anchor="middle">Slow diaphragmatic breathing decompresses lumbar spine</text>
+        </svg>`;
+    }
+
+    if (k.includes("squat") || n.includes("squat") || n.includes("lunge")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <rect x="25" y="132" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
+            <!-- Standing -->
+            <circle cx="80" cy="38" r="8" fill="#94A3B8"/>
+            <line x1="80" y1="46" x2="80" y2="85" stroke="#94A3B8" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="80" y1="85" x2="75" y2="132" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+            <line x1="80" y1="85" x2="85" y2="132" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+            <path d="M 105 75 Q 140 65 170 80" fill="none" stroke="#F59E0B" stroke-width="2" stroke-dasharray="4 3"/>
+            <!-- Deep Squat -->
+            <circle cx="210" cy="58" r="9" fill="#67E8F9"/>
+            <line x1="210" y1="67" x2="185" y2="100" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <line x1="205" y1="75" x2="245" y2="75" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
+            <line x1="185" y1="100" x2="230" y2="100" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
+            <line x1="230" y1="100" x2="225" y2="132" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
+            <text x="200" y="40" fill="#10B981" font-size="9.5" font-weight="900" text-anchor="middle">THIGHS PARALLEL · WEIGHT ON HEELS</text>
+            <text x="200" y="145" fill="#67E8F9" font-size="8.5" text-anchor="middle">Knees track over toes · Chest stays upright</text>
+        </svg>`;
+    }
+
+    if (k.includes("pushup") || n.includes("push-up") || n.includes("push up") || n.includes("mountain")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <rect x="25" y="130" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
+            <circle cx="230" cy="85" r="9" fill="#67E8F9"/>
+            <line x1="60" y1="128" x2="225" y2="87" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
+            <line x1="205" y1="92" x2="195" y2="110" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="195" y1="110" x2="205" y2="130" stroke="#F8FAFC" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M 205 60 L 205 78 M 201 74 L 205 78 L 209 74" stroke="#67E8F9" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M 220 78 L 220 60 M 216 64 L 220 60 L 224 64" stroke="#10B981" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <text x="150" y="42" fill="#10B981" font-size="9.5" font-weight="900" text-anchor="middle">STRICT PLANK LINE · ELBOWS AT 45°</text>
+            <text x="150" y="144" fill="#94A3B8" font-size="8.5" text-anchor="middle">Lower chest 2 inches from floor, then press up explosively</text>
+        </svg>`;
+    }
+
+    if (k.includes("plank") || n.includes("plank")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <rect x="25" y="128" width="250" height="4" rx="2" fill="rgba(6,182,212,0.2)"/>
+            <line x1="210" y1="128" x2="235" y2="128" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <line x1="210" y1="98" x2="210" y2="128" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="230" cy="92" r="9" fill="#67E8F9"/>
+            <line x1="55" y1="126" x2="222" y2="98" stroke="#10B981" stroke-width="4.5" stroke-linecap="round"/>
+            <line x1="45" y1="128" x2="245" y2="92" stroke="#67E8F9" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <text x="150" y="50" fill="#67E8F9" font-size="9.5" font-weight="900" text-anchor="middle">NO SAGGING HIPS · SQUEEZE GLUTES & CORE</text>
+            <text x="150" y="70" fill="#94A3B8" font-size="8.5" text-anchor="middle">Keep neck neutral gazing directly between your thumbs</text>
+        </svg>`;
+    }
+
+    if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio")) {
+        return `
+        <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+            <rect width="100%" height="100%" fill="#020617"/>
+            <rect x="25" y="132" width="250" height="4" rx="2" fill="rgba(255,255,255,0.12)"/>
+            <circle cx="150" cy="38" r="9" fill="#67E8F9"/>
+            <line x1="150" y1="47" x2="150" y2="90" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+            <line x1="150" y1="58" x2="115" y2="28" stroke="#67E8F9" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="150" y1="58" x2="185" y2="28" stroke="#67E8F9" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="150" y1="90" x2="115" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
+            <line x1="150" y1="90" x2="185" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
+            <text x="150" y="18" fill="#FBBF24" font-size="9.5" font-weight="900" text-anchor="middle">EXPLOSIVE STAR JUMP · LAND SOFTLY</text>
+            <text x="150" y="145" fill="#94A3B8" font-size="8.5" text-anchor="middle">Rhythmic cadence · Stay light on the balls of your feet</text>
+        </svg>`;
+    }
+
+    // Default universal mobility & posture diagram
+    return `
+    <svg class="active-exercise-diagram-svg" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#020617"/>
+        <rect x="25" y="132" width="250" height="4" rx="2" fill="rgba(6,182,212,0.2)"/>
+        <circle cx="150" cy="40" r="9" fill="#67E8F9"/>
+        <line x1="150" y1="49" x2="150" y2="92" stroke="#F8FAFC" stroke-width="4" stroke-linecap="round"/>
+        <line x1="150" y1="92" x2="135" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="150" y1="92" x2="165" y2="132" stroke="#10B981" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="150" y1="58" x2="110" y2="58" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
+        <line x1="150" y1="58" x2="190" y2="58" stroke="#67E8F9" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="108" cy="58" rx="10" ry="16" stroke="#FBBF24" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
+        <ellipse cx="192" cy="58" rx="10" ry="16" stroke="#FBBF24" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
+        <text x="150" y="24" fill="#FBBF24" font-size="9.5" font-weight="900" text-anchor="middle">ACTIVE MOVEMENT & POSTURE ALIGNMENT</text>
+        <text x="150" y="145" fill="#94A3B8" font-size="8.5" text-anchor="middle">Breathe rhythmically · Move with full range of motion</text>
+    </svg>`;
+}
+
+/* =====================================================
+   POPUP EXERCISE MODE & SEQUENTIAL STEP PROGRESSION
+   - Renders overview list on Dashboard 2 matching screenshot
+   - Opens step-by-step popup showing exercise posture illustration
+   - After marking exercise completed, advances sequentially to next step in same popup format
+   - On final completion: awards +25 XP, updates activity time, shows celebration card
+===================================================== */
+
+const DEFAULT_POPUP_EXERCISES = [
+    {
+        name: "Cat-Cow & Spine Decompression",
+        key: "cat_cow",
+        duration: "4 mins",
+        reps: "Controlled breathing",
+        target_muscles: "Spine, Neck & Core",
+        instructions: [
+            "Start on hands and knees with wrists directly beneath shoulders and knees under hips.",
+            "Inhale: Gently drop belly toward the floor, tilt tailbone up, and look forward/up (Cow Pose).",
+            "Exhale: Press firmly into the ground, round your spine up toward the ceiling, and tuck chin (Cat Pose).",
+            "Flow continuously with deep, rhythmic diaphragmatic breaths for 4 minutes."
+        ]
+    },
+    {
+        name: "Surya Namaskar (Sun Salutations)",
+        key: "surya_namaskar",
+        duration: "8 mins",
+        reps: "6 slow rounds",
+        target_muscles: "Hamstrings, Chest & Full Body",
+        instructions: [
+            "1. Stand tall at the top of your mat with palms joined at heart center (Pranamasana).",
+            "2. Inhale: Sweep arms overhead, arching back gently (Hastauttanasana).",
+            "3. Exhale: Hinge from hips, folding forward to touch ankles or floor (Padahastasana).",
+            "4. Step back to plank, lower gently into Cobra (Bhujangasana), and press into Downward Dog.",
+            "5. Step forward and return to prayer. Complete 6 smooth, meditative rounds."
+        ]
+    },
+    {
+        name: "Glute Bridges & Bird-Dog Core",
+        key: "glute_bridges",
+        duration: "5 mins",
+        reps: "3 sets x 12 reps",
+        target_muscles: "Gluteus Maximus, Lower Back & Core",
+        instructions: [
+            "Lie flat on your back with knees bent and feet planted flat hip-width apart.",
+            "Drive powerfully through heels to hoist your pelvis until thighs and torso form a straight bridge line.",
+            "Squeeze glutes intensely at apex for a 2-second hold, then lower smoothly.",
+            "Transition into alternate-arm/leg Bird-Dog extensions for 12 reps each set."
+        ]
+    },
+    {
+        name: "Child's Pose & Deep Hip Openers",
+        key: "childs_pose",
+        duration: "3 mins",
+        reps: "Restorative stretches",
+        target_muscles: "Hips, Lower Lumbar & Lats",
+        instructions: [
+            "Kneel on the mat with big toes touching and knees spread wider than your torso.",
+            "Sink hips firmly back onto your heels and reach arms straight forward along the floor.",
+            "Rest forehead gently on the mat and lengthen your spine with each exhale.",
+            "Hold steady for 3 minutes to relieve lumbar tension and calm the nervous system."
+        ]
+    }
+];
+
+function getWorkoutProgress() {
+    const key = getWorkoutProgressStorageKey();
+    let prog = null;
+    try {
+        prog = JSON.parse(localStorage.getItem(key));
+    } catch (e) {
+        prog = null;
+    }
+    if (!prog || typeof prog.currentStep !== "number") {
+        prog = { currentStep: 0, completedSteps: [], isFinished: false };
+    }
+    return prog;
+}
+
+function saveWorkoutProgress(prog) {
+    const key = getWorkoutProgressStorageKey();
+    localStorage.setItem(key, JSON.stringify(prog));
+}
+
+function getOrdinal(n) {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// 1. RENDER OVERVIEW LIST ON DASHBOARD 2
+function renderDashboardExerciseOverview(exercises, container, btnElem, exerciseStat) {
+    if (!container) return;
+    if (!exercises || !exercises.length) {
+        exercises = DEFAULT_POPUP_EXERCISES;
+    }
+    activeWorkoutExercises = exercises;
+
+    const prog = getWorkoutProgress();
+    const isFinished = prog.isFinished || (prog.completedSteps && prog.completedSteps.length >= exercises.length);
+
+    if (isFinished) {
+        if (exerciseStat) exerciseStat.textContent = `${lastRecommendedWorkoutDuration} min`;
+    }
+
+    container.innerHTML = exercises.map((ex, idx) => {
+        const isCompleted = prog.completedSteps && prog.completedSteps.includes(idx);
+        const isActive = !isFinished && prog.currentStep === idx;
+
+        return `
+            <div
+                class="exercise-overview-row ${isCompleted ? 'is-completed' : isActive ? 'is-active' : ''}"
+                onclick="openExerciseModePopup(${idx})"
+                title="Click to view posture guide & instructions in popup">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="color: ${isCompleted ? '#10B981' : '#67E8F9'}; font-weight: 900; font-size: 13px;">
+                        ${isCompleted ? '✓' : '▸'}
+                    </span>
+                    <span style="font-weight: 700; color: ${isCompleted ? '#E2E8F0' : '#F8FAFC'}; font-size: 13px;">
+                        ${escapeHTML(ex.name)}
+                    </span>
+                    ${isActive ? '<span style="font-size: 9px; padding: 2px 7px; background: rgba(6, 182, 212, 0.2); color: #67E8F9; border-radius: 4px; font-weight: 800; border: 1px solid rgba(6, 182, 212, 0.4);">ACTIVE NOW</span>' : ''}
+                    ${isCompleted ? '<span style="font-size: 9px; padding: 2px 7px; background: rgba(16, 185, 129, 0.15); color: #6EE7B7; border-radius: 4px; font-weight: 800;">DONE</span>' : ''}
+                </div>
+                <span style="color: #FCD34D; font-size: 11.5px; font-weight: 700;">
+                    ${escapeHTML(ex.duration)} · ${escapeHTML(ex.reps)}
+                </span>
+            </div>
+        `;
+    }).join("");
+
+    // Update main Exercise Mode launch button on Dashboard 2
+    const launchBtn = document.getElementById("launchExerciseModeBtn");
+    if (launchBtn) {
+        if (isFinished) {
+            launchBtn.style.background = "rgba(16, 185, 129, 0.2)";
+            launchBtn.style.borderColor = "#10B981";
+            launchBtn.style.color = "#6EE7B7";
+            launchBtn.textContent = `✓ WORKOUT COMPLETED (+25 XP) · REVIEW OR RESTART`;
+        } else if (prog.completedSteps && prog.completedSteps.length > 0) {
+            launchBtn.style.background = "";
+            launchBtn.style.borderColor = "";
+            launchBtn.style.color = "";
+            launchBtn.textContent = `⚡ RESUME EXERCISE MODE (STEP ${prog.currentStep + 1} OF ${exercises.length})`;
+        } else {
+            launchBtn.style.background = "";
+            launchBtn.style.borderColor = "";
+            launchBtn.style.color = "";
+            launchBtn.textContent = `⚡ START EXERCISE MODE (OPEN STEP-BY-STEP POPUP)`;
+        }
+    }
+
+    if (btnElem) btnElem.style.display = "none";
+}
+
+// 2. OPEN & CLOSE EXERCISE MODE POPUP MODAL
+function openExerciseModePopup(targetStepIndex = null) {
+    if (!activeWorkoutExercises || !activeWorkoutExercises.length) {
+        activeWorkoutExercises = DEFAULT_POPUP_EXERCISES;
+    }
+
+    const prog = getWorkoutProgress();
+    if (typeof targetStepIndex === "number" && targetStepIndex >= 0 && targetStepIndex < activeWorkoutExercises.length) {
+        prog.currentStep = targetStepIndex;
+        saveWorkoutProgress(prog);
+    }
+
+    const modal = document.getElementById("exerciseModePopupModal");
+    if (modal) {
+        modal.classList.remove("hidden");
+    }
+
+    renderPopupExerciseStep();
+}
+
+function closeExerciseModePopup() {
+    stopPopupStepTimer();
+    const modal = document.getElementById("exerciseModePopupModal");
+    if (modal) {
+        modal.classList.add("hidden");
+    }
+}
+
+// 3. RENDER STEP INSIDE POPUP MODAL
+function renderPopupExerciseStep() {
+    if (!activeWorkoutExercises || !activeWorkoutExercises.length) {
+        activeWorkoutExercises = DEFAULT_POPUP_EXERCISES;
+    }
+
+    const prog = getWorkoutProgress();
+    const total = activeWorkoutExercises.length;
+    const isFinished = prog.isFinished || (prog.completedSteps && prog.completedSteps.length >= total);
+
+    const titleEl = document.getElementById("popupWorkoutTitle");
+    const subEl = document.getElementById("popupWorkoutSubtitle");
+    const counterEl = document.getElementById("popupStepCounterText");
+    const pctEl = document.getElementById("popupProgressPctText");
+    const fillEl = document.getElementById("popupProgressFill");
+    const activeSection = document.getElementById("popupActiveExerciseSection");
+    const celebSection = document.getElementById("popupCelebrationSection");
+    const celebDesc = document.getElementById("popupCelebrationDesc");
+
+    if (titleEl) titleEl.textContent = currentWorkoutName || "Scheduled Exercise Routine";
+    if (subEl) subEl.textContent = "Follow the posture guide and complete each exercise to advance to the next step.";
+
+    // If all completed, show celebration view inside popup
+    if (isFinished) {
+        if (activeSection) activeSection.classList.add("hidden");
+        if (celebSection) celebSection.classList.remove("hidden");
+        if (counterEl) counterEl.textContent = `ALL ${total} STEPS COMPLETED`;
+        if (pctEl) pctEl.textContent = "100% COMPLETED";
+        if (fillEl) fillEl.style.width = "100%";
+        if (celebDesc) {
+            celebDesc.textContent = `Fantastic effort! You completed all ${total} exercises in your scheduled routine today (+25 XP earned).`;
+        }
+
+        const exerciseStat = document.getElementById("exerciseStat");
+        if (exerciseStat) exerciseStat.textContent = `${lastRecommendedWorkoutDuration} min`;
+
+        const breakdownList = document.getElementById("exerciseBreakdownList");
+        if (breakdownList) {
+            renderDashboardExerciseOverview(activeWorkoutExercises, breakdownList, null, exerciseStat);
+        }
+        return;
+    }
+
+    // Active Exercise View
+    if (activeSection) activeSection.classList.remove("hidden");
+    if (celebSection) celebSection.classList.add("hidden");
+
+    const curStepIdx = Math.min(prog.currentStep, total - 1);
+    const curEx = activeWorkoutExercises[curStepIdx];
+    const isLastStep = curStepIdx === total - 1;
+    const ordinal = getOrdinal(curStepIdx + 1);
+    const pct = Math.round((prog.completedSteps.length / total) * 100);
+
+    if (counterEl) counterEl.textContent = `STEP ${curStepIdx + 1} OF ${total}`;
+    if (pctEl) pctEl.textContent = `${pct}% COMPLETED`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
+
+    const badgeEl = document.getElementById("popupStepBadge");
+    const timingEl = document.getElementById("popupExerciseTiming");
+    const diagramEl = document.getElementById("popupDiagramBox");
+    const nameEl = document.getElementById("popupExerciseName");
+    const pillsEl = document.getElementById("popupPills");
+    const instructionsEl = document.getElementById("popupInstructions");
+    const completeBtn = document.getElementById("popupCompleteBtn");
+    const nextPreviewEl = document.getElementById("popupNextPreview");
+
+    if (badgeEl) badgeEl.textContent = `⚡ ${ordinal.toUpperCase()} EXERCISE · ACTIVE`;
+    if (timingEl) timingEl.textContent = `${curEx.duration} · ${curEx.reps}`;
+    if (diagramEl) diagramEl.innerHTML = getExerciseIllustrationSVG(curEx.key, curEx.name);
+    if (nameEl) nameEl.textContent = curEx.name;
+
+    if (pillsEl) {
+        pillsEl.innerHTML = `
+            <span class="active-exercise-pill timing">⏱️ ${escapeHTML(curEx.duration)}</span>
+            <span class="active-exercise-pill timing">⚡ ${escapeHTML(curEx.reps)}</span>
+            <span class="active-exercise-pill muscles">🎯 ${escapeHTML(curEx.target_muscles || "Mobility & Core")}</span>
+        `;
+    }
+
+    if (instructionsEl) {
+        const steps = curEx.instructions && curEx.instructions.length > 0 ? curEx.instructions : [
+            "Start in proper posture and keep core engaged.",
+            "Perform controlled movements through full range of motion.",
+            "Breathe rhythmically without holding your breath."
+        ];
+        instructionsEl.innerHTML = steps.map(ins => `<li>${escapeHTML(ins)}</li>`).join("");
+    }
+
+    if (completeBtn) {
+        if (isLastStep) {
+            completeBtn.textContent = "🎉 COMPLETE FINAL EXERCISE (+25 XP)";
+        } else {
+            completeBtn.textContent = `✓ ${ordinal.toUpperCase()} EXERCISE COMPLETED → NEXT EXERCISE`;
+        }
+    }
+
+    if (nextPreviewEl) {
+        if (!isLastStep && activeWorkoutExercises[curStepIdx + 1]) {
+            const nextEx = activeWorkoutExercises[curStepIdx + 1];
+            nextPreviewEl.textContent = `Next up: Step ${curStepIdx + 2} · ${nextEx.name} (${nextEx.duration})`;
+        } else {
+            nextPreviewEl.textContent = "Final exercise! Completing this will finish today's routine and claim your XP.";
+        }
+    }
+
+    initPopupTimerForStep(curEx.duration);
+}
+
+// 4. HANDLE STEP COMPLETION & TRANSITION TO NEXT EXERCISE
+function handlePopupStepComplete() {
+    stopPopupStepTimer();
+    const prog = getWorkoutProgress();
+
+    if (!prog.completedSteps.includes(prog.currentStep)) {
+        prog.completedSteps.push(prog.currentStep);
+    }
+
+    addXP(5);
+
+    if (prog.currentStep + 1 >= activeWorkoutExercises.length) {
+        // Final exercise completed
+        prog.isFinished = true;
+        saveWorkoutProgress(prog);
+        localStorage.setItem(getWorkoutStorageKey(), "true");
+        addXP(10); // Completion bonus (+25 XP total)
+
+        const exerciseStat = document.getElementById("exerciseStat");
+        if (exerciseStat) exerciseStat.textContent = `${lastRecommendedWorkoutDuration} min`;
+
+        const suggestion = document.getElementById("aiSuggestion");
+        if (suggestion) {
+            suggestion.textContent = "Outstanding work! You completed all exercises in your scheduled routine today.";
+        }
+
+        renderPopupExerciseStep();
+    } else {
+        // Transition to next exercise in the same popup format!
+        prog.currentStep++;
+        saveWorkoutProgress(prog);
+        renderPopupExerciseStep();
+    }
+
+    // Refresh Dashboard 2 overview list
+    const breakdownList = document.getElementById("exerciseBreakdownList");
+    const exerciseStat = document.getElementById("exerciseStat");
+    renderDashboardExerciseOverview(activeWorkoutExercises, breakdownList, null, exerciseStat);
+
+    updateDynamicVitals();
+}
+
+// 5. RESTART POPUP WORKOUT
+function restartPopupWorkout() {
+    stopPopupStepTimer();
+    const prog = { currentStep: 0, completedSteps: [], isFinished: false };
+    saveWorkoutProgress(prog);
+    localStorage.setItem(getWorkoutStorageKey(), "false");
+
+    const exerciseStat = document.getElementById("exerciseStat");
+    if (exerciseStat) exerciseStat.textContent = "0 min";
+
+    renderPopupExerciseStep();
+
+    const breakdownList = document.getElementById("exerciseBreakdownList");
+    renderDashboardExerciseOverview(activeWorkoutExercises, breakdownList, null, exerciseStat);
+
+    updateDynamicVitals();
+}
+
+// 6. POPUP STEP TIMER CONTROLS
+let popupTimerInterval = null;
+let popupTimerSeconds = 60;
+let isPopupTimerRunning = false;
+
+function initPopupTimerForStep(durationStr) {
+    stopPopupStepTimer();
+    let mins = 1;
+    try {
+        const m = parseInt(durationStr);
+        if (!isNaN(m) && m > 0) mins = m;
+    } catch (e) {
+        mins = 1;
+    }
+    popupTimerSeconds = Math.min(mins * 60, 240);
+    isPopupTimerRunning = false;
+    updatePopupTimerDisplay();
+}
+
+function updatePopupTimerDisplay() {
+    const clock = document.getElementById("popupTimerClock");
+    if (!clock) return;
+    const m = Math.floor(popupTimerSeconds / 60);
+    const s = popupTimerSeconds % 60;
+    clock.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function togglePopupStepTimer() {
+    const btn = document.getElementById("popupTimerToggleBtn");
+    if (isPopupTimerRunning) {
+        stopPopupStepTimer();
+        if (btn) btn.textContent = "▶ RESUME";
+    } else {
+        isPopupTimerRunning = true;
+        if (btn) btn.textContent = "⏸ PAUSE";
+        popupTimerInterval = setInterval(() => {
+            if (popupTimerSeconds > 0) {
+                popupTimerSeconds--;
+                updatePopupTimerDisplay();
+            } else {
+                stopPopupStepTimer();
+                if (btn) btn.textContent = "✓ DONE";
+            }
+        }, 1000);
+    }
+}
+
+function stopPopupStepTimer() {
+    if (popupTimerInterval) {
+        clearInterval(popupTimerInterval);
+        popupTimerInterval = null;
+    }
+    isPopupTimerRunning = false;
+    const btn = document.getElementById("popupTimerToggleBtn");
+    if (btn) btn.textContent = "▶ START";
+}
+
+function resetPopupStepTimer() {
+    stopPopupStepTimer();
+    popupTimerSeconds = 60;
+    updatePopupTimerDisplay();
+}
+
+// Backward compatibility alias for any existing callers
+const renderSequentialWorkout = renderDashboardExerciseOverview;
+const restartCurrentWorkout = restartPopupWorkout;
+const completeCurrentExerciseStep = handlePopupStepComplete;
+
+function openExerciseGuideModalByIndex(index) {
+    openExerciseModePopup(index);
+}
+
+function closeExerciseGuideModal() {
+    closeExerciseModePopup();
 }
 
 function toggleWorkoutComplete() {
@@ -2292,39 +3386,65 @@ async function loadRoutine() {
 
 
 function routineRow(icon, label, time) {
+    const isMeal = ["Breakfast", "Lunch", "Snack", "Dinner"].includes(label);
+    if (isMeal) {
+        const loggedItems = Array.isArray(currentTodayFoods) 
+            ? currentTodayFoods.filter(f => (f.meal_type || "").toLowerCase() === label.toLowerCase()) 
+            : [];
+        const isLogged = loggedItems.length > 0;
+        
+        if (isLogged) {
+            const totalCals = loggedItems.reduce((acc, f) => acc + (Math.round(Number(f.calories)) || 0), 0);
+            const foodNames = loggedItems.map(f => f.food_name).join(", ");
+            return `
+                <div class="routine-item routine-item-logged" style="border-left: 3px solid #10B981; background: rgba(16, 185, 129, 0.05); padding: 10px 14px; border-radius: 10px; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 18px;">${icon}</span>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="routine-label" style="font-weight: 700; color: #F8FAFC;">${label}</span>
+                                <span style="font-size: 10px; font-weight: 800; background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 2px 6px; border-radius: 4px;">✓ Filled & Saved</span>
+                            </div>
+                            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">
+                                ${escapeHTML(foodNames)} · <strong style="color: #10B981;">${totalCals} kcal</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="routine-time" style="color: #10B981; font-weight: 800;">
+                        ${time || "--"}
+                    </div>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="routine-item" style="padding: 10px 14px; border-radius: 10px; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 18px;">${icon}</span>
+                        <div>
+                            <span class="routine-label" style="color: #F8FAFC;">${label}</span>
+                            <div style="font-size: 10px; color: #64748B;">Not filled yet</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="routine-time">${time || "--"}</span>
+                        <button type="button" class="mini-button" style="padding: 3px 10px; font-size: 10px; border-color: rgba(6, 182, 212, 0.4); color: #67E8F9; background: rgba(6, 182, 212, 0.1);" onclick="openFoodModal('${label}')">+ Fill</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
 
     return `
-
-        <div class="routine-item">
-
-            <div>
-
-                <span>
-
-                    ${icon}
-
-                </span>
-
-
-                <span class="routine-label">
-
-                    ${label}
-
-                </span>
-
+        <div class="routine-item" style="padding: 10px 14px; border-radius: 10px; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 18px;">${icon}</span>
+                <span class="routine-label">${label}</span>
             </div>
-
-
             <div class="routine-time">
-
                 ${time || "--"}
-
             </div>
-
         </div>
-
     `;
-
 }
 
 
@@ -2917,6 +4037,7 @@ function completeExercise(points) {
     exerciseStat.textContent =
         `${current + 5} min`;
 
+    loadHealthPrecautions();
 
     document.getElementById(
         "aiSuggestion"
@@ -3006,6 +4127,214 @@ function updateXP() {
 
     }
 
+}
+
+
+/* =========================================================
+   DYNAMIC HEALTH SCORE & ENERGY LEVEL ENGINE
+   Calculates live, accurate vitals from:
+   - Sleep quality & duration
+   - Nutrition & meals logged today
+   - Physical activity (steps walked + workout completed)
+   - Hydration (water drank vs 2.5L goal)
+   - Circadian biological curve (time of day)
+========================================================= */
+
+function updateDynamicVitals() {
+    // 1. Get Sleep Duration
+    let sleepHours = 8.0;
+    const sleepEl = document.getElementById("sleepStat");
+    if (sleepEl && sleepEl.textContent) {
+        const parsed = parseFloat(sleepEl.textContent);
+        if (!isNaN(parsed) && parsed > 0) {
+            sleepHours = parsed;
+        }
+    }
+
+    // 2. Get Hydration
+    const waterKey = getWaterStorageKey();
+    const waterL = parseFloat(localStorage.getItem(waterKey)) || waterAmount || 0.0;
+    const waterTarget = 2.5;
+
+    // 3. Get Steps
+    const stepKey = getStepStorageKey();
+    const steps = parseInt(localStorage.getItem(stepKey)) || 0;
+    const stepTarget = 10000;
+
+    // 4. Get Nutrition / Calories
+    let calories = 0;
+    const calEl = document.getElementById("calorieStat");
+    if (calEl && calEl.textContent) {
+        calories = parseFloat(calEl.textContent.replace(/,/g, "")) || 0;
+    }
+
+    // 5. Get Workout Progress
+    const workoutProg = getWorkoutProgress();
+    const isWorkoutDone = workoutProg.isFinished || (localStorage.getItem(getWorkoutStorageKey()) === "true");
+    const workoutStepsCompleted = (workoutProg.completedSteps || []).length;
+
+    // ==========================================
+    // A. CALCULATE DAILY HEALTH SCORE (0 - 100%)
+    // "Calculated from your sleep, meals & activity"
+    // 4 components x 25 points = 100 points
+    // ==========================================
+
+    // (1) Sleep Score (25 max)
+    let sleepScore = 20;
+    if (sleepHours >= 7 && sleepHours <= 9) {
+        sleepScore = 25;
+    } else if (sleepHours >= 6 && sleepHours < 7) {
+        sleepScore = 21;
+    } else if (sleepHours > 9 && sleepHours <= 10) {
+        sleepScore = 21;
+    } else if (sleepHours >= 5 && sleepHours < 6) {
+        sleepScore = 15;
+    } else {
+        sleepScore = 10;
+    }
+
+    // (2) Hydration Score (25 max)
+    const hydrationScore = Math.min(25, Math.round((waterL / waterTarget) * 25));
+
+    // (3) Activity & Exercise Score (25 max)
+    const stepScore = Math.min(18, Math.round((steps / stepTarget) * 18));
+    let exerciseBonus = 0;
+    if (isWorkoutDone) {
+        exerciseBonus = 7;
+    } else if (workoutStepsCompleted > 0) {
+        exerciseBonus = Math.min(6, workoutStepsCompleted * 2);
+    }
+    const activityScore = Math.min(25, stepScore + exerciseBonus);
+
+    // (4) Nutrition & Meal Fuel Score (25 max)
+    let nutritionScore = 15;
+    const hour = new Date().getHours();
+
+    if (calories > 0) {
+        if (calories >= 1400 && calories <= 2400) {
+            nutritionScore = 25;
+        } else if (calories >= 800 && calories < 1400) {
+            nutritionScore = hour < 14 ? 22 : 18;
+        } else if (calories > 2400 && calories <= 2800) {
+            nutritionScore = 20;
+        } else if (calories > 2800) {
+            nutritionScore = 16;
+        } else {
+            nutritionScore = hour < 12 ? 18 : 13;
+        }
+    } else {
+        if (hour < 11) nutritionScore = 18;
+        else if (hour < 15) nutritionScore = 12;
+        else nutritionScore = 8;
+    }
+
+    const totalHealthScore = Math.max(20, Math.min(100, Math.round(sleepScore + hydrationScore + activityScore + nutritionScore)));
+
+    // Render Health Score UI
+    const healthValEl = document.getElementById("healthValue");
+    const healthRadialEl = document.getElementById("healthRadial");
+    const healthStatusEl = document.getElementById("healthStatusText");
+
+    if (healthValEl) {
+        healthValEl.textContent = totalHealthScore;
+    }
+    if (healthRadialEl) {
+        const degrees = Math.round((totalHealthScore / 100) * 360);
+        healthRadialEl.style.setProperty("--progress", `${degrees}deg`);
+    }
+    if (healthStatusEl) {
+        if (totalHealthScore >= 88) {
+            healthStatusEl.textContent = "OPTIMAL";
+            healthStatusEl.style.color = "#34D399";
+        } else if (totalHealthScore >= 75) {
+            healthStatusEl.textContent = "GOOD";
+            healthStatusEl.style.color = "#10B981";
+        } else if (totalHealthScore >= 55) {
+            healthStatusEl.textContent = "MODERATE";
+            healthStatusEl.style.color = "#FCD34D";
+        } else {
+            healthStatusEl.textContent = "NEEDS CARE";
+            healthStatusEl.style.color = "#F87171";
+        }
+    }
+
+    // ==========================================
+    // B. CALCULATE ENERGY LEVEL / RESERVE (0 - 100%)
+    // "Stay active, take short breaks, and recharge."
+    // Based on circadian biology, sleep foundation, hydration recharge & fuel
+    // ==========================================
+    const now = new Date();
+    const timeDec = now.getHours() + (now.getMinutes() / 60);
+
+    // 1. Circadian biological rhythm curve
+    let circadianBase = 75;
+    if (timeDec >= 6 && timeDec < 9) {
+        circadianBase = 70 + ((timeDec - 6) / 3) * 16;
+    } else if (timeDec >= 9 && timeDec < 13.5) {
+        circadianBase = 86 + ((timeDec - 9) / 4.5) * 7;
+    } else if (timeDec >= 13.5 && timeDec < 16.5) {
+        circadianBase = 76 - ((timeDec - 13.5) / 3) * 8;
+    } else if (timeDec >= 16.5 && timeDec < 20.5) {
+        circadianBase = 74 + ((timeDec - 16.5) / 4) * 8;
+    } else if (timeDec >= 20.5 && timeDec < 23) {
+        circadianBase = 70 - ((timeDec - 20.5) / 2.5) * 30;
+    } else {
+        const nightProgress = timeDec >= 23 ? (timeDec - 23) / 7 : (timeDec + 1) / 7;
+        circadianBase = 35 - nightProgress * 13;
+    }
+
+    // 2. Sleep Quality multiplier
+    let sleepMod = 0;
+    if (sleepHours >= 7 && sleepHours <= 9) sleepMod = +5;
+    else if (sleepHours >= 6) sleepMod = 0;
+    else sleepMod = -10;
+
+    // 3. Hydration recharge (+0% to +12%)
+    const hydRatio = Math.min(1.0, waterL / waterTarget);
+    const hydMod = (hydRatio * 12) - 4;
+
+    // 4. Food replenishment (+0% to +10%)
+    let foodMod = 0;
+    if (calories >= 1000) foodMod = +7;
+    else if (calories >= 350) foodMod = +3;
+    else if (timeDec > 13) foodMod = -6;
+
+    // 5. Physical exertion & recovery
+    let exertionMod = 0;
+    if (isWorkoutDone) {
+        exertionMod = -3;
+    } else if (steps > 12000) {
+        exertionMod = -5;
+    }
+
+    const totalEnergy = Math.max(15, Math.min(100, Math.round(circadianBase + sleepMod + hydMod + foodMod + exertionMod)));
+
+    // Render Energy UI
+    const energyValEl = document.getElementById("energyValue");
+    const energyFillEl = document.getElementById("energyFill");
+    const energyStatusEl = document.getElementById("energyStatusText");
+
+    if (energyValEl) {
+        energyValEl.textContent = `${totalEnergy}%`;
+    }
+    if (energyFillEl) {
+        energyFillEl.style.width = `${totalEnergy}%`;
+    }
+    if (energyStatusEl) {
+        if (totalEnergy >= 85) {
+            energyStatusEl.textContent = "PEAK";
+            energyStatusEl.style.color = "#67E8F9";
+        } else if (totalEnergy >= 65) {
+            energyStatusEl.textContent = "ACTIVE";
+            energyStatusEl.style.color = "#06B6D4";
+        } else if (totalEnergy >= 45) {
+            energyStatusEl.textContent = "STEADY";
+            energyStatusEl.style.color = "#FCD34D";
+        } else {
+            energyStatusEl.textContent = "LOW / REST";
+            energyStatusEl.style.color = "#FDA4AF";
+        }
+    }
 }
 
 
