@@ -338,6 +338,12 @@ def get_google_client_id():
     return {"client_id": os.getenv("GOOGLE_CLIENT_ID", "").strip()}
 
 
+@app.get("/auth/google/callback")
+def google_callback_page():
+    """Fallback handler for OAuth redirect callbacks."""
+    return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+
 @app.post("/auth/google")
 def auth_google(req: GoogleAuthRequest):
     """
