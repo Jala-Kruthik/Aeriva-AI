@@ -5072,3 +5072,447 @@ h2 {
     font-size: 11px;
     color: #64748B;
 }
+
+
+/* =========================================================
+   ARENA STAGE & KINETIC DISAPPEARING TYPOGRAPHY THEME
+   (BUILT FOR THE STORM — ESPORTS / STADIUM CONCERT AESTHETIC)
+========================================================= */
+
+.arena-stage-theme {
+    position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: radial-gradient(circle at 50% 0%, #15092a 0%, #080314 55%, #05020c 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 36px 24px 20px 24px;
+}
+
+/* ARENA VOLUMETRIC SPOTLIGHTS & TRUSS */
+.stage-spotlights {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* Top Stadium Truss Bar with red & white LEDs */
+.stage-truss-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(168, 85, 247, 0.22);
+    background: linear-gradient(180deg, rgba(20, 10, 36, 0.9), transparent);
+    z-index: 2;
+}
+
+.truss-leds {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.truss-led {
+    width: 12px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(239, 68, 68, 0.75);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.85);
+    animation: ledPulse 3s infinite ease-in-out alternate;
+}
+
+.truss-led.white {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.95);
+    animation: ledPulse 2.5s infinite ease-in-out alternate-reverse;
+}
+
+@keyframes ledPulse {
+    0% { opacity: 0.35; transform: scaleX(0.9); }
+    50% { opacity: 1; transform: scaleX(1.1); }
+    100% { opacity: 0.5; transform: scaleX(1); }
+}
+
+/* Volumetric Laser Spotlight Beams */
+.spotlight-beam {
+    position: absolute;
+    top: -50px;
+    width: 240px;
+    height: 900px;
+    transform-origin: top center;
+    filter: blur(28px);
+    opacity: 0.42;
+    mix-blend-mode: screen;
+}
+
+.beam-1 {
+    left: 12%;
+    transform: rotate(26deg);
+    background: linear-gradient(180deg, rgba(192, 132, 252, 0.85) 0%, rgba(147, 51, 234, 0.35) 45%, transparent 100%);
+    animation: beamSweep1 9s infinite alternate ease-in-out;
+}
+
+.beam-2 {
+    left: 28%;
+    transform: rotate(12deg);
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.75) 0%, rgba(126, 34, 206, 0.3) 50%, transparent 100%);
+    animation: beamSweep2 8s infinite alternate ease-in-out;
+}
+
+.beam-3 {
+    right: 28%;
+    transform: rotate(-12deg);
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.75) 0%, rgba(126, 34, 206, 0.3) 50%, transparent 100%);
+    animation: beamSweep3 8.5s infinite alternate ease-in-out;
+}
+
+.beam-4 {
+    right: 12%;
+    transform: rotate(-26deg);
+    background: linear-gradient(180deg, rgba(192, 132, 252, 0.85) 0%, rgba(147, 51, 234, 0.35) 45%, transparent 100%);
+    animation: beamSweep4 9.5s infinite alternate ease-in-out;
+}
+
+@keyframes beamSweep1 {
+    0% { transform: rotate(24deg) scaleX(1); opacity: 0.32; }
+    100% { transform: rotate(29deg) scaleX(1.15); opacity: 0.52; }
+}
+
+@keyframes beamSweep2 {
+    0% { transform: rotate(10deg) scaleX(1.05); opacity: 0.36; }
+    100% { transform: rotate(15deg) scaleX(0.95); opacity: 0.56; }
+}
+
+@keyframes beamSweep3 {
+    0% { transform: rotate(-10deg) scaleX(1.05); opacity: 0.36; }
+    100% { transform: rotate(-15deg) scaleX(0.95); opacity: 0.56; }
+}
+
+@keyframes beamSweep4 {
+    0% { transform: rotate(-24deg) scaleX(1); opacity: 0.32; }
+    100% { transform: rotate(-29deg) scaleX(1.15); opacity: 0.52; }
+}
+
+.stage-ambient-glow {
+    position: absolute;
+    top: 15%;
+    left: 15%;
+    width: 70%;
+    height: 500px;
+    background: radial-gradient(ellipse at center, rgba(147, 51, 234, 0.22) 0%, rgba(6, 182, 212, 0.12) 45%, transparent 70%);
+    filter: blur(55px);
+    pointer-events: none;
+}
+
+.stage-chevron-backdrop {
+    position: absolute;
+    inset: 0;
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.stage-chevron-backdrop svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* MAIN STAGE GRID CONTAINER */
+.arena-stage-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 48px;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+    padding-top: 32px;
+    padding-bottom: 24px;
+}
+
+@media (max-width: 1080px) {
+    .arena-stage-container {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        justify-items: center;
+        padding-top: 20px;
+    }
+}
+
+/* LEFT HERO COLUMN */
+.stage-hero-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    max-width: 720px;
+    z-index: 2;
+}
+
+@media (max-width: 1080px) {
+    .stage-hero-content {
+        align-items: center;
+        text-align: center;
+        max-width: 640px;
+    }
+}
+
+/* TOP FLOATING PILL (EXACT LOOK FROM IMAGE) */
+.stage-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 16px rgba(168, 85, 247, 0.25);
+    margin-bottom: 22px;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+.stage-pill-badge:hover {
+    border-color: rgba(192, 132, 252, 0.5);
+    box-shadow: 0 4px 24px rgba(168, 85, 247, 0.45);
+    transform: translateY(-1px);
+}
+
+.pill-grid-icon {
+    display: grid;
+    grid-template-columns: repeat(3, 3.5px);
+    grid-template-rows: repeat(2, 3.5px);
+    gap: 2.5px;
+}
+
+.pill-grid-icon span {
+    width: 3.5px;
+    height: 3.5px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 0.5px;
+}
+
+.pill-text {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #F8FAFC;
+}
+
+/* STAGE KICKER */
+.stage-kicker {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.26em;
+    color: #C084FC;
+    text-transform: uppercase;
+    margin: 0 0 16px 0;
+    text-shadow: 0 0 14px rgba(192, 132, 252, 0.5);
+}
+
+/* GIANT KINETIC HEADLINE */
+.kinetic-headline-wrap {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 18px;
+    overflow: hidden;
+    padding: 6px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.kinetic-line {
+    display: block;
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 900;
+    line-height: 0.92;
+    text-transform: uppercase;
+    letter-spacing: -0.038em;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transform: translateY(0) scale(1) skewX(0);
+    filter: blur(0) brightness(1);
+    opacity: 1;
+    transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+                filter 0.65s ease,
+                opacity 0.5s ease;
+}
+
+.kinetic-line.solid {
+    color: #FFFFFF;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.8),
+                 0 0 35px rgba(168, 85, 247, 0.35);
+}
+
+.kinetic-line.outline {
+    color: transparent;
+    -webkit-text-stroke: 2.8px #FFFFFF;
+    text-shadow: 0 0 32px rgba(192, 132, 252, 0.55);
+}
+
+/* UNIQUE DISAPPEARING ANIMATION PHASES */
+.kinetic-headline-wrap.disappearing .kinetic-line {
+    transform: translateY(-34px) scale(1.08) skewX(-14deg);
+    filter: blur(18px) brightness(2.6);
+    opacity: 0;
+    transition: transform 0.52s cubic-bezier(0.7, 0, 0.3, 1),
+                filter 0.52s ease,
+                opacity 0.42s ease;
+}
+
+.kinetic-headline-wrap.disappearing .kinetic-laser-glare {
+    transform: translateX(140%);
+    opacity: 1;
+    transition: transform 0.48s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.48s ease;
+}
+
+.kinetic-headline-wrap.entering .kinetic-line {
+    transform: translateY(38px) scale(0.92) skewX(8deg);
+    filter: blur(14px) brightness(2.0);
+    opacity: 0;
+    transition: none; /* instant preparation */
+}
+
+.kinetic-laser-glare {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.85) 50%, transparent 100%);
+    transform: translateX(-140%);
+    opacity: 0;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+}
+
+/* SUBTEXT */
+.stage-subtext {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #94A3B8;
+    margin: 0 0 20px 0;
+    max-width: 580px;
+}
+
+/* KINETIC TIMELINE CONTROLS */
+.kinetic-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.kinetic-progress-bar {
+    width: 120px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.kinetic-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #C084FC, #22D3EE);
+    border-radius: 999px;
+}
+
+.kinetic-nav-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.kinetic-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.kinetic-dot.active {
+    background: #C084FC;
+    box-shadow: 0 0 10px #C084FC;
+    transform: scale(1.3);
+}
+
+.kinetic-next-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(168, 85, 247, 0.14);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    color: #E9D5FF;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.kinetic-next-btn:hover {
+    background: rgba(168, 85, 247, 0.3);
+    border-color: #C084FC;
+    color: #FFFFFF;
+    transform: translateX(2px);
+}
+
+/* STAGE FEATURE CHIPS */
+.stage-feature-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.stage-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #CBD5E1;
+    backdrop-filter: blur(8px);
+}
+
+.chip-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.chip-dot.cyan { background: #06B6D4; box-shadow: 0 0 8px #06B6D4; }
+.chip-dot.emerald { background: #10B981; box-shadow: 0 0 8px #10B981; }
+.chip-dot.purple { background: #A855F7; box-shadow: 0 0 8px #A855F7; }
+
+/* ENHANCE AUTH TERMINAL FOR ARENA DUAL STAGE */
+.arena-auth-card {
+    background: rgba(10, 15, 30, 0.78);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(168, 85, 247, 0.22);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6),
+                0 0 40px rgba(168, 85, 247, 0.15);
+    width: 100%;
+    max-width: 520px;
+    margin: 0;
+}
+

@@ -7,7 +7,7 @@
 
     <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
 
-    <link rel="stylesheet" href="/static/style.css?v=3.1">
+    <link rel="stylesheet" href="/static/style.css?v=4.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -22,9 +22,115 @@
      LOGIN & REGISTER SCREEN
 ===================================================== -->
 
-<section id="authScreen" class="screen auth-screen">
+<section id="authScreen" class="screen auth-screen arena-stage-theme">
 
-    <div class="auth-terminal glass-panel">
+    <!-- ARENA STAGE VOLUMETRIC LIGHTS & TRUSS BAR -->
+    <div class="stage-spotlights" aria-hidden="true">
+        <!-- Top Stadium Truss Bar with red & white dash LEDs -->
+        <div class="stage-truss-bar">
+            <div class="truss-leds">
+                <span class="truss-led"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led white"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led white"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led white"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led white"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led white"></span>
+                <span class="truss-led"></span>
+                <span class="truss-led"></span>
+            </div>
+        </div>
+
+        <!-- Volumetric angled laser spotlight beams -->
+        <div class="spotlight-beam beam-1"></div>
+        <div class="spotlight-beam beam-2"></div>
+        <div class="spotlight-beam beam-3"></div>
+        <div class="spotlight-beam beam-4"></div>
+        <div class="stage-ambient-glow"></div>
+
+        <!-- Geometric stage chevron backdrop lines -->
+        <div class="stage-chevron-backdrop">
+            <svg viewBox="0 0 1400 700" fill="none" preserveAspectRatio="none">
+                <path d="M100 650 L700 120 L1300 650" stroke="rgba(168, 85, 247, 0.18)" stroke-width="4" stroke-dasharray="16 12"/>
+                <path d="M220 680 L700 200 L1180 680" stroke="rgba(147, 51, 234, 0.28)" stroke-width="6"/>
+                <path d="M340 700 L700 280 L1060 700" stroke="rgba(192, 132, 252, 0.15)" stroke-width="3"/>
+            </svg>
+        </div>
+    </div>
+
+    <!-- MAIN ARENA STAGE CONTAINER (SPLIT HERO + AUTH TERMINAL) -->
+    <div class="arena-stage-container">
+
+        <!-- LEFT COLUMN: GRAND HERO STAGE WITH DISAPPEARING KINETIC TEXT -->
+        <div class="stage-hero-content">
+
+            <!-- TOP FLOATING PILL (EXACT ICON & WORKING LABEL) -->
+            <div class="stage-pill-badge" id="stagePillBadge">
+                <span class="pill-grid-icon" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                    <span></span><span></span><span></span>
+                </span>
+                <span class="pill-text">Working</span>
+            </div>
+
+            <!-- KICKER / SUBTITLE -->
+            <p class="stage-kicker">
+                WE ARE AERIVA AI &bull; NEXT-GEN HEALTH SYSTEM
+            </p>
+
+            <!-- GIANT KINETIC HEADLINE WITH UNIQUE DISAPPEARING ANIMATION -->
+            <div class="kinetic-headline-wrap" id="kineticHeadlineWrap" onclick="nextKineticPhrase()" title="Click to advance phrase">
+                <div class="kinetic-line solid" id="kineticSolid">BUILT FOR</div>
+                <div class="kinetic-line outline" id="kineticOutline">THE STORM.</div>
+                <div class="kinetic-laser-glare" id="kineticLaserGlare"></div>
+            </div>
+
+            <p class="stage-subtext">
+                Autonomous daily routines, biometrics telemetry, and active wellness quests — engineered to unlock your peak physical potential.
+            </p>
+
+            <!-- KINETIC CONTROLS: PROGRESS BAR, DOTS & NEXT BUTTON -->
+            <div class="kinetic-controls">
+                <div class="kinetic-progress-bar">
+                    <div class="kinetic-progress-fill" id="kineticProgressFill"></div>
+                </div>
+                <div class="kinetic-nav-dots" id="kineticNavDots"></div>
+                <button class="kinetic-next-btn" type="button" onclick="nextKineticPhrase()" title="Next phrase">
+                    <span>NEXT</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- MINI FEATURE CHIPS -->
+            <div class="stage-feature-chips">
+                <div class="stage-chip">
+                    <span class="chip-dot cyan"></span>
+                    <span>AI Routine Matrix</span>
+                </div>
+                <div class="stage-chip">
+                    <span class="chip-dot emerald"></span>
+                    <span>Vitals Telemetry</span>
+                </div>
+                <div class="stage-chip">
+                    <span class="chip-dot purple"></span>
+                    <span>Google OAuth 2.0</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: AUTH TERMINAL (SIGN IN & REGISTER) -->
+        <div class="auth-terminal glass-panel arena-auth-card">
 
         <div class="brand-lockup">
             <div class="brand-mark">
@@ -251,6 +357,8 @@
         </div>
 
     </div>
+
+    </div> <!-- Close .arena-stage-container -->
 
     <!-- BOTTOM PAGE ATTRIBUTION -->
     <footer class="auth-bottom-attribution">
@@ -1920,7 +2028,7 @@
 </div>
 
 
-<script src="/static/app.js?v=3.1"></script>
+<script src="/static/app.js?v=4.0"></script>
 
 </body>
 </html>

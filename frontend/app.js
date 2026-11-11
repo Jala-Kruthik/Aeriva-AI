@@ -5509,7 +5509,135 @@ async function handleGoogleProfileSubmit(event) {
 }
 
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initGoogleAuth);
+    document.addEventListener("DOMContentLoaded", () => {
+        initGoogleAuth();
+        initKineticStage();
+    });
 } else {
     initGoogleAuth();
+    initKineticStage();
 }
+
+/* =========================================================
+   ARENA KINETIC DISAPPEARING TYPOGRAPHY CONTROLLER
+========================================================= */
+
+const kineticPhrases = [
+    { solid: "BUILT FOR", outline: "THE STORM." },
+    { solid: "DESIGNED FOR", outline: "PEAK LIVING." },
+    { solid: "ENGINEERED FOR", outline: "LONGEVITY." },
+    { solid: "POWERED BY", outline: "INTELLIGENCE." },
+    { solid: "FORGED FOR", outline: "EVERY GOAL." }
+];
+
+let currentKineticIndex = 0;
+let kineticTimer = null;
+const KINETIC_INTERVAL_MS = 4000;
+let isKineticTransitioning = false;
+
+function initKineticStage() {
+    const wrap = document.getElementById("kineticHeadlineWrap");
+    const solidEl = document.getElementById("kineticSolid");
+    const outlineEl = document.getElementById("kineticOutline");
+    const dotsContainer = document.getElementById("kineticNavDots");
+    if (!wrap || !solidEl || !outlineEl) return;
+
+    // Build nav dots
+    if (dotsContainer) {
+        dotsContainer.innerHTML = kineticPhrases.map((_, i) =>
+            `<button class="kinetic-dot ${i === 0 ? 'active' : ''}" type="button" onclick="goToKineticPhrase(${i})" aria-label="Go to phrase ${i + 1}"></button>`
+        ).join("");
+    }
+
+    // Set initial text
+    solidEl.textContent = kineticPhrases[0].solid;
+    outlineEl.textContent = kineticPhrases[0].outline;
+
+    // Pause on hover
+    wrap.addEventListener("mouseenter", () => {
+        clearInterval(kineticTimer);
+    });
+    wrap.addEventListener("mouseleave", () => {
+        startKineticTimer();
+    });
+
+    startKineticTimer();
+}
+
+function switchKineticPhrase(targetIndex) {
+    if (isKineticTransitioning) return;
+    const wrap = document.getElementById("kineticHeadlineWrap");
+    const solidEl = document.getElementById("kineticSolid");
+    const outlineEl = document.getElementById("kineticOutline");
+    if (!wrap || !solidEl || !outlineEl) return;
+
+    isKineticTransitioning = true;
+
+    // Phase 1: Disappear uniquely (blur, scale, skew, flash & vaporize)
+    wrap.classList.remove("entering");
+    wrap.classList.add("disappearing");
+
+    setTimeout(() => {
+        // Compute new index
+        if (typeof targetIndex === "number") {
+            currentKineticIndex = targetIndex;
+        } else {
+            currentKineticIndex = (currentKineticIndex + 1) % kineticPhrases.length;
+        }
+
+        const nextPhrase = kineticPhrases[currentKineticIndex];
+        solidEl.textContent = nextPhrase.solid;
+        outlineEl.textContent = nextPhrase.outline;
+
+        // Update nav dots
+        const dots = document.querySelectorAll(".kinetic-dot");
+        dots.forEach((dot, idx) => {
+            dot.classList.toggle("active", idx === currentKineticIndex);
+        });
+
+        // Phase 2: Enter from beneath with focused snap
+        wrap.classList.remove("disappearing");
+        wrap.classList.add("entering");
+
+        // Force browser layout reflow
+        void wrap.offsetWidth;
+
+        // Phase 3: Settle into resting state
+        requestAnimationFrame(() => {
+            wrap.classList.remove("entering");
+            isKineticTransitioning = false;
+        });
+
+        resetKineticProgressBar();
+    }, 520);
+}
+
+function nextKineticPhrase() {
+    startKineticTimer();
+    switchKineticPhrase();
+}
+
+function goToKineticPhrase(idx) {
+    if (idx === currentKineticIndex) return;
+    startKineticTimer();
+    switchKineticPhrase(idx);
+}
+
+function startKineticTimer() {
+    clearInterval(kineticTimer);
+    resetKineticProgressBar();
+    kineticTimer = setInterval(() => {
+        switchKineticPhrase();
+    }, KINETIC_INTERVAL_MS);
+}
+
+function resetKineticProgressBar() {
+    const fill = document.getElementById("kineticProgressFill");
+    if (!fill) return;
+    fill.style.transition = "none";
+    fill.style.width = "0%";
+    void fill.offsetWidth;
+    fill.style.transition = `width ${KINETIC_INTERVAL_MS}ms linear`;
+    fill.style.width = "100%";
+}
+
