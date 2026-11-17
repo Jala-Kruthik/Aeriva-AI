@@ -35,6 +35,13 @@ class User(Base):
         nullable=False
     )
 
+    google_id = Column(
+        String,
+        unique=True,
+        index=True,
+        nullable=True
+    )
+
     password = Column(
         String,
         nullable=False

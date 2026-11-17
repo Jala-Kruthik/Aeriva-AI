@@ -1,0 +1,112 @@
+{
+  "jalakruthik2810@gmail.com": {
+    "id": 1,
+    "name": "JALA KRUTHIK",
+    "email": "jalakruthik2810@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$zq6HnavdNWLSEFwe4wmwrw$6tUEqE1DR8Tpm3nIcyXru6+wQHCMwCZM8dL7vhtOkU4",
+    "age": 19,
+    "height": 175.0,
+    "weight": 61.0,
+    "health_goal": "Build healthy habits",
+    "onboarding_completed": true
+  },
+  "jalakruthik@gmail.com": {
+    "id": 2,
+    "name": "Jala Kruthik",
+    "email": "jalakruthik@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$NCShBFz2srial0L6DYioqA$dL9U7qppRqWErrMk+tb2CmEOJJO2gEHO8AcwOc5NcRg",
+    "age": 19,
+    "height": 175.0,
+    "weight": 58.0,
+    "health_goal": "Improve fitness",
+    "onboarding_completed": true
+  },
+  "bunny@gmail.com": {
+    "id": 3,
+    "name": "Bunny",
+    "email": "bunny@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$yAgiFyEdrvwX/N4BTS6CyQ$XBgm6MXFsTKJNh57CQR4m62ouJhAhMg/+s5aWASjOrM",
+    "age": 19,
+    "height": 175.0,
+    "weight": 56.0,
+    "health_goal": "Maintain health",
+    "onboarding_completed": true
+  },
+  "guru@gmail.com": {
+    "id": 4,
+    "name": "guru",
+    "email": "guru@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$E6EKwI8zCwH6ylBriPldgA$eErzo2MUCjgjhda5zPkO2ZdO/1sV2Gi/b2oaR0TcdTM",
+    "age": 18,
+    "height": 160.0,
+    "weight": 60.0,
+    "health_goal": "Gain muscle",
+    "onboarding_completed": true
+  },
+  "kruthik@gmail.com": {
+    "id": 5,
+    "name": "kruthik",
+    "email": "kruthik@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$vyQVvaKqBR6aLqx1HKg9uQ$dWz+eXy7C1J+TdRGC0/ScbsFPzo7FERJPXYzMwo97YU",
+    "age": 19,
+    "height": 175.0,
+    "weight": 84.0,
+    "health_goal": "Gain muscle",
+    "onboarding_completed": true
+  },
+  "jala@gmail.com": {
+    "id": 6,
+    "name": "jala",
+    "email": "jala@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$JXChUS3z6jS4pNJzs6d1sw$97RhDfE/BWSnHoP/NNzeNaPOAFM2Vk/UFJ46uuq0Iyw",
+    "age": 18,
+    "height": 165.0,
+    "weight": 79.0,
+    "health_goal": "Lose weight",
+    "onboarding_completed": true
+  },
+  "partha@gmail.com": {
+    "id": 7,
+    "name": "partha",
+    "email": "partha@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$+VNsRJ0N9zkoaV+6cU1TTg$xPWEXnzsDEJQWaEuGntWzuH2qd8BWKU+ATEzITz2o74",
+    "age": 18,
+    "height": 140.0,
+    "weight": 50.0,
+    "health_goal": "Maintain health",
+    "onboarding_completed": true
+  },
+  "bunty@gmail.com": {
+    "id": 8,
+    "name": "Bunty",
+    "email": "bunty@gmail.com",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$a2lxxe75+vuU8DIjOxcojA$aiv+glRvnMyP/RtXlP7hfPcGSoYXm4nKvjn3oWCZ1N0",
+    "age": 18,
+    "height": 160.0,
+    "weight": 90.0,
+    "health_goal": "Build healthy habits",
+    "onboarding_completed": true
+  },
+  "testuser_health@aeriva.ai": {
+    "id": 9,
+    "name": "Kruthik",
+    "email": "testuser_health@aeriva.ai",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$WHZnBiKY6nm1BVTd6gx8fg$SqoGmzmAq0v6dL0K9LQDK/3wcPXrbgEFobG9wucOmhA",
+    "age": 24,
+    "height": 175.0,
+    "weight": 68.0,
+    "health_goal": "Weight Loss",
+    "onboarding_completed": true
+  },
+  "test_persistence@aeriva.ai": {
+    "id": 10,
+    "name": "Persistence Tester",
+    "email": "test_persistence@aeriva.ai",
+    "password": "$argon2id$v=19$m=65536,t=3,p=4$cNRSQxZ3pf6H0OcM0qSewg$OpdAToQpbM0+JReERmEUZB5v6nojVj9A1ZxaAsC49yc",
+    "age": 25,
+    "height": 5.9,
+    "weight": 70.0,
+    "health_goal": "Muscle Gain",
+    "onboarding_completed": true
+  }
+}

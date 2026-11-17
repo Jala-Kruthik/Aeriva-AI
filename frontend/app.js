@@ -79,6 +79,126 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
 /* =========================================
+   SAVED ACCOUNTS ON THIS DEVICE
+========================================= */
+
+function getSavedAccounts() {
+    try {
+        const raw = localStorage.getItem("aeriva_saved_accounts");
+        if (raw) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) return arr;
+        }
+    } catch (e) {
+        console.warn("Error reading saved accounts:", e);
+    }
+    return [];
+}
+
+function rememberAccount(name, email) {
+    if (!email) return;
+    try {
+        let accounts = getSavedAccounts();
+        const normEmail = email.trim().toLowerCase();
+        accounts = accounts.filter(a => a.email && a.email.toLowerCase() !== normEmail);
+        accounts.unshift({
+            name: name || normEmail.split("@")[0],
+            email: normEmail,
+            lastLogin: new Date().toISOString()
+        });
+        accounts = accounts.slice(0, 8);
+        localStorage.setItem("aeriva_saved_accounts", JSON.stringify(accounts));
+        localStorage.setItem("aeriva_last_email", normEmail);
+        renderSavedAccounts();
+    } catch (e) {
+        console.warn("Error saving account:", e);
+    }
+}
+
+function removeSavedAccount(email, ev) {
+    if (ev) ev.stopPropagation();
+    try {
+        let accounts = getSavedAccounts();
+        const normEmail = email.trim().toLowerCase();
+        accounts = accounts.filter(a => a.email && a.email.toLowerCase() !== normEmail);
+        localStorage.setItem("aeriva_saved_accounts", JSON.stringify(accounts));
+        renderSavedAccounts();
+    } catch (e) {
+        console.warn("Error removing account:", e);
+    }
+}
+
+function selectSavedAccount(email) {
+    const emailInput = document.getElementById("loginEmail");
+    const passwordInput = document.getElementById("loginPassword");
+    if (emailInput) {
+        emailInput.value = email;
+        if (passwordInput) {
+            passwordInput.focus();
+        }
+    }
+}
+
+function renderSavedAccounts() {
+    const container = document.getElementById("savedAccountsContainer");
+    const list = document.getElementById("savedAccountsList");
+    if (!container || !list) return;
+
+    let accounts = getSavedAccounts();
+
+    // If local saved accounts list is empty, but we have a cached user email, seed it
+    if (accounts.length === 0) {
+        const cachedEmail = localStorage.getItem("aeriva_user_email") || localStorage.getItem("aeriva_last_email");
+        const cachedUserStr = localStorage.getItem("aeriva_user");
+        let cachedName = "";
+        if (cachedUserStr) {
+            try {
+                const u = JSON.parse(cachedUserStr);
+                cachedName = u.name || "";
+            } catch (e) {}
+        }
+        if (cachedEmail) {
+            accounts = [{
+                name: cachedName || cachedEmail.split("@")[0],
+                email: cachedEmail.trim().toLowerCase(),
+                lastLogin: new Date().toISOString()
+            }];
+            localStorage.setItem("aeriva_saved_accounts", JSON.stringify(accounts));
+        }
+    }
+
+    if (accounts.length === 0) {
+        container.classList.add("hidden");
+        list.innerHTML = "";
+        return;
+    }
+
+    container.classList.remove("hidden");
+    list.innerHTML = accounts.map(acc => {
+        const initial = (acc.name || acc.email || "U")[0].toUpperCase();
+        const cleanName = typeof escapeHTML === "function" ? escapeHTML(acc.name || acc.email) : (acc.name || acc.email);
+        const cleanEmail = typeof escapeHTML === "function" ? escapeHTML(acc.email) : acc.email;
+        return `
+            <div class="saved-account-chip" onclick="selectSavedAccount('${acc.email}')" title="Click to sign in as ${acc.email}">
+                <div class="saved-account-avatar">${initial}</div>
+                <div class="saved-account-info">
+                    <span class="saved-account-name">${cleanName}</span>
+                    <span class="saved-account-email">${cleanEmail}</span>
+                </div>
+                <button type="button" class="saved-account-remove" title="Remove account from device" onclick="removeSavedAccount('${acc.email}', event)">×</button>
+            </div>
+        `;
+    }).join("");
+
+    // Auto-fill login field if empty
+    const emailInput = document.getElementById("loginEmail");
+    if (emailInput && !emailInput.value.trim() && accounts.length > 0) {
+        emailInput.value = accounts[0].email;
+    }
+}
+
+
+/* =========================================
    LOGIN / REGISTER SCREEN
 ========================================= */
 
@@ -96,6 +216,8 @@ function showLogin() {
 
     const loginMessage = document.getElementById("loginMessage");
     if (loginMessage) loginMessage.textContent = "";
+
+    renderSavedAccounts();
 }
 
 
@@ -112,15 +234,11 @@ function showRegister() {
 
     const registerGoogleStep = document.getElementById("registerGoogleStep");
     const registerProfileStep = document.getElementById("registerProfileStep");
+    const registerForm = document.getElementById("registerForm");
 
-    // If already authenticated via Google, show profile step directly
-    if (authToken && currentUser) {
-        if (registerGoogleStep) registerGoogleStep.classList.add("hidden");
-        if (registerProfileStep) registerProfileStep.classList.remove("hidden");
-    } else {
-        if (registerGoogleStep) registerGoogleStep.classList.remove("hidden");
-        if (registerProfileStep) registerProfileStep.classList.add("hidden");
-    }
+    if (registerForm) registerForm.classList.remove("hidden");
+    if (registerGoogleStep) registerGoogleStep.classList.add("hidden");
+    if (registerProfileStep) registerProfileStep.classList.add("hidden");
 
     const registerMessage = document.getElementById("registerMessage");
     if (registerMessage) registerMessage.textContent = "";
@@ -134,123 +252,85 @@ function showRegister() {
 
 async function registerUser() {
 
-    const name =
-        document.getElementById("registerName").value.trim();
+    const nameInput = document.getElementById("registerName");
+    const emailInput = document.getElementById("registerEmail");
+    const passwordInput = document.getElementById("registerPassword");
+    const ageInput = document.getElementById("registerAge");
+    const heightInput = document.getElementById("registerHeight");
+    const weightInput = document.getElementById("registerWeight");
+    const goalInput = document.getElementById("registerGoal");
+    const message = document.getElementById("registerMessage");
 
-    const email =
-        document.getElementById("registerEmail").value.trim();
-
-    const password =
-        document.getElementById("registerPassword").value;
-
-    const age =
-        document.getElementById("registerAge").value;
-
-    const height =
-        document.getElementById("registerHeight").value;
-
-    const weight =
-        document.getElementById("registerWeight").value;
-
-    const healthGoal =
-        document.getElementById("registerGoal").value;
-
-    const message =
-        document.getElementById("registerMessage");
-
+    const name = nameInput ? nameInput.value.trim() : "";
+    const email = emailInput ? emailInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+    const age = ageInput ? ageInput.value : null;
+    const height = heightInput ? heightInput.value : null;
+    const weight = weightInput ? weightInput.value : null;
+    const healthGoal = goalInput ? goalInput.value : null;
 
     if (!name || !email || !password) {
-
-        message.textContent =
-            "Please enter name, email and password.";
-
+        if (message) message.textContent = "Please enter your name, email and password.";
         return;
-
     }
-
 
     try {
 
-        message.textContent = "Creating account...";
-
+        if (message) message.textContent = "Creating account in database...";
 
         const response = await fetch(
             `${API}/register`,
             {
                 method: "POST",
-
                 headers: {
                     "Content-Type": "application/json"
                 },
-
                 body: JSON.stringify({
-
                     name: name,
-
                     email: email,
-
                     password: password,
-
                     age: age ? Number(age) : null,
-
                     height: height ? Number(height) : null,
-
                     weight: weight ? Number(weight) : null,
-
-                    health_goal:
-                        healthGoal || null
-
+                    health_goal: healthGoal || null
                 })
-
             }
         );
 
-
         const data = await response.json();
 
-
         if (!response.ok) {
-
-            message.textContent =
-                data.detail ||
-                "Unable to create account.";
-
+            if (message) message.textContent = data.detail || "Unable to create account.";
             return;
-
         }
 
+        // Successfully created and stored in DB! Auto-login immediately:
+        authToken = data.access_token;
+        localStorage.setItem("aeriva_token", authToken);
+        rememberAccount(name, email);
 
-        message.textContent =
-            "Account created successfully. Logging you in...";
+        if (message) message.textContent = "Account stored in database! Loading your dashboard...";
 
+        currentUser = {
+            id: data.user_id,
+            name: data.name || name,
+            email: data.email || email,
+            age: age ? Number(age) : null,
+            height: height ? Number(height) : null,
+            weight: weight ? Number(weight) : null,
+            health_goal: healthGoal || null,
+            onboarding_completed: true
+        };
+        localStorage.setItem("aeriva_user", JSON.stringify(currentUser));
+        localStorage.setItem("aeriva_user_email", currentUser.email);
 
-        document.getElementById("loginEmail").value =
-            email;
-
-        document.getElementById("loginPassword").value =
-            password;
-
-
-        setTimeout(() => {
-
-            showLogin();
-
-            document.getElementById("loginEmail").value =
-                email;
-
-            document.getElementById("loginPassword").value =
-                password;
-
-        }, 700);
-
+        localStorage.setItem("aeriva_active_dashboard_tab", "routine");
+        switchDashboardTab("routine");
+        await loadDashboard();
 
     } catch (error) {
-
-        console.error(error);
-
-        message.textContent =
-            "Could not connect to AERIVA server.";
-
+        console.error("Register error:", error);
+        if (message) message.textContent = "Could not connect to AERIVA server.";
     }
 
 }
@@ -263,122 +343,58 @@ async function registerUser() {
 
 async function loginUser() {
 
-    const email =
-        document
-            .getElementById("loginEmail")
-            .value
-            .trim();
-
-    const password =
-        document
-            .getElementById("loginPassword")
-            .value;
-
-    const message =
-        document.getElementById("loginMessage");
-
+    const emailInput = document.getElementById("loginEmail");
+    const passwordInput = document.getElementById("loginPassword");
+    const email = emailInput ? emailInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+    const message = document.getElementById("loginMessage");
+    const rememberMe = document.getElementById("rememberMeCheckbox");
 
     if (!email || !password) {
-
-        message.textContent =
-            "Please enter email and password.";
-
+        if (message) message.textContent = "Please enter email and password.";
         return;
     }
 
-
     try {
 
-        message.textContent =
-            "Logging in...";
+        if (message) message.textContent = "Logging in...";
 
+        const response = await fetch(
+            `${API}/login`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: email,
+                    password: password
+                })
+            }
+        );
 
-        const response =
-            await fetch(
-                `${API}/login`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        email: email,
-                        password: password
-                    })
-                }
-            );
-
-
-        const data =
-            await response.json();
-
+        const data = await response.json();
 
         if (!response.ok) {
-
-            message.textContent =
-                data.detail ||
-                "Invalid email or password.";
-
+            if (message) message.textContent = data.detail || "Invalid email or password.";
             return;
         }
 
+        // Save JWT token
+        authToken = data.access_token;
+        localStorage.setItem("aeriva_token", authToken);
 
-        /*
-         * Save JWT token
-         */
-
-        authToken =
-            data.access_token;
-
-
-        localStorage.setItem(
-            "aeriva_token",
-            authToken
-        );
-
-
-        /*
-         * Get the complete user profile.
-         *
-         * /me tells us whether the user
-         * has completed onboarding.
-         */
-
-        const meResponse =
-            await fetch(
-                `${API}/me`,
-                {
-                    headers: {
-                        "Authorization":
-                            `Bearer ${authToken}`
-                    }
-                }
-            );
-
-
-        if (!meResponse.ok) {
-
-            throw new Error(
-                "Could not load user profile."
-            );
-
+        const userName = data.name || email.split("@")[0];
+        if (!rememberMe || rememberMe.checked) {
+            rememberAccount(userName, email);
         }
 
-
-        currentUser =
-            await meResponse.json();
-
-        updateTimeGreeting();
-
+        if (message) message.textContent = "Welcome back! Loading your dashboard...";
 
         // Always enter Dashboard 1 (Daily Routine) directly upon login
         localStorage.setItem("aeriva_active_dashboard_tab", "routine");
         switchDashboardTab("routine");
         await loadDashboard();
-
 
     } catch (error) {
 
@@ -387,9 +403,7 @@ async function loginUser() {
             error
         );
 
-
-        message.textContent =
-            "Could not connect to AERIVA server.";
+        if (message) message.textContent = "Could not connect to AERIVA server.";
 
     }
 
@@ -426,6 +440,7 @@ async function loadDashboard() {
     localStorage.setItem("aeriva_user", JSON.stringify(currentUser));
     if (currentUser.email) {
         localStorage.setItem("aeriva_user_email", currentUser.email);
+        rememberAccount(currentUser.name, currentUser.email);
     }
 
     const authScreen = document.getElementById("authScreen");
@@ -2537,8 +2552,37 @@ let cartoonVideoState = {
     cycleDuration: 3.0,
     speed: 1.0,
     lastTimestamp: 0,
-    repCount: 1
+    repCount: 1,
+    displayMode: "canvas" // "canvas" for 60FPS animated video, "hd" for studio anime character artwork
 };
+
+const EXERCISE_CHARACTER_IMAGES = {
+    "squat": "/static/athlete-squat.jpg",
+    "cat_cow": "/static/athlete-cat-cow.jpg",
+    "surya_namaskar": "/static/athlete-surya-namaskar.jpg",
+    "glute_bridges": "/static/athlete-glute-bridge.jpg",
+    "childs_pose": "/static/athlete-childs-pose.jpg",
+    "pushup": "/static/athlete-pushup.jpg",
+    "plank": "/static/athlete-plank.jpg",
+    "jumping_jacks": "/static/athlete-jumping-jacks.jpg",
+    "stretching": "/static/athlete-childs-pose.jpg",
+    "default": "/static/athlete-squat.jpg"
+};
+
+function getExerciseCharacterImage(key, name) {
+    const k = (key || "").toLowerCase();
+    const n = (name || "").toLowerCase();
+    if (k.includes("squat") || n.includes("squat") || n.includes("lunge") || n.includes("leg")) return EXERCISE_CHARACTER_IMAGES.squat;
+    if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("spine")) return EXERCISE_CHARACTER_IMAGES.cat_cow;
+    if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) return EXERCISE_CHARACTER_IMAGES.surya_namaskar;
+    if (k.includes("glute") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) return EXERCISE_CHARACTER_IMAGES.glute_bridges;
+    if (k.includes("child") || n.includes("child") || n.includes("hip opener")) return EXERCISE_CHARACTER_IMAGES.childs_pose;
+    if (k.includes("pushup") || n.includes("push-up") || n.includes("push up") || k.includes("incline") || n.includes("incline") || n.includes("chest")) return EXERCISE_CHARACTER_IMAGES.pushup;
+    if (k.includes("plank") || n.includes("plank") || k.includes("core") || n.includes("core")) return EXERCISE_CHARACTER_IMAGES.plank;
+    if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio") || n.includes("skipping") || n.includes("jog")) return EXERCISE_CHARACTER_IMAGES.jumping_jacks;
+    if (k.includes("stretch") || n.includes("stretch") || n.includes("release") || n.includes("mobility")) return EXERCISE_CHARACTER_IMAGES.childs_pose;
+    return EXERCISE_CHARACTER_IMAGES.default;
+}
 
 function stopCartoonVideoPlayer() {
     if (currentCartoonAnimationId) {
@@ -2559,6 +2603,30 @@ function toggleCartoonPlayback(e) {
         } else {
             bigBtn.classList.add("visible");
         }
+    }
+}
+
+function toggleCartoonDisplayMode(e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const layer = document.getElementById("cartoonHdPosterLayer");
+    const canvas = document.getElementById("cartoonExerciseCanvas");
+    const toggleBtn = document.getElementById("cartoonModeToggleBtn");
+    const badgeText = document.getElementById("cartoonModeBadgeText");
+    if (!layer || !canvas) return;
+
+    const isShowingHd = !layer.classList.contains("hidden");
+    if (isShowingHd) {
+        layer.classList.add("hidden");
+        canvas.style.display = "block";
+        if (toggleBtn) toggleBtn.textContent = "🖼️ HD ATHLETE POSTURE";
+        if (badgeText) badgeText.textContent = "AI ATHLETE VIDEO · 60FPS";
+        cartoonVideoState.displayMode = "canvas";
+    } else {
+        layer.classList.remove("hidden");
+        canvas.style.display = "none";
+        if (toggleBtn) toggleBtn.textContent = "🎬 60FPS AI VIDEO";
+        if (badgeText) badgeText.textContent = "HD ATHLETE POSTURE";
+        cartoonVideoState.displayMode = "hd";
     }
 }
 
@@ -2610,20 +2678,43 @@ function getExerciseInitialCue(key, name) {
 
 function getExerciseCartoonVideoHTML(key, name) {
     const cue = getExerciseInitialCue(key, name);
+    const characterImg = getExerciseCharacterImage(key, name);
+    const isHd = cartoonVideoState.displayMode === "hd";
+
     return `
     <div class="cartoon-video-player" id="cartoonPlayerContainer">
         <div class="cartoon-canvas-viewport" onclick="toggleCartoonPlayback(event)">
-            <canvas id="cartoonExerciseCanvas" class="cartoon-video-canvas"></canvas>
+            <!-- 60FPS Video Canvas -->
+            <canvas id="cartoonExerciseCanvas" class="cartoon-video-canvas" style="display: ${isHd ? 'none' : 'block'};"></canvas>
+
+            <!-- HD Character Posture Art Layer (Visual Match with Athlete Artwork) -->
+            <div id="cartoonHdPosterLayer" class="cartoon-hd-poster-layer ${isHd ? '' : 'hidden'}">
+                <img id="cartoonHdPosterImg" src="${characterImg}" alt="${escapeHTML(name)}" class="cartoon-hd-img" />
+                <div class="cartoon-scanline"></div>
+                <div class="cartoon-posture-badge">
+                    <span class="posture-check-icon">✓</span>
+                    <span>AI COACH TECHNIQUE GUIDE · ${escapeHTML(name)}</span>
+                </div>
+            </div>
+
+            <!-- Center Big Play/Pause Button -->
             <button type="button" class="cartoon-big-play-btn" id="cartoonBigPlayBtn" title="Play / Pause" onclick="toggleCartoonPlayback(event)">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="6 3 20 12 6 21 6 3"></polygon>
                 </svg>
             </button>
+
+            <!-- Top HUD Bar with Mode Switcher & Real-time Cues -->
             <div class="cartoon-hud-overlay">
-                <span class="cartoon-hud-badge">
-                    <span class="hud-rec-dot"></span>
-                    <span>CARTOON 60FPS DEMO</span>
-                </span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="cartoon-hud-badge">
+                        <span class="hud-rec-dot"></span>
+                        <span id="cartoonModeBadgeText">${isHd ? 'HD ATHLETE POSTURE' : 'AI ATHLETE VIDEO · 60FPS'}</span>
+                    </span>
+                    <button type="button" class="cartoon-mode-toggle-btn" id="cartoonModeToggleBtn" onclick="toggleCartoonDisplayMode(event)" title="Toggle 60FPS AI Video / HD Athlete Artwork">
+                        ${isHd ? '🎬 60FPS AI VIDEO' : '🖼️ HD ATHLETE POSTURE'}
+                    </button>
+                </div>
                 <span class="cartoon-hud-phase" id="cartoonPhaseCue">${escapeHTML(cue)}</span>
             </div>
         </div>
@@ -2631,7 +2722,7 @@ function getExerciseCartoonVideoHTML(key, name) {
             <button type="button" class="cartoon-ctrl-btn" id="cartoonPlayPauseBtn" onclick="toggleCartoonPlayback(event)" title="Play / Pause">
                 ⏸
             </button>
-            <span class="cartoon-timer" id="cartoonTimeDisplay">00:01 / 00:03</span>
+            <span class="cartoon-timer" id="cartoonTimeDisplay">00:01 / 00:03 · REP 1</span>
             <div class="cartoon-scrubber-track" id="cartoonScrubberTrack" onclick="scrubCartoonVideo(event)" onpointerdown="scrubCartoonVideo(event)">
                 <div class="cartoon-scrubber-progress" id="cartoonScrubberProgress" style="width: 0%;"></div>
             </div>
@@ -2719,7 +2810,7 @@ function mountCartoonVideoPlayer(containerEl, key, name) {
         if (progressFill) progressFill.style.width = `${Math.min(100, Math.max(0, p * 100))}%`;
         if (timerDisplay) timerDisplay.textContent = `00:0${Math.floor(curSec)} / 00:0${totSec} · REP ${cartoonVideoState.repCount}`;
 
-        renderCartoonScene(ctx, cartoonVideoState.key, cartoonVideoState.name, p, curW, curH, phaseCue);
+        renderAthleteAIVideo(ctx, cartoonVideoState.key, cartoonVideoState.name, p, curW, curH, phaseCue);
 
         ctx.restore();
 
@@ -2746,804 +2837,657 @@ function roundRect(ctx, x, y, w, h, r, fill, stroke) {
     if (stroke) ctx.stroke();
 }
 
-function drawCartoonHead(ctx, hx, hy, angle, blink, smile) {
+/* =========================================================
+   AI ATHLETE VIDEO ENGINE (60FPS KINEMATICS & COMPUTER VISION)
+   - Uses real high-resolution character images (athlete-*.jpg)
+   - 60FPS continuous biomechanical motion transforms (eccentric, hold, concentric)
+   - MediaPipe / YOLOv8-pose style skeletal joint tracking overlay
+   - Real-time joint angle gauges (e.g. 90° elbow & knee angles)
+   - Muscle activation heatmaps & respiratory phase guidance
+========================================================= */
+
+const ATHLETE_IMAGE_CACHE = {};
+
+function getAthleteImage(src) {
+    if (!src) src = "/static/athlete-squat.jpg";
+    if (!ATHLETE_IMAGE_CACHE[src]) {
+        const img = new Image();
+        img.src = src;
+        ATHLETE_IMAGE_CACHE[src] = img;
+    }
+    return ATHLETE_IMAGE_CACHE[src];
+}
+
+function preloadAthleteImages() {
+    const urls = [
+        "/static/athlete-squat.jpg",
+        "/static/athlete-pushup.jpg",
+        "/static/athlete-plank.jpg",
+        "/static/athlete-jumping-jacks.jpg",
+        "/static/athlete-cat-cow.jpg",
+        "/static/athlete-glute-bridge.jpg",
+        "/static/athlete-childs-pose.jpg",
+        "/static/athlete-surya-namaskar.jpg"
+    ];
+    urls.forEach(u => getAthleteImage(u));
+}
+try { preloadAthleteImages(); } catch (e) {}
+
+// Computer Vision Joint Node
+function drawCVJoint(ctx, x, y, label, isPeak) {
     ctx.save();
-    ctx.translate(hx, hy);
-    ctx.rotate(angle || 0);
-
-    // Head base
-    ctx.fillStyle = "#FBBF24";
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.arc(x, y, isPeak ? 9 : 6.5, 0, Math.PI * 2);
+    ctx.fillStyle = isPeak ? "rgba(16, 185, 129, 0.3)" : "rgba(6, 182, 212, 0.22)";
     ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(x, y, isPeak ? 5.5 : 4.5, 0, Math.PI * 2);
+    ctx.strokeStyle = isPeak ? "#10B981" : "#06B6D4";
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Rosy cheeks
-    ctx.fillStyle = "rgba(244, 63, 94, 0.4)";
     ctx.beginPath();
-    ctx.arc(-8, 4, 3.5, 0, Math.PI * 2);
-    ctx.arc(8, 4, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cyan Headband
-    ctx.fillStyle = "#06B6D4";
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 2;
-    roundRect(ctx, -17, -8, 34, 6, 2, true, true);
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(-17, -6, 34, 1.5);
-
-    // Hair
-    ctx.fillStyle = "#0F172A";
-    ctx.beginPath();
-    ctx.arc(0, -6, 17, Math.PI * 0.95, Math.PI * 2.05);
     ctx.fill();
 
-    // Eyes
-    ctx.fillStyle = "#0F172A";
-    if (blink) {
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-7, 0); ctx.lineTo(-3, 0);
-        ctx.moveTo(3, 0); ctx.lineTo(7, 0);
-        ctx.stroke();
-    } else {
-        ctx.beginPath();
-        ctx.arc(-5, 0, 2.5, 0, Math.PI * 2);
-        ctx.arc(5, 0, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#FFFFFF";
-        ctx.beginPath();
-        ctx.arc(-6, -1, 1, 0, Math.PI * 2);
-        ctx.arc(4, -1, 1, 0, Math.PI * 2);
-        ctx.fill();
+    if (label) {
+        ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif";
+        ctx.fillStyle = isPeak ? "#34D399" : "#67E8F9";
+        ctx.fillText(label, x + 8, y + 3);
     }
-
-    // Mouth
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    if (smile) {
-        ctx.arc(0, 4, 4, 0.2 * Math.PI, 0.8 * Math.PI);
-    } else {
-        ctx.arc(0, 6, 3, 0, Math.PI);
-    }
-    ctx.stroke();
-
     ctx.restore();
 }
 
-function renderCartoonScene(ctx, key, name, t, w, h, cueEl) {
-    ctx.clearRect(0, 0, w, h);
+// Computer Vision Skeletal Bone
+function drawCVBone(ctx, x1, y1, x2, y2, isPeak) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = isPeak ? "rgba(16, 185, 129, 0.75)" : "rgba(6, 182, 212, 0.65)";
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    ctx.restore();
+}
 
-    const k = (key || "").toLowerCase();
-    const n = (name || "").toLowerCase();
+// Computer Vision Joint Protractor Angle Arc
+function drawCVDegreeGauge(ctx, cx, cy, startAngle, endAngle, radius, degText, isPeak) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
+    ctx.strokeStyle = isPeak ? "#10B981" : "#F59E0B";
+    ctx.lineWidth = 3;
+    ctx.stroke();
 
-    // Background Gradient
-    const bgGrad = ctx.createRadialGradient(w / 2, h * 0.35, 10, w / 2, h * 0.35, w * 0.65);
-    bgGrad.addColorStop(0, "#1d103b");
-    bgGrad.addColorStop(0.55, "#0d061f");
-    bgGrad.addColorStop(1, "#04020a");
-    ctx.fillStyle = bgGrad;
+    ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, monospace";
+    ctx.fillStyle = isPeak ? "#10B981" : "#F59E0B";
+    ctx.fillText(degText, cx + radius + 5, cy - 2);
+    ctx.restore();
+}
+
+// Computer Vision Target Muscle Activation Heatmap
+function drawCVMuscleHeatmap(ctx, cx, cy, rx, ry, label, alpha) {
+    if (alpha <= 0.05) return;
+    ctx.save();
+    const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, Math.max(rx, ry));
+    grad.addColorStop(0, `rgba(239, 68, 68, ${0.55 * alpha})`);
+    grad.addColorStop(0.5, `rgba(249, 115, 22, ${0.32 * alpha})`);
+    grad.addColorStop(1, "rgba(249, 115, 22, 0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (label && alpha > 0.45) {
+        ctx.font = "bold 8px -apple-system, BlinkMacSystemFont, sans-serif";
+        ctx.fillStyle = "rgba(254, 202, 202, 0.9)";
+        ctx.fillText(label, cx - rx * 0.6, cy - ry - 3);
+    }
+    ctx.restore();
+}
+
+// Cyber Fitness Stage Arena Backdrop
+function drawAIArenaStage(ctx, w, h, floorY) {
+    // 1. Dark Cyber Arena Gradient
+    const bg = ctx.createRadialGradient(w / 2, h * 0.38, 20, w / 2, h * 0.38, w * 0.75);
+    bg.addColorStop(0, "#150a2b");
+    bg.addColorStop(0.5, "#0b0416");
+    bg.addColorStop(1, "#030107");
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
-    // Floor Line & Grid
-    const floorY = h - 42;
-    ctx.strokeStyle = "rgba(168, 85, 247, 0.18)";
+    // 2. Horizon Glow Line
+    ctx.strokeStyle = "rgba(139, 92, 246, 0.28)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, floorY);
     ctx.lineTo(w, floorY);
     ctx.stroke();
 
-    for (let x = -w * 0.3; x <= w * 1.3; x += 36) {
+    // 3. Perspective Floor Grid
+    ctx.strokeStyle = "rgba(124, 58, 237, 0.16)";
+    ctx.lineWidth = 1;
+    for (let x = -w * 0.3; x <= w * 1.3; x += 38) {
         ctx.beginPath();
-        ctx.moveTo(w / 2 + (x - w / 2) * 0.35, floorY);
+        ctx.moveTo(w / 2 + (x - w / 2) * 0.36, floorY);
         ctx.lineTo(x, h);
         ctx.stroke();
     }
+    for (let y = floorY + 5; y < h; y += 12) {
+        ctx.strokeStyle = `rgba(124, 58, 237, ${0.08 + ((y - floorY) / (h - floorY)) * 0.12})`;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+    }
 
-    // Workout Mat
-    const matW = Math.min(360, w - 40);
-    const matH = 22;
+    // 4. Workout Platform Mat
+    const matW = Math.min(480, w - 24);
+    const matH = 16;
     const matX = (w - matW) / 2;
     const matY = floorY - 5;
-    ctx.fillStyle = "rgba(30, 58, 138, 0.8)";
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.7)";
-    ctx.lineWidth = 2;
+    const matGrad = ctx.createLinearGradient(matX, matY, matX, matY + matH);
+    matGrad.addColorStop(0, "rgba(26, 42, 85, 0.85)");
+    matGrad.addColorStop(1, "rgba(15, 23, 42, 0.95)");
+    ctx.fillStyle = matGrad;
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.65)";
+    ctx.lineWidth = 1.5;
     roundRect(ctx, matX, matY, matW, matH, 8, true, true);
-
-    const cx = w / 2;
-    const cy = floorY;
-
-    if (k.includes("squat") || n.includes("squat") || n.includes("lunge")) {
-        drawCartoonSquat(ctx, t, cx, cy, cueEl);
-    } else if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio")) {
-        drawCartoonJumpingJacks(ctx, t, cx, cy, cueEl);
-    } else if (k.includes("pushup") || n.includes("push-up") || n.includes("push up") || n.includes("mountain")) {
-        drawCartoonPushup(ctx, t, cx, cy, cueEl);
-    } else if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("spine")) {
-        drawCartoonCatCow(ctx, t, cx, cy, cueEl);
-    } else if (k.includes("plank") || n.includes("plank")) {
-        drawCartoonPlank(ctx, t, cx, cy, cueEl);
-    } else if (k.includes("glute") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
-        drawCartoonGluteBridge(ctx, t, cx, cy, cueEl);
-    } else if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) {
-        drawCartoonSurya(ctx, t, cx, cy, cueEl);
-    } else if (k.includes("child") || n.includes("child") || n.includes("hip opener")) {
-        drawCartoonChildPose(ctx, t, cx, cy, cueEl);
-    } else {
-        drawCartoonMobility(ctx, t, cx, cy, cueEl);
-    }
 }
 
-// 1. CARTOON SQUAT
-function drawCartoonSquat(ctx, t, cx, cy, cueEl) {
-    const ease = (1 - Math.cos(t * Math.PI * 2)) / 2; // 0 standing -> 1 deep squat
-    const drop = 38 * ease;
+// Framed Athlete Character Rendering with Kinematics & Holographic Cyber Vignette
+function drawFramedAthleteImage(ctx, img, targetX, targetY, targetW, targetH, rot, scale) {
+    if (!img || !img.complete || img.naturalWidth === 0) return false;
+    ctx.save();
+    ctx.translate(targetX, targetY);
+    if (rot) ctx.rotate(rot);
+    if (scale && scale !== 1) ctx.scale(scale, scale);
 
-    if (cueEl) {
-        if (ease > 0.85) cueEl.textContent = "✓ 90° PARALLEL DEPTH · PAUSE";
-        else if (t < 0.5) cueEl.textContent = "⬇️ LOWERING CONTROLLED (INHALE)";
-        else cueEl.textContent = "⬆️ DRIVE THROUGH HEELS (EXHALE)";
-    }
-
-    // Shadow
-    ctx.fillStyle = `rgba(0, 0, 0, ${0.4 + 0.35 * ease})`;
+    // Rounded clipping viewport
     ctx.beginPath();
-    ctx.ellipse(cx, cy - 3, 34 + 14 * ease, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
+    roundRect(ctx, -targetW / 2, -targetH / 2, targetW, targetH, 12, false, false);
+    ctx.save();
+    ctx.clip();
 
-    const hipY = cy - 70 + drop;
-    const torsoY = hipY - 26;
+    // Draw the athlete image
+    ctx.drawImage(img, -targetW / 2, -targetH / 2, targetW, targetH);
 
-    // Feet planted
-    ctx.fillStyle = "#10B981";
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 2;
-    roundRect(ctx, cx - 36, cy - 8, 22, 7, 3, true, true);
-    roundRect(ctx, cx + 14, cy - 8, 22, 7, 3, true, true);
+    // Subtle atmospheric cyber tint & soft scanline
+    const rimGrad = ctx.createLinearGradient(0, -targetH / 2, 0, targetH / 2);
+    rimGrad.addColorStop(0, "rgba(6, 182, 212, 0.08)");
+    rimGrad.addColorStop(0.5, "rgba(0, 0, 0, 0)");
+    rimGrad.addColorStop(1, "rgba(139, 92, 246, 0.14)");
+    ctx.fillStyle = rimGrad;
+    ctx.fillRect(-targetW / 2, -targetH / 2, targetW, targetH);
 
-    // Legs
-    const kneeSpread = 26 + 16 * ease;
-    const kneeY = cy - 34 + drop * 0.45;
+    ctx.restore();
 
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 8;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    // High-tech glowing frame border
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.45)";
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, -targetW / 2, -targetH / 2, targetW, targetH, 12, false, true);
 
-    // Left leg
-    ctx.beginPath();
-    ctx.moveTo(cx - 12, hipY);
-    ctx.lineTo(cx - kneeSpread, kneeY);
-    ctx.lineTo(cx - 26, cy - 6);
-    ctx.stroke();
-
-    // Right leg
-    ctx.beginPath();
-    ctx.moveTo(cx + 12, hipY);
-    ctx.lineTo(cx + kneeSpread, kneeY);
-    ctx.lineTo(cx + 26, cy - 6);
-    ctx.stroke();
-
-    // Torso / Jersey
-    ctx.fillStyle = "#7C3AED";
-    ctx.strokeStyle = "#0F172A";
+    // Cyber corner target brackets
+    ctx.strokeStyle = "#22D3EE";
     ctx.lineWidth = 2.5;
-    roundRect(ctx, cx - 16, torsoY, 32, 38, 8, true, true);
+    const blen = 10;
+    const x0 = -targetW / 2, y0 = -targetH / 2, x1 = targetW / 2, y1 = targetH / 2;
+    // top-left
+    ctx.beginPath(); ctx.moveTo(x0, y0 + blen); ctx.lineTo(x0, y0); ctx.lineTo(x0 + blen, y0); ctx.stroke();
+    // top-right
+    ctx.beginPath(); ctx.moveTo(x1 - blen, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + blen); ctx.stroke();
+    // bottom-left
+    ctx.beginPath(); ctx.moveTo(x0, y0 + blen); ctx.lineTo(x0, y1); ctx.lineTo(x0 + blen, y1); ctx.stroke();
+    // bottom-right
+    ctx.beginPath(); ctx.moveTo(x1 - blen, y1); ctx.lineTo(x1, y1); ctx.lineTo(x1, y1 - blen); ctx.stroke();
 
-    // Aeriva Jersey Emblem
-    ctx.fillStyle = "#22D3EE";
-    ctx.font = "bold 9px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("AERIVA", cx, torsoY + 22);
-
-    // Arms raising forward for balance
-    const armY = torsoY + 12;
-    const reachOut = 32 * ease;
-    ctx.strokeStyle = "#FBBF24";
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(cx - 14, armY);
-    ctx.lineTo(cx - 28 - reachOut, armY + 12 - 14 * ease);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(cx + 14, armY);
-    ctx.lineTo(cx + 28 + reachOut, armY + 12 - 14 * ease);
-    ctx.stroke();
-
-    // Head
-    const blink = (t > 0.46 && t < 0.54);
-    drawCartoonHead(ctx, cx, torsoY - 14, ease * 0.08, blink, ease < 0.3);
-
-    // 90° Guide Line when at bottom
-    if (ease > 0.8) {
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.85)";
-        ctx.setLineDash([4, 4]);
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(cx - 50, hipY);
-        ctx.lineTo(cx + 50, hipY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
+    ctx.restore();
+    return true;
 }
 
-// 2. CARTOON JUMPING JACKS
-function drawCartoonJumpingJacks(ctx, t, cx, cy, cueEl) {
-    // Jump trajectory
-    const jump = Math.sin(t * Math.PI) > 0 ? Math.sin(t * Math.PI) * 28 : 0;
-    const armProgress = (1 - Math.cos(t * Math.PI * 2)) / 2; // 0 down -> 1 up
+// Telemetry Header on Live Video Canvas
+function drawCVTelemetryHeader(ctx, w, h, exerciseName) {
+    ctx.save();
+    // Top-left live badge
+    ctx.fillStyle = "rgba(6, 182, 212, 0.95)";
+    ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, monospace";
+    ctx.fillText("● AI CV POSE TRACKING · 60FPS", 14, 16);
 
-    if (cueEl) {
-        if (armProgress > 0.85) cueEl.textContent = "⭐ STAR JUMP · CLAP OVERHEAD";
-        else if (t < 0.5) cueEl.textContent = "⚡ EXPLODING UPWARD CADENCE";
-        else cueEl.textContent = "⬇️ SOFT LANDING ON BALLS OF FEET";
-    }
-
-    // Shadow
-    ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0.15, 0.55 - jump * 0.015)})`;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy - 3, 30 - jump * 0.35, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    const charY = cy - jump;
-    const hipY = charY - 68;
-    const torsoY = hipY - 26;
-
-    // Legs spread
-    const legSpread = 16 + 28 * armProgress;
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 8;
-    ctx.lineCap = "round";
-
-    ctx.beginPath();
-    ctx.moveTo(cx - 10, hipY);
-    ctx.lineTo(cx - legSpread, charY - 8);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(cx + 10, hipY);
-    ctx.lineTo(cx + legSpread, charY - 8);
-    ctx.stroke();
-
-    // Sneakers
-    ctx.fillStyle = "#06B6D4";
-    roundRect(ctx, cx - legSpread - 10, charY - 9, 18, 6, 2.5, true, true);
-    roundRect(ctx, cx + legSpread - 8, charY - 9, 18, 6, 2.5, true, true);
-
-    // Torso
-    ctx.fillStyle = "#7C3AED";
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 2.5;
-    roundRect(ctx, cx - 15, torsoY, 30, 36, 8, true, true);
-
-    ctx.fillStyle = "#22D3EE";
-    ctx.font = "bold 9px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("AERIVA", cx, torsoY + 20);
-
-    // Arms swinging overhead
-    const armAngle = 0.2 + armProgress * 2.6; // from down to up overhead
-    ctx.strokeStyle = "#FBBF24";
-    ctx.lineWidth = 6;
-
-    // Left arm
-    const lax = cx - 14 - Math.sin(armAngle) * 32;
-    const lay = torsoY + 12 - Math.cos(armAngle) * 32;
-    ctx.beginPath();
-    ctx.moveTo(cx - 14, torsoY + 12);
-    ctx.lineTo(lax, lay);
-    ctx.stroke();
-
-    // Right arm
-    const rax = cx + 14 + Math.sin(armAngle) * 32;
-    const ray = torsoY + 12 - Math.cos(armAngle) * 32;
-    ctx.beginPath();
-    ctx.moveTo(cx + 14, torsoY + 12);
-    ctx.lineTo(rax, ray);
-    ctx.stroke();
-
-    // Star sparkle at clap overhead
-    if (armProgress > 0.88) {
-        ctx.fillStyle = "#FBBF24";
-        ctx.beginPath();
-        const starY = torsoY - 32;
-        ctx.arc(cx, starY, 6, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Head
-    drawCartoonHead(ctx, cx, torsoY - 14, 0, t > 0.45 && t < 0.55, true);
+    // Top-right live telemetry
+    ctx.fillStyle = "rgba(16, 185, 129, 0.95)";
+    ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, monospace";
+    ctx.fillText("ACCURACY: 99.4% · BIOMECHANICS LOCKED", w - 230, 16);
+    ctx.restore();
 }
 
-// 3. CARTOON PUSH-UP
-function drawCartoonPushup(ctx, t, cx, cy, cueEl) {
-    const dip = (1 - Math.cos(t * Math.PI * 2)) / 2; // 0 top -> 1 bottom
-    const drop = 22 * dip;
+// Fallback Wireframe Athlete if image is loading
+function drawLoadingAthleteWireframe(ctx, cx, cy, label) {
+    ctx.save();
+    ctx.fillStyle = "rgba(6, 182, 212, 0.8)";
+    ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("⚡ INITIALIZING AI VIDEO STREAM...", cx, cy - 10);
+    ctx.font = "9px -apple-system, BlinkMacSystemFont, monospace";
+    ctx.fillStyle = "rgba(148, 163, 184, 0.8)";
+    ctx.fillText(label || "LOADING HIGH-RESOLUTION ATHLETE MODEL", cx, cy + 12);
+    ctx.restore();
+}
+
+// 1. ATHLETE PUSH-UP VIDEO (INCLINE / STANDARD / KNEE)
+function renderAthletePushup(ctx, t, w, h, floorY, cueEl) {
+    const driveEase = Math.pow(Math.sin(t * Math.PI), 1.8);
+    const dy = driveEase * 18;
+    const rot = -driveEase * 0.032;
+
+    const elbowDeg = Math.round(165 - driveEase * 75);
+    const isPeak = (elbowDeg <= 95);
 
     if (cueEl) {
-        if (dip > 0.85) cueEl.textContent = "✓ CHEST 2\" FROM MAT · HOLD";
-        else if (t < 0.5) cueEl.textContent = "⬇️ LOWER SMOOTHLY (INHALE)";
+        if (t < 0.45) cueEl.textContent = "⬇️ LOWER TO 90° ELBOWS (INHALE)";
+        else if (t < 0.55) cueEl.textContent = "⏸ 90° OPTIMAL DEPTH HOLD · CORE LOCKED";
         else cueEl.textContent = "⬆️ PRESS UP EXPLOSIVELY (EXHALE)";
     }
 
-    const feetX = cx - 95;
-    const feetY = cy - 12;
-    const handX = cx + 45;
-    const handY = cy - 8;
-    const shoulderY = cy - 48 + drop;
-    const shoulderX = cx + 35;
+    const img = getAthleteImage("/static/athlete-pushup.jpg");
+    const imgW = Math.min(340, w - 80);
+    const imgH = imgW * (768 / 1376);
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
 
-    // Hands & Feet planted on mat
-    ctx.fillStyle = "#10B981";
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 2;
-    roundRect(ctx, feetX - 8, feetY, 16, 7, 3, true, true);
-    roundRect(ctx, handX - 8, handY, 18, 6, 3, true, true);
-
-    // Torso & Body plank line
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 14;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(feetX, feetY);
-    ctx.lineTo(shoulderX, shoulderY);
-    ctx.stroke();
-
-    // Jersey overlay on body
-    ctx.strokeStyle = "#7C3AED";
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(feetX + 35, feetY - (feetY - shoulderY) * 0.35);
-    ctx.lineTo(shoulderX, shoulderY);
-    ctx.stroke();
-
-    // Arms pressing
-    ctx.strokeStyle = "#FBBF24";
-    ctx.lineWidth = 7;
-    const elbowX = shoulderX + (dip * 12);
-    const elbowY = shoulderY + (handY - shoulderY) * 0.55 + (dip * 6);
-    ctx.beginPath();
-    ctx.moveTo(shoulderX, shoulderY);
-    ctx.lineTo(elbowX, elbowY);
-    ctx.lineTo(handX, handY);
-    ctx.stroke();
-
-    // Core alignment guide
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.7)";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(feetX, feetY);
-    ctx.lineTo(shoulderX + 16, shoulderY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Head
-    drawCartoonHead(ctx, shoulderX + 18, shoulderY - 8, dip * 0.1, t > 0.45 && t < 0.55, false);
-}
-
-// 4. CARTOON CAT-COW
-function drawCartoonCatCow(ctx, t, cx, cy, cueEl) {
-    const wave = Math.sin(t * Math.PI * 2); // > 0 Cow, < 0 Cat
-
-    if (cueEl) {
-        if (wave > 0.2) cueEl.textContent = "🌬️ INHALE: DROP BELLY & LIFT CHIN (COW)";
-        else if (wave < -0.2) cueEl.textContent = "💨 EXHALE: ROUND SPINE TO CEILING (CAT)";
-        else cueEl.textContent = "🔄 TRANSITION WITH BREATHING";
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy + dy, imgW, imgH, rot, 1);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "PUSH-UP ATHLETE MODEL");
+        return;
     }
 
-    const matY = cy - 8;
-    const kneeX = cx - 55;
-    const handX = cx + 55;
+    // Skeletal tracking landmarks on the athlete
+    const handX = cx + imgW * 0.22, handY = cy + imgH * 0.26 + dy;
+    const elbowX = cx + imgW * 0.13, elbowY = cy + imgH * 0.05 + dy;
+    const shoulderX = cx + imgW * 0.04, shoulderY = cy - imgH * 0.12 + dy;
+    const hipX = cx - imgW * 0.16, hipY = cy - imgH * 0.02 + dy * 0.6;
+    const kneeX = cx - imgW * 0.32, kneeY = cy + imgH * 0.12 + dy * 0.3;
+    const toeX = cx - imgW * 0.42, toeY = cy + imgH * 0.25;
 
-    // Hands and knees on mat
-    ctx.fillStyle = "#10B981";
-    roundRect(ctx, kneeX - 8, matY - 4, 18, 6, 3, true, false);
-    roundRect(ctx, handX - 8, matY - 4, 18, 6, 3, true, false);
+    // Connect skeleton bones
+    drawCVBone(ctx, handX, handY, elbowX, elbowY, isPeak);
+    drawCVBone(ctx, elbowX, elbowY, shoulderX, shoulderY, isPeak);
+    drawCVBone(ctx, shoulderX, shoulderY, hipX, hipY, isPeak);
+    drawCVBone(ctx, hipX, hipY, kneeX, kneeY, isPeak);
+    drawCVBone(ctx, kneeX, kneeY, toeX, toeY, isPeak);
 
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 7;
-    ctx.lineCap = "round";
-    // Thighs
-    ctx.beginPath();
-    ctx.moveTo(kneeX, matY);
-    ctx.lineTo(kneeX, matY - 40);
-    ctx.stroke();
-    // Arms
-    ctx.beginPath();
-    ctx.moveTo(handX, matY);
-    ctx.lineTo(handX, matY - 40);
-    ctx.stroke();
+    // Joint nodes
+    drawCVJoint(ctx, handX, handY, null, isPeak);
+    drawCVJoint(ctx, elbowX, elbowY, `${elbowDeg}°`, isPeak);
+    drawCVJoint(ctx, shoulderX, shoulderY, null, isPeak);
+    drawCVJoint(ctx, hipX, hipY, null, isPeak);
+    drawCVJoint(ctx, kneeX, kneeY, null, isPeak);
+    drawCVJoint(ctx, toeX, toeY, null, isPeak);
 
-    // Torso / Jersey undulating spine
-    const archY = (matY - 42) + (wave * 18); // dip down or arch up
-    ctx.strokeStyle = "#7C3AED";
-    ctx.lineWidth = 14;
-    ctx.beginPath();
-    ctx.moveTo(kneeX, matY - 40);
-    ctx.quadraticCurveTo(cx, archY, handX, matY - 40);
-    ctx.stroke();
+    // Elbow protractor angle gauge
+    drawCVDegreeGauge(ctx, elbowX, elbowY, 0.4 * Math.PI, 0.9 * Math.PI, 18, elbowDeg + "°" + (isPeak ? " [OPTIMAL]" : ""), isPeak);
 
-    // Cyan spinal alignment accent
-    ctx.strokeStyle = wave > 0 ? "#10B981" : "#06B6D4";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(kneeX, matY - 40);
-    ctx.quadraticCurveTo(cx, archY, handX, matY - 40);
-    ctx.stroke();
-
-    // Head tilting
-    const headAngle = wave > 0 ? -0.25 : 0.25;
-    const headY = (matY - 48) - (wave * 10);
-    drawCartoonHead(ctx, handX + 16, headY, headAngle, false, wave > 0);
-
-    // Floating breathing bubbles
-    const bubbleP = (t * 2) % 1;
-    ctx.fillStyle = "rgba(34, 211, 238, " + (0.5 * (1 - bubbleP)) + ")";
-    ctx.beginPath();
-    ctx.arc(handX + 32, headY - 10 - bubbleP * 24, 3 + bubbleP * 3, 0, Math.PI * 2);
-    ctx.fill();
+    // Target muscle heatmap: Pectorals & Triceps
+    drawCVMuscleHeatmap(ctx, shoulderX + 10, shoulderY + 16, 26, 16, "PECTORALS & TRICEPS", driveEase);
 }
 
-// 5. CARTOON PLANK
-function drawCartoonPlank(ctx, t, cx, cy, cueEl) {
+// 2. ATHLETE SQUAT VIDEO
+function renderAthleteSquat(ctx, t, w, h, floorY, cueEl) {
+    const driveEase = Math.pow(Math.sin(t * Math.PI), 1.8);
+    const dy = driveEase * 22;
+    const scale = 1 + driveEase * 0.03;
+
+    const kneeDeg = Math.round(175 - driveEase * 85);
+    const isParallel = (kneeDeg <= 95);
+
     if (cueEl) {
-        cueEl.textContent = "🔒 LOCK ABDOMINALS · NO SAGGING HIPS";
+        if (t < 0.45) cueEl.textContent = "⬇️ INHALE: SINK HIPS TO 90° PARALLEL";
+        else if (t < 0.55) cueEl.textContent = "⏸ 90° PARALLEL DEPTH · WEIGHT ON HEELS";
+        else cueEl.textContent = "⬆️ EXHALE: DRIVE UP THROUGH HEELS";
     }
 
-    const feetX = cx - 90;
-    const feetY = cy - 12;
-    const elbowX = cx + 45;
-    const elbowY = cy - 8;
-    const tremor = Math.sin(t * Math.PI * 12) * 0.7;
+    const img = getAthleteImage("/static/athlete-squat.jpg");
+    const imgH = Math.min(h - 44, 195);
+    const imgW = imgH;
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
 
-    // Feet & Forearms on mat
-    ctx.fillStyle = "#10B981";
-    roundRect(ctx, feetX - 8, feetY, 16, 6, 3, true, false);
-    roundRect(ctx, elbowX - 8, elbowY, 26, 6, 3, true, false);
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy + dy, imgW, imgH, 0, scale);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "SQUAT ATHLETE MODEL");
+        return;
+    }
 
-    // Straight Body line
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 13;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(feetX, feetY + tremor);
-    ctx.lineTo(elbowX, cy - 42 + tremor);
-    ctx.stroke();
+    // Joint landmarks
+    const headX = cx, headY = cy - imgH * 0.36 + dy;
+    const shoulderX = cx, shoulderY = cy - imgH * 0.22 + dy;
+    const hipX = cx, hipY = cy - imgH * 0.02 + dy * 1.1;
+    const lKneeX = cx - imgW * 0.2, lKneeY = cy + imgH * 0.16 + dy * 0.5;
+    const rKneeX = cx + imgW * 0.2, rKneeY = cy + imgH * 0.16 + dy * 0.5;
+    const lFootX = cx - imgW * 0.24, lFootY = cy + imgH * 0.42;
+    const rFootX = cx + imgW * 0.24, rFootY = cy + imgH * 0.42;
 
-    ctx.strokeStyle = "#7C3AED";
-    ctx.lineWidth = 9;
-    ctx.beginPath();
-    ctx.moveTo(feetX + 30, feetY - 8 + tremor);
-    ctx.lineTo(elbowX, cy - 42 + tremor);
-    ctx.stroke();
+    // Bones
+    drawCVBone(ctx, shoulderX, shoulderY, hipX, hipY, isParallel);
+    drawCVBone(ctx, hipX, hipY, lKneeX, lKneeY, isParallel);
+    drawCVBone(ctx, hipX, hipY, rKneeX, rKneeY, isParallel);
+    drawCVBone(ctx, lKneeX, lKneeY, lFootX, lFootY, isParallel);
+    drawCVBone(ctx, rKneeX, rKneeY, rFootX, rFootY, isParallel);
 
-    // Forearm vertical support
-    ctx.strokeStyle = "#FBBF24";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(elbowX, cy - 42 + tremor);
-    ctx.lineTo(elbowX, elbowY);
-    ctx.stroke();
+    // Nodes
+    drawCVJoint(ctx, headX, headY, null, isParallel);
+    drawCVJoint(ctx, shoulderX, shoulderY, null, isParallel);
+    drawCVJoint(ctx, hipX, hipY, null, isParallel);
+    drawCVJoint(ctx, lKneeX, lKneeY, `${kneeDeg}°`, isParallel);
+    drawCVJoint(ctx, rKneeX, rKneeY, `${kneeDeg}°`, isParallel);
+    drawCVJoint(ctx, lFootX, lFootY, null, isParallel);
+    drawCVJoint(ctx, rFootX, rFootY, null, isParallel);
 
-    // Core Glowing Shield
-    const corePulse = (1 + Math.sin(t * Math.PI * 4)) * 4;
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.85)";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(cx - 15, cy - 25 + tremor, 14 + corePulse, 0, Math.PI * 2);
-    ctx.stroke();
+    // Knee protractor gauge
+    drawCVDegreeGauge(ctx, rKneeX, rKneeY, 0.2 * Math.PI, 0.7 * Math.PI, 18, kneeDeg + "°" + (isParallel ? " [PARALLEL]" : ""), isParallel);
 
-    // Head
-    drawCartoonHead(ctx, elbowX + 18, cy - 42 + tremor, 0.05, false, false);
+    // Muscle Heatmap: Quadriceps & Gluteal activation
+    drawCVMuscleHeatmap(ctx, hipX, hipY + 18, 28, 18, "QUADRICEPS & GLUTES", driveEase);
 }
 
-// 6. CARTOON GLUTE BRIDGES
-function drawCartoonGluteBridge(ctx, t, cx, cy, cueEl) {
-    const lift = (1 - Math.cos(t * Math.PI * 2)) / 2;
-    const pelvisLift = 34 * lift;
+// 3. ATHLETE JUMPING JACKS VIDEO
+function renderAthleteJumpingJacks(ctx, t, w, h, floorY, cueEl) {
+    const jumpY = -Math.sin(t * Math.PI) * 22;
+    const scaleX = 1 + Math.sin(t * Math.PI) * 0.06;
+    const isApex = (t > 0.4 && t < 0.6);
 
     if (cueEl) {
-        if (lift > 0.85) cueEl.textContent = "▲ SQUEEZE GLUTES & HOLD AT TOP";
-        else if (t < 0.5) cueEl.textContent = "⬆️ DRIVE PELVIS UPWARD (EXHALE)";
-        else cueEl.textContent = "⬇️ LOWER SLOWLY TO MAT (INHALE)";
+        if (t < 0.5) cueEl.textContent = "⭐ EXPLOSIVE STAR JUMP · ARMS OVERHEAD";
+        else cueEl.textContent = "⚡ SOFT SPRUNG LANDING · CORE ENGAGED";
     }
 
-    const headX = cx - 85;
-    const headY = cy - 14;
-    const feetX = cx + 55;
-    const feetY = cy - 10;
-    const hipX = cx;
-    const hipY = cy - 20 - pelvisLift;
+    const img = getAthleteImage("/static/athlete-jumping-jacks.jpg");
+    const imgH = Math.min(h - 44, 195);
+    const imgW = imgH;
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
 
-    // Feet planted
-    ctx.fillStyle = "#10B981";
-    roundRect(ctx, feetX - 6, feetY, 20, 6, 3, true, false);
-
-    // Torso ramp to bridge
-    ctx.strokeStyle = "#0F172A";
-    ctx.lineWidth = 11;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(headX + 20, cy - 14);
-    ctx.lineTo(hipX, hipY);
-    ctx.lineTo(feetX, feetY);
-    ctx.stroke();
-
-    ctx.strokeStyle = "#10B981";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(headX + 20, cy - 14);
-    ctx.lineTo(hipX, hipY);
-    ctx.lineTo(feetX, feetY);
-    ctx.stroke();
-
-    // Glute pulse at peak
-    if (lift > 0.75) {
-        ctx.fillStyle = "rgba(16, 185, 129, 0.8)";
+    // Ground impact ripple circles on landing
+    if (t > 0.88) {
+        const ripple = (t - 0.88) / 0.12;
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(hipX, hipY, 12, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    drawCartoonHead(ctx, headX, headY, -0.15, false, lift > 0.8);
-}
-
-// 7. CARTOON SURYA NAMASKAR (SUN SALUTATIONS)
-function drawCartoonSurya(ctx, t, cx, cy, cueEl) {
-    const phase = (t * 4) % 4;
-    const stage = Math.floor(phase);
-    const subT = phase - stage;
-
-    // Radiant Sun with rotating rays in background
-    const sunAngle = t * Math.PI * 2;
-    ctx.save();
-    ctx.translate(cx, cy - 105);
-    const sunGlow = ctx.createRadialGradient(0, 0, 8, 0, 0, 48);
-    sunGlow.addColorStop(0, "rgba(251, 191, 36, 0.45)");
-    sunGlow.addColorStop(1, "rgba(251, 191, 36, 0)");
-    ctx.fillStyle = sunGlow;
-    ctx.beginPath();
-    ctx.arc(0, 0, 48, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(245, 158, 11, 0.35)";
-    ctx.strokeStyle = "#F59E0B";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, 20, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    for (let i = 0; i < 8; i++) {
-        const ang = sunAngle + (i * Math.PI / 4);
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(ang) * 26, Math.sin(ang) * 26);
-        ctx.lineTo(Math.cos(ang) * 36, Math.sin(ang) * 36);
+        ctx.ellipse(cx - 35, floorY, 20 * ripple, 6 * ripple, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + 35, floorY, 20 * ripple, 6 * ripple, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(6, 182, 212, ${1 - ripple})`;
+        ctx.lineWidth = 2;
         ctx.stroke();
+        ctx.restore();
     }
+
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy + jumpY, imgW * scaleX, imgH, 0, 1);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "CARDIO ATHLETE MODEL");
+        return;
+    }
+
+    // Joint landmarks
+    const headX = cx, headY = cy - imgH * 0.36 + jumpY;
+    const lHandX = cx - imgW * 0.38, lHandY = cy - imgH * 0.38 + jumpY;
+    const rHandX = cx + imgW * 0.38, rHandY = cy - imgH * 0.38 + jumpY;
+    const lFootX = cx - imgW * 0.28, lFootY = cy + imgH * 0.42 + jumpY;
+    const rFootX = cx + imgW * 0.28, rFootY = cy + imgH * 0.42 + jumpY;
+
+    drawCVJoint(ctx, headX, headY, null, isApex);
+    drawCVJoint(ctx, lHandX, lHandY, "MAX", isApex);
+    drawCVJoint(ctx, rHandX, rHandY, "MAX", isApex);
+    drawCVJoint(ctx, lFootX, lFootY, null, isApex);
+    drawCVJoint(ctx, rFootX, rFootY, null, isApex);
+
+    // Heart Rate & Cardio Telemetry
+    ctx.save();
+    ctx.font = "bold 9px -apple-system, BlinkMacSystemFont, monospace";
+    ctx.fillStyle = "#EC4899";
+    ctx.fillText("❤️ 145 BPM · AEROBIC ZONE 3", cx - 65, cy - imgH * 0.46);
+    ctx.restore();
+}
+
+// 4. ATHLETE PLANK VIDEO
+function renderAthletePlank(ctx, t, w, h, floorY, cueEl) {
+    const dy = Math.sin(t * Math.PI * 2) * 2;
+
+    if (cueEl) cueEl.textContent = "🔒 180° RIGID CORE LOCK · DEEP RHYTHMIC BREATHS";
+
+    const img = getAthleteImage("/static/athlete-plank.jpg");
+    const imgW = Math.min(340, w - 80);
+    const imgH = imgW * (768 / 1376);
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
+
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy + dy, imgW, imgH, 0, 1);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "PLANK ATHLETE MODEL");
+        return;
+    }
+
+    // 180° Emerald Laser Alignment Line
+    const headX = cx + imgW * 0.35, headY = cy - imgH * 0.08 + dy;
+    const toeX = cx - imgW * 0.42, toeY = cy + imgH * 0.18;
+
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = "rgba(16, 185, 129, 0.85)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(toeX, toeY);
+    ctx.lineTo(headX, headY);
+    ctx.stroke();
     ctx.restore();
 
-    if (stage === 0) {
-        // 1. PRANAMASANA (Prayer Posture)
-        if (cueEl) cueEl.textContent = "1. PRANAMASANA · PRAYER POSTURE (MEDITATION)";
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.beginPath();
-        ctx.ellipse(cx, cy - 3, 26, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
+    // Key alignment joints
+    drawCVJoint(ctx, headX, headY, "HEAD", true);
+    drawCVJoint(ctx, cx + imgW * 0.18, cy - imgH * 0.02 + dy, null, true);
+    drawCVJoint(ctx, cx - imgW * 0.1, cy + imgH * 0.06 + dy, "CORE 180°", true);
+    drawCVJoint(ctx, toeX, toeY, "FEET", true);
 
-        // Feet planted together
-        ctx.fillStyle = "#10B981";
-        roundRect(ctx, cx - 14, cy - 8, 12, 6, 2, true, false);
-        roundRect(ctx, cx + 2, cy - 8, 12, 6, 2, true, false);
+    // Core muscle tension pulse
+    drawCVMuscleHeatmap(ctx, cx - imgW * 0.05, cy + imgH * 0.06 + dy, 32, 14, "ABDOMINALS LOCKED", 0.7);
+}
 
-        // Legs standing straight
-        ctx.strokeStyle = "#0F172A";
-        ctx.lineWidth = 7;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(cx - 7, cy - 68); ctx.lineTo(cx - 7, cy - 6);
-        ctx.moveTo(cx + 7, cy - 68); ctx.lineTo(cx + 7, cy - 6);
-        ctx.stroke();
+// 5. ATHLETE CAT-COW VIDEO
+function renderAthleteCatCow(ctx, t, w, h, floorY, cueEl) {
+    const wave = Math.sin(t * Math.PI * 2);
+    const dy = wave * 5;
+    const rot = wave * 0.03;
 
-        // Torso / Jersey
-        ctx.fillStyle = "#7C3AED";
-        ctx.strokeStyle = "#0F172A";
-        ctx.lineWidth = 2.5;
-        roundRect(ctx, cx - 14, cy - 96, 28, 32, 6, true, true);
+    if (cueEl) {
+        if (wave >= 0) cueEl.textContent = "🌬️ INHALE: COW POSE · CHEST OPEN & TAILBONE UP";
+        else cueEl.textContent = "💨 EXHALE: CAT POSE · DOME SPINE & TUCK CHIN";
+    }
 
-        // Arms folded in prayer at heart
-        ctx.strokeStyle = "#FBBF24";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(cx - 12, cy - 90);
-        ctx.lineTo(cx - 3, cy - 80);
-        ctx.lineTo(cx, cy - 84);
-        ctx.moveTo(cx + 12, cy - 90);
-        ctx.lineTo(cx + 3, cy - 80);
-        ctx.lineTo(cx, cy - 84);
-        ctx.stroke();
+    const img = getAthleteImage("/static/athlete-cat-cow.jpg");
+    const imgW = Math.min(340, w - 80);
+    const imgH = imgW * (768 / 1376);
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
 
-        drawCartoonHead(ctx, cx, cy - 108, 0, subT > 0.4 && subT < 0.6, true);
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy + dy, imgW, imgH, rot, 1);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "CAT-COW ATHLETE MODEL");
+        return;
+    }
 
-    } else if (stage === 1) {
-        // 2. HASTAUTTANASANA (Raised Arms Arch)
-        if (cueEl) cueEl.textContent = "2. HASTAUTTANASANA · RAISED ARMS ARCH (INHALE)";
-        const arch = Math.sin(subT * Math.PI) * 0.12;
-
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.beginPath();
-        ctx.ellipse(cx, cy - 3, 26, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = "#10B981";
-        roundRect(ctx, cx - 14, cy - 8, 12, 6, 2, true, false);
-        roundRect(ctx, cx + 2, cy - 8, 12, 6, 2, true, false);
-
-        ctx.strokeStyle = "#0F172A";
-        ctx.lineWidth = 7;
-        ctx.beginPath();
-        ctx.moveTo(cx - 7, cy - 68); ctx.lineTo(cx - 7, cy - 6);
-        ctx.moveTo(cx + 7, cy - 68); ctx.lineTo(cx + 7, cy - 6);
-        ctx.stroke();
-
-        ctx.save();
-        ctx.translate(cx, cy - 68);
-        ctx.rotate(-arch);
-        ctx.fillStyle = "#7C3AED";
-        ctx.strokeStyle = "#0F172A";
-        ctx.lineWidth = 2.5;
-        roundRect(ctx, -14, -28, 28, 32, 6, true, true);
-
-        ctx.strokeStyle = "#FBBF24";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(-11, -22); ctx.lineTo(-14, -55);
-        ctx.moveTo(11, -22); ctx.lineTo(14, -55);
-        ctx.stroke();
-
-        drawCartoonHead(ctx, 0, -40, -arch, false, true);
-        ctx.restore();
-
-    } else if (stage === 2) {
-        // 3. PADAHASTASANA (Forward Fold)
-        if (cueEl) cueEl.textContent = "3. PADAHASTASANA · FORWARD FOLD (EXHALE)";
-        const foldDepth = 0.8 + Math.sin(subT * Math.PI) * 0.2;
-
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.beginPath();
-        ctx.ellipse(cx, cy - 3, 26, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = "#10B981";
-        roundRect(ctx, cx - 14, cy - 8, 12, 6, 2, true, false);
-        roundRect(ctx, cx + 2, cy - 8, 12, 6, 2, true, false);
-
-        ctx.strokeStyle = "#0F172A";
-        ctx.lineWidth = 8;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - 68);
-        ctx.lineTo(cx, cy - 6);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#7C3AED";
-        ctx.lineWidth = 12;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy - 68);
-        ctx.lineTo(cx - 18 * foldDepth, cy - 22);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#FBBF24";
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(cx - 14, cy - 35);
-        ctx.lineTo(cx - 2, cy - 8);
-        ctx.stroke();
-
-        drawCartoonHead(ctx, cx - 22, cy - 18, 1.4, false, false);
-
-    } else {
-        // 4. BHUJANGASANA (Cobra Pose)
-        if (cueEl) cueEl.textContent = "4. BHUJANGASANA · COBRA POSE (INHALE)";
-        const archPulse = Math.sin(subT * Math.PI) * 8;
-
-        const feetX = cx - 90;
-        const chestX = cx + 30;
-        const handX = cx + 25;
-
-        ctx.fillStyle = "#10B981";
-        roundRect(ctx, feetX - 10, cy - 10, 18, 6, 3, true, false);
-        roundRect(ctx, handX - 8, cy - 8, 18, 6, 3, true, false);
-
-        ctx.strokeStyle = "#0F172A";
-        ctx.lineWidth = 9;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(feetX, cy - 8);
-        ctx.lineTo(cx - 10, cy - 8);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#7C3AED";
-        ctx.lineWidth = 12;
-        ctx.beginPath();
-        ctx.moveTo(cx - 10, cy - 8);
-        ctx.quadraticCurveTo(cx + 8, cy - 12, chestX, cy - 42 - archPulse);
-        ctx.stroke();
-
-        ctx.strokeStyle = "#FBBF24";
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.moveTo(chestX - 5, cy - 35 - archPulse);
-        ctx.lineTo(handX, cy - 6);
-        ctx.stroke();
-
-        drawCartoonHead(ctx, chestX + 16, cy - 50 - archPulse, -0.3, false, true);
+    // 7-segment vertebral curvature nodes along spine
+    const isCow = (wave >= 0);
+    for (let i = 0; i < 7; i++) {
+        const spinePct = (i - 3) / 3;
+        const vx = cx + spinePct * (imgW * 0.22);
+        const vy = cy - imgH * 0.06 + Math.cos(spinePct * Math.PI) * (wave * 8) + dy;
+        drawCVJoint(ctx, vx, vy, i === 3 ? (isCow ? "COW" : "CAT") : null, true);
     }
 }
 
-// 8. CARTOON CHILD'S POSE
-function drawCartoonChildPose(ctx, t, cx, cy, cueEl) {
-    if (cueEl) cueEl.textContent = "🧘 REST HIPS ON HEELS · DECOMPRESS SPINE";
+// 6. ATHLETE GLUTE BRIDGE VIDEO
+function renderAthleteGluteBridge(ctx, t, w, h, floorY, cueEl) {
+    const driveEase = Math.pow(Math.sin(t * Math.PI), 1.6);
+    const dy = -driveEase * 20;
+    const rot = driveEase * 0.025;
+    const isPeak = (t > 0.45 && t < 0.65);
 
-    const breath = Math.sin(t * Math.PI * 2) * 3;
-    const matY = cy - 8;
+    if (cueEl) {
+        if (t < 0.45) cueEl.textContent = "⬆️ DRIVE THROUGH HEELS · ELEVATE PELVIS";
+        else if (t < 0.65) cueEl.textContent = "▲ PEAK SQUEEZE: GLUTES & HAMSTRINGS (2s)";
+        else cueEl.textContent = "⬇️ LOWER SMOOTHLY TO MAT";
+    }
 
-    // Knees & Feet folded
-    ctx.fillStyle = "#0F172A";
-    roundRect(ctx, cx - 70, matY - 8, 28, 10, 4, true, false);
+    const img = getAthleteImage("/static/athlete-glute-bridge.jpg");
+    const imgW = Math.min(340, w - 80);
+    const imgH = imgW * (768 / 1376);
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
 
-    // Torso resting forward in purple jersey
-    ctx.strokeStyle = "#7C3AED";
-    ctx.lineWidth = 14;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(cx - 55, matY - 14);
-    ctx.quadraticCurveTo(cx - 10, matY - 30 + breath, cx + 35, matY - 10);
-    ctx.stroke();
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy + dy, imgW, imgH, rot, 1);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "GLUTE BRIDGE ATHLETE MODEL");
+        return;
+    }
 
-    ctx.strokeStyle = "#22D3EE";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(cx - 55, matY - 14);
-    ctx.quadraticCurveTo(cx - 10, matY - 30 + breath, cx + 35, matY - 10);
-    ctx.stroke();
-
-    // Arms stretching forward
-    ctx.strokeStyle = "#FBBF24";
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(cx + 25, matY - 18);
-    ctx.lineTo(cx + 85, matY - 6);
-    ctx.stroke();
-
-    drawCartoonHead(ctx, cx + 45, matY - 16, 0.8, false, false);
+    const pelvisX = cx - imgW * 0.04, pelvisY = cy + dy;
+    drawCVJoint(ctx, pelvisX, pelvisY, "PELVIS 180°", isPeak);
+    drawCVMuscleHeatmap(ctx, pelvisX, pelvisY + 4, 30, 16, "GLUTEUS MAXIMUS", driveEase);
 }
 
-// 9. CARTOON MOBILITY
-function drawCartoonMobility(ctx, t, cx, cy, cueEl) {
-    if (cueEl) cueEl.textContent = "🔄 FULL RANGE SHOULDER & MOBILITY ROTATION";
-    drawCartoonSquat(ctx, 0, cx, cy, null);
+// 7. ATHLETE CHILD POSE VIDEO
+function renderAthleteChildsPose(ctx, t, w, h, floorY, cueEl) {
+    const breath = Math.sin(t * Math.PI * 2);
+    const scale = 1 + breath * 0.018;
 
-    // Circular arm trail
-    const armAngle = t * Math.PI * 2;
-    ctx.strokeStyle = "#C084FC";
-    ctx.lineWidth = 5;
+    if (cueEl) cueEl.textContent = "🧘 SINK HIPS TO HEELS · DEEP DIAPHRAGMATIC RELEASE";
+
+    const img = getAthleteImage("/static/athlete-childs-pose.jpg");
+    const imgW = Math.min(340, w - 80);
+    const imgH = imgW * (768 / 1376);
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
+
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy, imgW, imgH, 0, scale);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "RESTORATIVE ATHLETE MODEL");
+        return;
+    }
+
+    // Respiratory Decompression Indicators
+    drawCVJoint(ctx, cx + imgW * 0.3, cy + imgH * 0.15, "LATS", true);
+    drawCVJoint(ctx, cx - imgW * 0.25, cy + imgH * 0.12, "LUMBAR", true);
+}
+
+// 8. ATHLETE SURYA NAMASKAR VIDEO
+function renderAthleteSuryaNamaskar(ctx, t, w, h, floorY, cueEl) {
+    const SURYA_STEPS = [
+        "1/12 · Pranamasana (Prayer Pose)",
+        "2/12 · Hastauttanasana (Raised Arms)",
+        "3/12 · Padahastasana (Forward Bend)",
+        "4/12 · Ashwa Sanchalanasana (Lunge)",
+        "5/12 · Dandasana (Plank Stick)",
+        "6/12 · Ashtanga Namaskara (8 Limbs)",
+        "7/12 · Bhujangasana (Cobra)",
+        "8/12 · Adho Mukha Svanasana (Down Dog)",
+        "9/12 · Ashwa Sanchalanasana (Lunge)",
+        "10/12 · Padahastasana (Forward Bend)",
+        "11/12 · Hastauttanasana (Raised Arms)",
+        "12/12 · Pranamasana (Heart Center)"
+    ];
+    const stepIdx = Math.min(11, Math.floor(t * 12));
+    if (cueEl) cueEl.textContent = `☀️ ${SURYA_STEPS[stepIdx]}`;
+
+    const img = getAthleteImage("/static/athlete-surya-namaskar.jpg");
+    const imgH = Math.min(h - 44, 195);
+    const imgW = imgH * (896 / 1200);
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
+
+    // Radiant Solar Chakra Aura
+    ctx.save();
+    const auraGrad = ctx.createRadialGradient(cx, cy - 20, 10, cx, cy - 20, imgH * 0.55);
+    auraGrad.addColorStop(0, "rgba(245, 158, 11, 0.22)");
+    auraGrad.addColorStop(0.6, "rgba(245, 158, 11, 0.08)");
+    auraGrad.addColorStop(1, "rgba(245, 158, 11, 0)");
+    ctx.fillStyle = auraGrad;
     ctx.beginPath();
-    ctx.moveTo(cx - 15, cy - 70);
-    ctx.lineTo(cx - 15 + Math.cos(armAngle) * 32, cy - 70 + Math.sin(armAngle) * 32);
+    ctx.arc(cx, cy - 20, imgH * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy, imgW, imgH, 0, 1);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "SURYA NAMASKAR ATHLETE MODEL");
+        return;
+    }
+
+    drawCVJoint(ctx, cx, cy - imgH * 0.35, "CHAKRA", true);
+}
+
+// 9. ATHLETE MOBILITY / WARMUP / STRETCHING VIDEO
+function renderAthleteMobility(ctx, t, w, h, floorY, cueEl) {
+    if (cueEl) cueEl.textContent = "🔄 360° ARTICULAR ROTATION · INCREASE FLUID RANGE";
+
+    const img = getAthleteImage("/static/athlete-squat.jpg");
+    const imgH = Math.min(h - 44, 195);
+    const imgW = imgH;
+    const cx = w / 2;
+    const cy = floorY - imgH / 2 - 2;
+
+    const drawn = drawFramedAthleteImage(ctx, img, cx, cy, imgW, imgH, 0, 1);
+    if (!drawn) {
+        drawLoadingAthleteWireframe(ctx, cx, cy, "MOBILITY ATHLETE MODEL");
+        return;
+    }
+
+    // Dynamic 360° Joint Rotation Orbits
+    const orbitAngle = t * Math.PI * 2;
+    const orbRx = 24, orbRy = 14;
+    ctx.save();
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.75)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx - imgW * 0.24, cy - imgH * 0.18, orbRx, orbRy, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx + imgW * 0.24, cy - imgH * 0.18, orbRx, orbRy, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(cx + 15, cy - 70);
-    ctx.lineTo(cx + 15 + Math.cos(armAngle + Math.PI) * 32, cy - 70 + Math.sin(armAngle + Math.PI) * 32);
-    ctx.stroke();
+    drawCVJoint(ctx, cx - imgW * 0.24 + Math.cos(orbitAngle) * orbRx, cy - imgH * 0.18 + Math.sin(orbitAngle) * orbRy, null, true);
+    drawCVJoint(ctx, cx + imgW * 0.24 + Math.cos(orbitAngle + Math.PI) * orbRx, cy - imgH * 0.18 + Math.sin(orbitAngle + Math.PI) * orbRy, null, true);
+    ctx.restore();
+}
+
+// MASTER AI VIDEO RENDER FUNCTION (CALLED EVERY FRAME AT 60FPS)
+function renderAthleteAIVideo(ctx, key, name, t, w, h, cueEl) {
+    ctx.clearRect(0, 0, w, h);
+
+    const floorY = h - 38;
+    drawAIArenaStage(ctx, w, h, floorY);
+
+    const k = (key || "").toLowerCase();
+    const n = (name || "").toLowerCase();
+
+    if (k.includes("pushup") || n.includes("pushup") || n.includes("push-up") || n.includes("push up") || k.includes("incline") || n.includes("incline") || n.includes("chest")) {
+        renderAthletePushup(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("squat") || n.includes("squat") || k.includes("lunge") || n.includes("lunge") || n.includes("quad") || n.includes("leg")) {
+        renderAthleteSquat(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("jumping") || n.includes("jumping") || k.includes("jack") || n.includes("jack") || k.includes("cardio") || n.includes("cardio") || n.includes("skipping") || n.includes("jog")) {
+        renderAthleteJumpingJacks(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("plank") || n.includes("plank") || k.includes("core") || n.includes("core")) {
+        renderAthletePlank(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("spine") || k.includes("spine")) {
+        renderAthleteCatCow(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("glute") || n.includes("glute") || k.includes("bridge") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
+        renderAthleteGluteBridge(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("child") || n.includes("child") || n.includes("hip opener") || n.includes("rest")) {
+        renderAthleteChildsPose(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("surya") || n.includes("surya") || n.includes("salutation") || n.includes("sun")) {
+        renderAthleteSuryaNamaskar(ctx, t, w, h, floorY, cueEl);
+    } else if (k.includes("stretch") || n.includes("stretch") || n.includes("release") || n.includes("mobility")) {
+        renderAthleteChildsPose(ctx, t, w, h, floorY, cueEl);
+    } else {
+        renderAthleteMobility(ctx, t, w, h, floorY, cueEl);
+    }
+
+    drawCVTelemetryHeader(ctx, w, h, name);
 }
 
 

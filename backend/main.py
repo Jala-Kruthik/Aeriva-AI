@@ -91,6 +91,97 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 
+ACCOUNTS_BACKUP_FILE = BASE_DIR / "database" / "accounts_backup.json"
+
+def sync_accounts_backup():
+    """
+    Ensures accounts are always preserved in database and backed up to JSON.
+    Restores any missing accounts to SQLite if DB was recreated or restarted,
+    and backs up all current accounts to JSON file.
+    """
+    try:
+        import json
+        db = SessionLocal()
+        backup_accounts = {}
+        if ACCOUNTS_BACKUP_FILE.exists():
+            try:
+                with open(ACCOUNTS_BACKUP_FILE, "r", encoding="utf-8") as f:
+                    backup_accounts = json.load(f)
+            except Exception as e:
+                print("Failed to read accounts backup:", e)
+                backup_accounts = {}
+
+        # 1. Restore any missing accounts from backup into DB
+        existing_users = {u.email.lower().strip(): u for u in db.query(User).all()}
+        db_changed = False
+        for email_key, u_data in backup_accounts.items():
+            norm_email = email_key.lower().strip()
+            if norm_email not in existing_users:
+                new_u = User(
+                    name=u_data.get("name", "Aeriva User"),
+                    email=norm_email,
+                    password=u_data.get("password", ""),
+                    age=u_data.get("age"),
+                    height=u_data.get("height"),
+                    weight=u_data.get("weight"),
+                    health_goal=u_data.get("health_goal"),
+                    onboarding_completed=bool(u_data.get("onboarding_completed", False))
+                )
+                db.add(new_u)
+                db_changed = True
+
+        if db_changed:
+            db.commit()
+
+        # 2. Update backup with all existing DB users
+        all_users = db.query(User).all()
+        current_backup = {}
+        for u in all_users:
+            current_backup[u.email.lower().strip()] = {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email.lower().strip(),
+                "password": u.password,
+                "age": u.age,
+                "height": u.height,
+                "weight": u.weight,
+                "health_goal": u.health_goal,
+                "onboarding_completed": u.onboarding_completed
+            }
+        with open(ACCOUNTS_BACKUP_FILE, "w", encoding="utf-8") as f:
+            json.dump(current_backup, f, indent=2)
+
+        db.close()
+    except Exception as e:
+        print("Accounts sync note:", e)
+
+def save_user_to_backup(user: User):
+    """Saves or updates a single user record in accounts_backup.json."""
+    try:
+        import json
+        current_backup = {}
+        if ACCOUNTS_BACKUP_FILE.exists():
+            try:
+                with open(ACCOUNTS_BACKUP_FILE, "r", encoding="utf-8") as f:
+                    current_backup = json.load(f)
+            except Exception:
+                current_backup = {}
+        current_backup[user.email.lower().strip()] = {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email.lower().strip(),
+            "password": user.password,
+            "age": user.age,
+            "height": user.height,
+            "weight": user.weight,
+            "health_goal": user.health_goal,
+            "onboarding_completed": bool(user.onboarding_completed)
+        }
+        with open(ACCOUNTS_BACKUP_FILE, "w", encoding="utf-8") as f:
+            json.dump(current_backup, f, indent=2)
+    except Exception as e:
+        print("Save user backup error:", e)
+
 def ensure_db_migrations():
     """Ensures food_logs has the image_url column in SQLite."""
     try:
@@ -109,6 +200,7 @@ def ensure_db_migrations():
         print("Database migration check note:", e)
 
 ensure_db_migrations()
+sync_accounts_backup()
 
 
 # =========================================
@@ -232,7 +324,7 @@ def register_user(user: UserCreate):
         if existing_user:
             raise HTTPException(
                 status_code=400,
-                detail="An account with this email already exists"
+                detail="Account already exists, please sign in"
             )
 
         hashed_password = hash_password(user.password)
@@ -252,11 +344,19 @@ def register_user(user: UserCreate):
         db.commit()
         db.refresh(new_user)
 
-        token = create_access_token({"sub": str(new_user.id)})
+        save_user_to_backup(new_user)
+
+        token = create_access_token({
+            "sub": str(new_user.id),
+            "email": new_user.email,
+            "name": new_user.name
+        })
 
         return {
             "message": "User registered successfully",
             "user_id": new_user.id,
+            "name": new_user.name,
+            "email": new_user.email,
             "access_token": token,
             "token_type": "bearer",
             "onboarding_completed": bool(new_user.onboarding_completed)
@@ -270,7 +370,7 @@ def register_user(user: UserCreate):
         db.rollback()
         raise HTTPException(
             status_code=400,
-            detail="An account with this email already exists"
+            detail="Account already exists, please sign in"
         )
 
     finally:
@@ -311,13 +411,20 @@ def login_user(user: UserLogin):
                 detail="Invalid email or password"
             )
 
-        token = create_access_token({"sub": str(existing_user.id)})
+        save_user_to_backup(existing_user)
+
+        token = create_access_token({
+            "sub": str(existing_user.id),
+            "email": existing_user.email,
+            "name": existing_user.name
+        })
 
         return {
             "access_token": token,
             "token_type": "bearer",
             "user_id": existing_user.id,
             "name": existing_user.name,
+            "email": existing_user.email,
             "onboarding_completed": bool(existing_user.onboarding_completed)
         }
 
@@ -377,11 +484,18 @@ def auth_google(req: GoogleAuthRequest):
         raise HTTPException(status_code=400, detail="Google token does not contain an email address")
 
     email = normalize_email(email)
+    google_sub = str(info.get("sub", "")).strip() or None
     name = (info.get("name") or info.get("given_name") or "Google User").strip()
 
     db = SessionLocal()
     try:
-        user = db.query(User).filter(User.email == email).first()
+        # Identity lookup: Google sub claim first, then normalized email
+        user = None
+        if google_sub:
+            user = db.query(User).filter(User.google_id == google_sub).first()
+        if not user:
+            user = db.query(User).filter(User.email == email).first()
+
         is_new_user = False
 
         if not user:
@@ -391,14 +505,27 @@ def auth_google(req: GoogleAuthRequest):
             user = User(
                 name=name,
                 email=email,
+                google_id=google_sub,
                 password=hashed_pw,
                 onboarding_completed=False
             )
             db.add(user)
             db.commit()
             db.refresh(user)
+        else:
+            # Existing user: link google_id if missing, return existing row
+            if google_sub and not user.google_id:
+                user.google_id = google_sub
+                db.commit()
+                db.refresh(user)
 
-        token = create_access_token({"sub": str(user.id)})
+        save_user_to_backup(user)
+
+        token = create_access_token({
+            "sub": str(user.id),
+            "email": user.email,
+            "name": user.name
+        })
 
         has_profile = bool(user.age and user.height and user.weight and user.health_goal)
 
@@ -463,6 +590,8 @@ def update_profile(
 
         db.commit()
         db.refresh(db_user)
+
+        save_user_to_backup(db_user)
 
         has_profile = bool(db_user.age and db_user.height and db_user.weight and db_user.health_goal)
 
@@ -580,20 +709,6 @@ def get_current_user(authorization: str | None):
                 .filter(User.email == norm_email)
                 .first()
             )
-
-        # Resilient persistence: If container restarted and DB was recreated, restore user profile from verified JWT
-        if not user and email:
-            import secrets
-            norm_email = normalize_email(str(email))
-            user = User(
-                name=name,
-                email=norm_email,
-                password=hash_password(secrets.token_urlsafe(32)),
-                onboarding_completed=True
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
 
         if not user:
             raise HTTPException(
