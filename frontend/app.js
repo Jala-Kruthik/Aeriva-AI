@@ -2878,12 +2878,12 @@ function drawCVJoint(ctx, x, y, label, isPeak) {
     ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, isPeak ? 9 : 6.5, 0, Math.PI * 2);
-    ctx.fillStyle = isPeak ? "rgba(16, 185, 129, 0.3)" : "rgba(6, 182, 212, 0.22)";
+    ctx.fillStyle = isPeak ? "rgba(0, 209, 160, 0.35)" : "rgba(198, 255, 0, 0.25)";
     ctx.fill();
 
     ctx.beginPath();
     ctx.arc(x, y, isPeak ? 5.5 : 4.5, 0, Math.PI * 2);
-    ctx.strokeStyle = isPeak ? "#10B981" : "#06B6D4";
+    ctx.strokeStyle = isPeak ? "#00D1A0" : "#C6FF00";
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -2906,7 +2906,7 @@ function drawCVBone(ctx, x1, y1, x2, y2, isPeak) {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
-    ctx.strokeStyle = isPeak ? "rgba(16, 185, 129, 0.75)" : "rgba(6, 182, 212, 0.65)";
+    ctx.strokeStyle = isPeak ? "#00D1A0" : "#C6FF00";
     ctx.lineWidth = 2.2;
     ctx.stroke();
     ctx.restore();
@@ -2917,12 +2917,12 @@ function drawCVDegreeGauge(ctx, cx, cy, startAngle, endAngle, radius, degText, i
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, radius, startAngle, endAngle);
-    ctx.strokeStyle = isPeak ? "#10B981" : "#F59E0B";
+    ctx.strokeStyle = isPeak ? "#00D1A0" : "#FF4D2E";
     ctx.lineWidth = 3;
     ctx.stroke();
 
     ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, monospace";
-    ctx.fillStyle = isPeak ? "#10B981" : "#F59E0B";
+    ctx.fillStyle = isPeak ? "#00D1A0" : "#FF4D2E";
     ctx.fillText(degText, cx + radius + 5, cy - 2);
     ctx.restore();
 }
@@ -2952,9 +2952,9 @@ function drawCVMuscleHeatmap(ctx, cx, cy, rx, ry, label, alpha) {
 function drawAIArenaStage(ctx, w, h, floorY) {
     // 1. Dark Cyber Arena Gradient
     const bg = ctx.createRadialGradient(w / 2, h * 0.38, 20, w / 2, h * 0.38, w * 0.75);
-    bg.addColorStop(0, "#150a2b");
-    bg.addColorStop(0.5, "#0b0416");
-    bg.addColorStop(1, "#030107");
+    bg.addColorStop(0, "#14151F");
+    bg.addColorStop(0.5, "#0E0F17");
+    bg.addColorStop(1, "#0B0B0F");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
 
@@ -2992,7 +2992,7 @@ function drawAIArenaStage(ctx, w, h, floorY) {
     matGrad.addColorStop(0, "rgba(26, 42, 85, 0.85)");
     matGrad.addColorStop(1, "rgba(15, 23, 42, 0.95)");
     ctx.fillStyle = matGrad;
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.65)";
+    ctx.strokeStyle = "#C6FF00";
     ctx.lineWidth = 1.5;
     roundRect(ctx, matX, matY, matW, matH, 8, true, true);
 }

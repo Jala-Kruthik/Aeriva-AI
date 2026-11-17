@@ -7,7 +7,11 @@
 
     <title>AERIVA AI — Smart Health & Lifestyle Dashboard</title>
 
-    <link rel="stylesheet" href="/static/style.css?v=5.2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/style.css?v=6.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -72,45 +76,41 @@
         <!-- LEFT COLUMN: GRAND HERO STAGE WITH DISAPPEARING KINETIC TEXT -->
         <div class="stage-hero-content">
 
-            <!-- TOP FLOATING PILL (EXACT ICON & WORKING LABEL) -->
-            <div class="stage-pill-badge" id="stagePillBadge">
-                <span class="pill-grid-icon" aria-hidden="true">
-                    <span></span><span></span><span></span>
-                    <span></span><span></span><span></span>
-                </span>
-                <span class="pill-text">Working</span>
+            <!-- TOP BRAND LOCKUP (MOCKUP 1) -->
+            <div class="brand-lockup-volt">
+                <div class="volt-badge-a">A</div>
+                <div class="volt-brand-name">AERIVA<br>AI</div>
             </div>
 
-            <!-- KICKER / SUBTITLE -->
-            <p class="stage-kicker">
-                WE ARE AERIVA AI &bull; NEXT-GEN HEALTH SYSTEM
-            </p>
-
-            <!-- GIANT KINETIC HEADLINE WITH UNIQUE DISAPPEARING ANIMATION -->
-            <div class="kinetic-headline-wrap" id="kineticHeadlineWrap" onclick="nextKineticPhrase()" title="Click to advance phrase">
-                <div class="kinetic-line solid" id="kineticSolid">BUILT FOR</div>
-                <div class="kinetic-line outline" id="kineticOutline">THE STORM.</div>
-                <div class="kinetic-laser-glare" id="kineticLaserGlare"></div>
+            <!-- FLOATING TILTED LVL UP STICKER -->
+            <div class="volt-lvlup-sticker">
+                <span>LVL<br>UP</span>
             </div>
 
-            <p class="stage-subtext">
-                Autonomous daily routines, biometrics telemetry, and active wellness quests — engineered to unlock your peak physical potential.
-            </p>
+            <!-- GIANT ANTON DISPLAY HEADLINE -->
+            <div class="volt-hero-center">
+                <h1 class="volt-hero-headline">WIN<br>YOUR<br>DAY.</h1>
+                <p class="volt-hero-sub">
+                    Habits, workouts and meals, scored like a game. Level up every day.
+                </p>
+            </div>
 
-            <!-- KINETIC CONTROLS: PROGRESS BAR, DOTS & NEXT BUTTON -->
-            <div class="kinetic-controls">
-                <div class="kinetic-progress-bar">
-                    <div class="kinetic-progress-fill" id="kineticProgressFill"></div>
+            <!-- BOTTOM RUNNING MARQUEE TICKER -->
+            <div class="volt-marquee-ticker">
+                <span>SMART NUTRITION &nbsp;/&nbsp; 60FPS MOVEMENT &nbsp;/&nbsp; CLINICAL PRECAUTIONS &nbsp;/</span>
+            </div>
+
+            <!-- PRESERVED PROTECTED HOOKS (HIDDEN) -->
+            <div class="hidden" aria-hidden="true">
+                <div id="stagePillBadge"><span class="pill-text">Working</span></div>
+                <div id="kineticHeadlineWrap" onclick="nextKineticPhrase()">
+                    <div id="kineticSolid">BUILT FOR</div>
+                    <div id="kineticOutline">THE STORM.</div>
+                    <div id="kineticLaserGlare"></div>
                 </div>
-                <div class="kinetic-nav-dots" id="kineticNavDots"></div>
-                <button class="kinetic-next-btn" type="button" onclick="nextKineticPhrase()" title="Next phrase">
-                    <span>NEXT</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
-                </button>
+                <div id="kineticProgressFill"></div>
+                <div id="kineticNavDots"></div>
             </div>
-
 
         </div>
 
@@ -745,35 +745,22 @@
         </header>
 
 
-        <!-- DAILY OVERVIEW & AI TIP -->
+        <!-- DAILY OVERVIEW & AI TIP (TAB 1 VOLT HERO BANNER) -->
         <div class="welcome-strip">
             <div>
                 <p class="section-kicker">
-                    TODAY'S OVERVIEW
+                    01 / DAILY ROUTINE / <span id="currentDate">TUE 17 NOV</span>
                 </p>
                 <h2>
-                    TRACK HABITS. STAY HEALTHY.
-                    <span class="green">
-                        WIN YOUR DAY.
-                    </span>
+                    TRACK<br>HABITS.<br>STAY<br>HEALTHY.
                 </h2>
-                <p id="currentDate">
-                    Today
-                </p>
             </div>
 
             <div class="ai-suggestion">
-                <span class="ai-pulse">
-                    ✦
-                </span>
-                <div>
-                    <span class="section-kicker">
-                        AI HEALTH ADVICE
-                    </span>
-                    <p id="aiSuggestion">
-                        Loading your wellness recommendations...
-                    </p>
-                </div>
+                <span class="section-kicker">Al advice</span>
+                <p id="aiSuggestion">
+                    Keep your energy up. Drink water and don't skip lunch.
+                </p>
             </div>
         </div>
 
@@ -813,11 +800,11 @@
                 </div>
             </article>
 
-            <!-- ENERGY LEVEL -->
+            <!-- ENERGY LEVEL (MOCKUP 2: 91% + 5 SEGMENTED BLOCKS) -->
             <article class="vital-card cyan-card">
                 <div class="card-top">
                     <span class="section-kicker">
-                        ENERGY LEVEL ⚡
+                        ENERGY
                     </span>
                     <span class="vital-status cyan-text" id="energyStatusText">
                         ACTIVE
@@ -825,17 +812,19 @@
                 </div>
 
                 <div class="energy-meter">
+                    <strong id="energyValue">91%</strong>
                     <div class="battery">
-                        <div id="energyFill" class="battery-fill" style="width: 75%;"></div>
+                        <div id="energyFill" class="battery-fill" style="width: 80%;"></div>
                     </div>
-                    <strong id="energyValue">
-                        75%
-                    </strong>
+                    <div class="segmented-meter" aria-hidden="true">
+                        <span class="segmented-block filled-volt"></span>
+                        <span class="segmented-block filled-volt"></span>
+                        <span class="segmented-block filled-volt"></span>
+                        <span class="segmented-block filled-volt"></span>
+                        <span class="segmented-block"></span>
+                    </div>
                 </div>
 
-                <p class="vital-title">
-                    Energy Reserve
-                </p>
                 <p class="vital-sub">
                     Stay active, take short breaks, and recharge.
                 </p>
@@ -1161,20 +1150,24 @@
 
                 <!-- SCHEDULED EXERCISE MODE (TRIGGER TO OPEN POPUP) -->
                 <section class="glass-panel">
-                    <div class="panel-header">
+                    <div class="tab2-hero-banner">
                         <div>
-                            <p class="section-kicker" style="color: #67E8F9;">
-                                2 · WHAT TO DO
+                            <p class="section-kicker">
+                                02 / WHAT TO DO
                             </p>
-                            <h2 style="font-size: 20px; font-weight: 800; color: #F8FAFC;">
-                                Exercise Mode &amp; Movement
+                            <h2>
+                                MOVE YOUR<br>BODY.
                             </h2>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 11px; color: #94A3B8;">ACTIVITY TIME:</span>
-                            <span class="date-badge" id="exerciseStat" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #6EE7B7; font-size: 13px;">
-                                0 min
-                            </span>
+                        <div class="exercise-meta-stats">
+                            <div class="exercise-meta-box">
+                                <span class="meta-val" id="exerciseMetaBurn">350</span>
+                                <span class="meta-label">KCAL TARGET</span>
+                            </div>
+                            <div class="exercise-meta-box">
+                                <span class="meta-val" id="exerciseStat">30</span>
+                                <span class="meta-label">MINUTES</span>
+                            </div>
                         </div>
                     </div>
 
@@ -1233,7 +1226,7 @@
                             type="button"
                             style="font-size: 14px; font-weight: 900; padding: 16px; box-shadow: 0 0 25px rgba(6, 182, 212, 0.45); letter-spacing: 0.05em;"
                             onclick="openExerciseModePopup()">
-                            ⚡ START EXERCISE MODE (OPEN STEP-BY-STEP POPUP)
+                            START EXERCISE MODE
                         </button>
                     </div>
                 </section>
@@ -1252,22 +1245,17 @@
                 <section class="glass-panel precautions-hero-card" id="precautionsHeroCard">
                     <div class="precautions-hero-header">
                         <div>
-                            <p class="section-kicker" style="color: #67E8F9; display: flex; align-items: center; gap: 6px;">
-                                <span class="live-dot" style="background: #10B981;"></span>
-                                AI CLINICAL SAFETY INTELLIGENCE
+                            <p class="section-kicker">
+                                03 / PRECAUTIONS AND GUIDANCE
                             </p>
-                            <h2 style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin: 4px 0 6px;">
-                                Health Precautions & Smart Guidance
+                            <h2>
+                                STAY SAFE.<br>STAY STRONG.
                             </h2>
-                            <p style="font-size: 12.5px; color: #94A3B8; margin: 0; line-height: 1.45;">
-                                Real-time AI precautions monitoring whether you are eating proper food, getting adequate rest, and maintaining daily physical exercise.
-                            </p>
                         </div>
                         <div class="precautions-score-box">
-                            <span class="precautions-score-label">HEALTH SAFETY SHIELD</span>
                             <div class="precautions-score-badge" id="precautionsOverallBadge">
-                                <span id="precautionsShieldIcon">🛡️</span>
-                                <span id="precautionsOverallText">ANALYZING STATUS</span>
+                                <span id="precautionsShieldIcon">□</span>
+                                <span id="precautionsOverallText">62%<br><span style="font-size: 10px; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.05em;">ATTENTION NEEDED</span></span>
                             </div>
                         </div>
                     </div>
