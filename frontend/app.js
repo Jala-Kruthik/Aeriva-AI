@@ -3665,6 +3665,56 @@ function renderDashboardExerciseOverview(exercises, container, btnElem, exercise
     if (btnElem) btnElem.style.display = "none";
 }
 
+// Global video mode toggle helpers
+window.aerivaSwitchViewMode = function(mode) {
+    if (typeof window.aerivaSetVideoMode === "function") {
+        window.aerivaSetVideoMode(mode);
+    }
+    renderPopupExerciseStep();
+};
+
+window.aerivaSetPlaybackRate = function(rate) {
+    const video = document.getElementById("trainerVideoPlayer");
+    if (video) {
+        video.playbackRate = rate;
+    }
+    document.querySelectorAll(".video-speed-btn").forEach(btn => {
+        if (btn.textContent.trim() === `${rate}x` || btn.textContent.trim() === `${rate.toFixed(1)}x`) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+};
+
+let lastVideoPlanCategory = "balanced";
+async function fetchWorkoutVideoPlan() {
+    try {
+        const stepKey = getStepStorageKey();
+        const steps = parseInt(localStorage.getItem(stepKey)) || 0;
+        const token = localStorage.getItem("aeriva_token");
+        const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+        const resp = await fetch(`/exercise/video-plan?steps=${steps}`, { headers });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.reason) {
+                const reasonEl = document.getElementById("popupWorkoutReasonText");
+                if (reasonEl) reasonEl.textContent = data.reason;
+            }
+            if (data.category) {
+                lastVideoPlanCategory = data.category;
+                const bubble = document.getElementById("coachHeroBubble");
+                if (bubble) {
+                    const catName = data.category.replace(/_/g, " ");
+                    bubble.innerHTML = `<span>"Tailored a <strong>${escapeHTML(catName)}</strong> session based on your nutrition & steps!"</span>`;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("[AERIVA] Video plan fetch error:", e);
+    }
+}
+
 // 2. OPEN & CLOSE EXERCISE MODE POPUP MODAL
 function openExerciseModePopup(targetStepIndex = null) {
     if (!activeWorkoutExercises || !activeWorkoutExercises.length) {
@@ -3682,12 +3732,17 @@ function openExerciseModePopup(targetStepIndex = null) {
         modal.classList.remove("hidden");
     }
 
+    fetchWorkoutVideoPlan();
     renderPopupExerciseStep();
 }
 
 function closeExerciseModePopup() {
     stopCartoonVideoPlayer();
     stopPopupStepTimer();
+    const videoPlayer = document.getElementById("trainerVideoPlayer");
+    if (videoPlayer) {
+        videoPlayer.pause();
+    }
     const modal = document.getElementById("exerciseModePopupModal");
     if (modal) {
         modal.classList.add("hidden");
@@ -3719,6 +3774,8 @@ function renderPopupExerciseStep() {
     // If all completed, show celebration view inside popup
     if (isFinished) {
         stopCartoonVideoPlayer();
+        const videoPlayer = document.getElementById("trainerVideoPlayer");
+        if (videoPlayer) videoPlayer.pause();
         if (activeSection) activeSection.classList.add("hidden");
         if (celebSection) celebSection.classList.remove("hidden");
         if (counterEl) counterEl.textContent = `ALL ${total} STEPS COMPLETED`;
@@ -3764,9 +3821,60 @@ function renderPopupExerciseStep() {
 
     if (badgeEl) badgeEl.textContent = `⚡ ${ordinal.toUpperCase()} EXERCISE · ACTIVE`;
     if (timingEl) timingEl.textContent = `${curEx.duration} · ${curEx.reps}`;
-    if (diagramEl) {
-        mountCartoonVideoPlayer(diagramEl, curEx.key, curEx.name);
+
+    // Mode handling: Canvas vs Video
+    const currentMode = (typeof window.aerivaGetVideoMode === "function") ? window.aerivaGetVideoMode() : "canvas";
+    const videoContainer = document.getElementById("trainerVideoContainer");
+    const videoPlayer = document.getElementById("trainerVideoPlayer");
+    const videoLabel = document.getElementById("videoExerciseLabel");
+    const videoReps = document.getElementById("videoRepCounter");
+    const videoFill = document.getElementById("videoProgressFill");
+
+    // Toggle button active states
+    document.querySelectorAll(".view-mode-btn").forEach(btn => {
+        if (btn.dataset.mode === currentMode) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+
+    if (currentMode === "video" && videoContainer && videoPlayer) {
+        if (diagramEl) diagramEl.classList.add("hidden");
+        videoContainer.classList.remove("hidden");
+        stopCartoonVideoPlayer();
+
+        const videoInfo = (typeof window.aerivaGetVideoInfo === "function") ? window.aerivaGetVideoInfo(curEx.key) : null;
+        if (videoLabel) videoLabel.textContent = (curEx.name || "EXERCISE").toUpperCase();
+        if (videoReps) videoReps.textContent = curEx.reps || "COACH MODE";
+
+        if (videoInfo && videoInfo.file_mp4) {
+            if (videoPlayer.getAttribute("data-current-src") !== videoInfo.file_mp4) {
+                videoPlayer.setAttribute("data-current-src", videoInfo.file_mp4);
+                videoPlayer.src = videoInfo.file_mp4;
+                if (videoInfo.poster) videoPlayer.poster = videoInfo.poster;
+                videoPlayer.load();
+                videoPlayer.play().catch(() => {});
+            }
+        } else {
+            videoPlayer.poster = "/static/trainer-character.jpg";
+        }
+
+        videoPlayer.ontimeupdate = () => {
+            if (videoPlayer.duration && videoFill) {
+                const pct = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+                videoFill.style.width = `${pct}%`;
+            }
+        };
+    } else {
+        if (videoContainer) videoContainer.classList.add("hidden");
+        if (videoPlayer) videoPlayer.pause();
+        if (diagramEl) {
+            diagramEl.classList.remove("hidden");
+            mountCartoonVideoPlayer(diagramEl, curEx.key, curEx.name);
+        }
     }
+
     if (nameEl) nameEl.textContent = curEx.name;
 
     if (pillsEl) {
@@ -3823,6 +3931,9 @@ function handlePopupStepComplete() {
         saveWorkoutProgress(prog);
         localStorage.setItem(getWorkoutStorageKey(), "true");
         addXP(10); // Completion bonus (+25 XP total)
+        if (typeof window.aerivaConfetti === "function") {
+            window.aerivaConfetti();
+        }
 
         const exerciseStat = document.getElementById("exerciseStat");
         if (exerciseStat) exerciseStat.textContent = `${lastRecommendedWorkoutDuration} min`;
@@ -4976,20 +5087,14 @@ function addXP(points) {
 
 
 function updateXP() {
-
-    const element =
-        document.getElementById(
-            "xpValue"
-        );
-
-
+    const element = document.getElementById("xpValue");
     if (element) {
-
-        element.textContent =
-            xp;
-
+        if (typeof window.aerivaCountUp === "function") {
+            window.aerivaCountUp(element, xp);
+        } else {
+            element.textContent = xp;
+        }
     }
-
 }
 
 
@@ -5143,7 +5248,11 @@ function updateDynamicVitals() {
 
     // Render Health Score UI
     if (healthValEl) {
-        healthValEl.textContent = totalHealthScore;
+        if (typeof window.aerivaCountUp === "function") {
+            window.aerivaCountUp(healthValEl, totalHealthScore);
+        } else {
+            healthValEl.textContent = totalHealthScore;
+        }
     }
     if (healthRadialEl) {
         const degrees = Math.round((totalHealthScore / 100) * 360);
@@ -5223,7 +5332,11 @@ function updateDynamicVitals() {
 
     // Render Energy UI
     if (energyValEl) {
-        energyValEl.textContent = `${totalEnergy}%`;
+        if (typeof window.aerivaCountUp === "function") {
+            window.aerivaCountUp(energyValEl, totalEnergy, "%");
+        } else {
+            energyValEl.textContent = `${totalEnergy}%`;
+        }
     }
     if (energyFillEl) {
         energyFillEl.style.width = `${totalEnergy}%`;
@@ -5670,9 +5783,9 @@ function appendAerivaMessage(role, text) {
 
     if (role === "bot") {
         const botAvatar = document.createElement("img");
-        botAvatar.src = "/static/aeriva-bot.jpg";
-        botAvatar.alt = "AERIVA";
-        botAvatar.className = "bot-avatar-tiny";
+        botAvatar.src = "/static/trainer-character.jpg";
+        botAvatar.alt = "Coach";
+        botAvatar.className = "bot-avatar-tiny coach-avatar-sm";
         row.appendChild(botAvatar);
     }
 
@@ -5695,9 +5808,9 @@ function showAerivaTypingIndicator() {
     row.className = "aeriva-msg-row bot-msg";
 
     const botAvatar = document.createElement("img");
-    botAvatar.src = "/static/aeriva-bot.jpg";
-    botAvatar.alt = "AERIVA";
-    botAvatar.className = "bot-avatar-tiny";
+    botAvatar.src = "/static/trainer-character.jpg";
+    botAvatar.alt = "Coach";
+    botAvatar.className = "bot-avatar-tiny coach-avatar-sm";
     row.appendChild(botAvatar);
 
     const indicator = document.createElement("div");

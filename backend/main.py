@@ -1786,6 +1786,100 @@ def get_exercise_recommendation(
 
 
 # =========================================
+# EXERCISE VIDEO PLAN (DIET & STEP DRIVEN)
+# =========================================
+
+@app.get("/exercise/video-plan")
+def get_exercise_video_plan(
+    steps: int = 0,
+    authorization: str | None = Header(default=None)
+):
+    """
+    Returns ordered video exercise plan and reason text based on user's current diet and step count.
+    Uses frontend/videos/manifest.json.
+    """
+    manifest_path = FRONTEND_DIR / "videos" / "manifest.json"
+    manifest_data = {}
+    if manifest_path.exists():
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                manifest_data = json.load(f)
+        except Exception:
+            manifest_data = {}
+
+    exercises_dict = manifest_data.get("exercises", {})
+    diet_mappings = manifest_data.get("diet_mappings", {})
+
+    user = None
+    if authorization:
+        try:
+            user = get_current_user(authorization)
+        except Exception:
+            user = None
+
+    db = SessionLocal()
+    try:
+        daily_calories = 0.0
+        if user:
+            today_logs = (
+                db.query(FoodLog)
+                .filter(FoodLog.user_id == user.id, FoodLog.log_date == date.today())
+                .all()
+            )
+            daily_calories = sum(float(l.calories or 0.0) for l in today_logs)
+
+        # Baseline TDEE & burn
+        weight_kg = float(user.weight or 68.0) if (user and user.weight) else 68.0
+        raw_height = float(user.height or 172.0) if (user and user.height) else 172.0
+        height_cm = (raw_height * 30.48) if (raw_height < 10.0) else raw_height
+        age = int(user.age or 25) if (user and user.age) else 25
+        bmr = (10 * weight_kg) + (6.25 * height_cm) - (5 * age) + 5
+        tdee = bmr * 1.25
+        step_burn = round(steps * 0.04, 1)
+        net_calorie_balance = round(daily_calories - (tdee + step_burn), 1)
+
+        # Categorize
+        if daily_calories > 2100 or net_calorie_balance > 250:
+            category = "calorie_surplus"
+        elif daily_calories < 1200 or net_calorie_balance < -350:
+            category = "calorie_deficit"
+        elif steps < 2000:
+            category = "sedentary"
+        else:
+            category = "balanced"
+
+        mapping = diet_mappings.get(category, diet_mappings.get("balanced", {
+            "reason": "Balanced daily activity & strength session",
+            "exercises": ["warmup", "squat", "pushup", "jumping_jacks", "plank", "stretching"]
+        }))
+
+        plan_exercises = []
+        for ex_key in mapping.get("exercises", []):
+            if ex_key in exercises_dict:
+                plan_exercises.append(exercises_dict[ex_key])
+            else:
+                plan_exercises.append({
+                    "key": ex_key,
+                    "title": ex_key.replace("_", " ").title(),
+                    "poster": "/static/athlete-squat.jpg",
+                    "file_mp4": f"/static/videos/{ex_key}.mp4",
+                    "file_webm": f"/static/videos/{ex_key}.webm",
+                    "target_muscles": "Full Body",
+                    "form_tips": ["Maintain controlled form and steady breathing."]
+                })
+
+        return {
+            "category": category,
+            "reason": mapping.get("reason", "Customized daily workout"),
+            "daily_calories": round(daily_calories),
+            "net_calorie_balance": round(net_calorie_balance),
+            "exercises": plan_exercises
+        }
+    finally:
+        db.close()
+
+
+# =========================================
 # HEALTH ANALYSIS
 # =========================================
 

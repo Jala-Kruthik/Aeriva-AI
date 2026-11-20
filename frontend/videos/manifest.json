@@ -1,0 +1,199 @@
+{
+  "version": "1.0",
+  "exercises": {
+    "pushup": {
+      "key": "pushup",
+      "title": "Incline Push-Ups / Knee Push-Ups",
+      "file_mp4": "/static/videos/pushup.mp4",
+      "file_webm": "/static/videos/pushup.webm",
+      "poster": "/static/athlete-pushup.jpg",
+      "target_muscles": "Pectorals, Triceps & Anterior Deltoids",
+      "form_tips": [
+        "Keep core braced and spine neutral throughout",
+        "Lower until elbows reach 90° angle",
+        "Press up explosively while exhaling",
+        "Avoid flaring elbows wider than 45°"
+      ],
+      "loop": true,
+      "duration_seconds": 8
+    },
+    "squat": {
+      "key": "squat",
+      "title": "Bodyweight Squats to Overhead Reach",
+      "file_mp4": "/static/videos/squat.mp4",
+      "file_webm": "/static/videos/squat.webm",
+      "poster": "/static/athlete-squat.jpg",
+      "target_muscles": "Quadriceps, Glutes & Hamstrings",
+      "form_tips": [
+        "Keep knees tracking over toes",
+        "Descend until thighs are parallel to floor",
+        "Drive through heels on the way up",
+        "Reach arms overhead at full extension"
+      ],
+      "loop": true,
+      "duration_seconds": 8
+    },
+    "plank": {
+      "key": "plank",
+      "title": "Plank Hold & Core Bracing",
+      "file_mp4": "/static/videos/plank.mp4",
+      "file_webm": "/static/videos/plank.webm",
+      "poster": "/static/athlete-plank.jpg",
+      "target_muscles": "Core, Transverse Abdominis & Erectors",
+      "form_tips": [
+        "Maintain a straight line from head to heels",
+        "Engage glutes and brace core",
+        "Avoid sagging hips or piking up",
+        "Breathe steadily throughout"
+      ],
+      "loop": true,
+      "duration_seconds": 10
+    },
+    "jumping_jacks": {
+      "key": "jumping_jacks",
+      "title": "Jumping Jacks / Walk-Jog Intervals",
+      "file_mp4": "/static/videos/jumping-jacks.mp4",
+      "file_webm": "/static/videos/jumping-jacks.webm",
+      "poster": "/static/athlete-jumping-jacks.jpg",
+      "target_muscles": "Cardiovascular System & Full Body",
+      "form_tips": [
+        "Land softly on balls of feet",
+        "Keep arms fully extended on each rep",
+        "Maintain rhythmic breathing",
+        "30s sprint / 30s walk intervals"
+      ],
+      "loop": true,
+      "duration_seconds": 8
+    },
+    "cat_cow": {
+      "key": "cat_cow",
+      "title": "Cat-Cow Spinal Flow",
+      "file_mp4": "/static/videos/cat-cow.mp4",
+      "file_webm": "/static/videos/cat-cow.webm",
+      "poster": "/static/athlete-cat-cow.jpg",
+      "target_muscles": "Spine, Erectors & Abdominals",
+      "form_tips": [
+        "Inhale into cow: arch spine, lift tailbone and chest",
+        "Exhale into cat: round spine, tuck chin and pelvis",
+        "Move slowly and fluidly between positions",
+        "Keep wrists directly under shoulders"
+      ],
+      "loop": true,
+      "duration_seconds": 8
+    },
+    "glute_bridge": {
+      "key": "glute_bridge",
+      "title": "Glute Bridge & Bird-Dog Extensions",
+      "file_mp4": "/static/videos/glute-bridge.mp4",
+      "file_webm": "/static/videos/glute-bridge.webm",
+      "poster": "/static/athlete-glute-bridge.jpg",
+      "target_muscles": "Glutes, Hamstrings & Lower Back",
+      "form_tips": [
+        "Drive hips up by squeezing glutes at the top",
+        "Keep feet flat, shoulder-width apart",
+        "Hold the top position for 2 seconds",
+        "Lower with control, don't drop"
+      ],
+      "loop": true,
+      "duration_seconds": 8
+    },
+    "childs_pose": {
+      "key": "childs_pose",
+      "title": "Child's Pose & Deep Hip Openers",
+      "file_mp4": "/static/videos/childs-pose.mp4",
+      "file_webm": "/static/videos/childs-pose.webm",
+      "poster": "/static/athlete-childs-pose.jpg",
+      "target_muscles": "Hips, Lower Lumbar & Lats",
+      "form_tips": [
+        "Spread knees wider than torso",
+        "Sink hips back onto heels",
+        "Reach arms forward, forehead on mat",
+        "Breathe deeply into lower back"
+      ],
+      "loop": true,
+      "duration_seconds": 10
+    },
+    "surya_namaskar": {
+      "key": "surya_namaskar",
+      "title": "Surya Namaskar (Sun Salutation)",
+      "file_mp4": "/static/videos/surya-namaskar.mp4",
+      "file_webm": "/static/videos/surya-namaskar.webm",
+      "poster": "/static/athlete-surya-namaskar.jpg",
+      "target_muscles": "Full Body Flexibility & Strength",
+      "form_tips": [
+        "Flow through all 12 poses continuously",
+        "Coordinate breath with each movement",
+        "Maintain balance and alignment",
+        "Start slow, build speed gradually"
+      ],
+      "loop": true,
+      "duration_seconds": 10
+    },
+    "warmup": {
+      "key": "warmup",
+      "title": "Brisk Pace Warmup & Torso Twists",
+      "file_mp4": "/static/videos/warmup.mp4",
+      "file_webm": "/static/videos/warmup.webm",
+      "poster": "/static/athlete-squat.jpg",
+      "target_muscles": "Spine Rotators & Dynamic Joints",
+      "form_tips": [
+        "March briskly in place with arm swings",
+        "Rotate torso gently left and right",
+        "Increase range of motion gradually",
+        "Keep shoulders relaxed"
+      ],
+      "loop": true,
+      "duration_seconds": 6
+    },
+    "walk_jog": {
+      "key": "walk_jog",
+      "title": "Brisk Walk-Jog Intervals",
+      "file_mp4": "/static/videos/walk-jog.mp4",
+      "file_webm": "/static/videos/walk-jog.webm",
+      "poster": "/static/athlete-jumping-jacks.jpg",
+      "target_muscles": "Cardiovascular Endurance & Calves",
+      "form_tips": [
+        "Alternate 30s jog with 30s brisk walk",
+        "Land softly on balls of feet",
+        "Maintain upright posture",
+        "Swing arms naturally"
+      ],
+      "loop": true,
+      "duration_seconds": 8
+    },
+    "stretching": {
+      "key": "stretching",
+      "title": "Full Body Spine & Shoulder Release",
+      "file_mp4": "/static/videos/stretching.mp4",
+      "file_webm": "/static/videos/stretching.webm",
+      "poster": "/static/athlete-squat.jpg",
+      "target_muscles": "Full Body Posterior Chain",
+      "form_tips": [
+        "Interlace fingers and stretch overhead",
+        "Side-bend gently each direction",
+        "Roll shoulders forward and backward",
+        "Deep diaphragmatic breathing"
+      ],
+      "loop": true,
+      "duration_seconds": 8
+    }
+  },
+  "diet_mappings": {
+    "calorie_surplus": {
+      "reason": "Calorie surplus today — fat-burn circuit to balance energy",
+      "exercises": ["warmup", "squat", "jumping_jacks", "pushup", "walk_jog", "stretching"]
+    },
+    "calorie_deficit": {
+      "reason": "Low calorie intake — mobility and recovery focus",
+      "exercises": ["warmup", "cat_cow", "glute_bridge", "childs_pose", "surya_namaskar", "stretching"]
+    },
+    "sedentary": {
+      "reason": "Under 2,000 steps — short movement circuit to get moving",
+      "exercises": ["warmup", "squat", "plank", "cat_cow", "stretching"]
+    },
+    "balanced": {
+      "reason": "Balanced intake — standard strength & cardio session",
+      "exercises": ["warmup", "squat", "pushup", "jumping_jacks", "plank", "stretching"]
+    }
+  }
+}

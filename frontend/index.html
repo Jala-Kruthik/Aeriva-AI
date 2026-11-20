@@ -11,7 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/style.css?v=10.0">
+    <link rel="stylesheet" href="/static/style.css?v=11.0">
+    <link rel="stylesheet" href="/static/aeriva-3d.css?v=11.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -1157,7 +1158,7 @@
 
                 <!-- SCHEDULED EXERCISE MODE (TRIGGER TO OPEN POPUP) -->
                 <section class="glass-panel">
-                    <div class="tab2-hero-banner">
+                    <div class="tab2-hero-banner trainer-hero-container">
                         <div>
                             <p class="section-kicker">
                                 02 / WHAT TO DO
@@ -1166,6 +1167,10 @@
                                 MOVE YOUR<br>BODY.
                             </h2>
                         </div>
+                        <div class="coach-speech-bubble" id="coachHeroBubble">
+                            <span>"Ready to move? Let's hit today's target together!"</span>
+                        </div>
+                        <img src="/static/trainer-cutout.png" alt="Coach" class="trainer-cutout depth-layer-fg" id="trainerHeroCutout">
                         <div class="exercise-meta-stats">
                             <div class="exercise-meta-box">
                                 <span class="meta-val" id="exerciseMetaBurn">350</span>
@@ -1674,9 +1679,40 @@
             <!-- 2-COLUMN STAGE GRID MATCHING MOCKUP 3 -->
             <div class="popup-stage-grid">
                 <div class="popup-stage-left">
+                    <!-- VIEW MODE TOGGLE (TRAINER VIDEO vs AI POSE CANVAS) -->
+                    <div class="view-mode-toggle" id="exerciseViewModeToggle">
+                        <button type="button" class="view-mode-btn" data-mode="video" onclick="window.aerivaSwitchViewMode && window.aerivaSwitchViewMode('video')">📹 TRAINER VIDEO</button>
+                        <button type="button" class="view-mode-btn active" data-mode="canvas" onclick="window.aerivaSwitchViewMode && window.aerivaSwitchViewMode('canvas')">🤖 AI POSE VIEW</button>
+                    </div>
+
                     <!-- ILLUSTRATION IMAGE OF HOW TO DO THAT EXERCISE -->
                     <div id="popupDiagramBox" class="exercise-popup-diagram-box">
                         <!-- SVG diagram inserted dynamically -->
+                    </div>
+
+                    <!-- TRAINER VIDEO PLAYER CONTAINER -->
+                    <div id="trainerVideoContainer" class="trainer-video-container hidden">
+                        <video id="trainerVideoPlayer" class="trainer-video-player" playsinline loop muted preload="auto" poster="/static/athlete-squat.jpg"></video>
+                        <div class="trainer-video-overlay">
+                            <div class="video-top-bar">
+                                <span class="video-exercise-label" id="videoExerciseLabel">SQUATS</span>
+                                <span class="video-rep-counter" id="videoRepCounter">COACH MODE</span>
+                            </div>
+                            <div class="video-progress-bar">
+                                <div class="video-progress-fill" id="videoProgressFill" style="width: 0%;"></div>
+                            </div>
+                            <div class="video-controls-bar">
+                                <button type="button" class="video-speed-btn" onclick="window.aerivaSetPlaybackRate && window.aerivaSetPlaybackRate(0.5)">0.5x</button>
+                                <button type="button" class="video-speed-btn active" onclick="window.aerivaSetPlaybackRate && window.aerivaSetPlaybackRate(1.0)">1.0x</button>
+                                <button type="button" class="video-speed-btn" onclick="window.aerivaSetPlaybackRate && window.aerivaSetPlaybackRate(1.5)">1.5x</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WORKOUT REASON STICKER (DIET-DRIVEN) -->
+                    <div class="workout-reason-sticker" id="popupWorkoutReasonSticker">
+                        <span class="reason-icon">💡</span>
+                        <span id="popupWorkoutReasonText">Personalized circuit based on today's nutrition & step burn.</span>
                     </div>
                 </div>
 
@@ -2079,13 +2115,13 @@
         <div id="aerivaChatHeader" class="aeriva-chat-header">
             <div class="header-bot-info">
                 <div class="header-avatar-wrap">
-                    <img src="/static/aeriva-bot.jpg" alt="AERIVA" class="header-avatar-img">
+                    <img src="/static/trainer-character.jpg" alt="Coach" class="header-avatar-img coach-avatar">
                     <span class="online-indicator-dot"></span>
                 </div>
                 <div>
                     <div class="bot-name-row">
                         <h3 id="aerivaChatTitle" class="bot-name">AERIVA</h3>
-                        <span class="bot-tag">AI COPILOT</span>
+                        <span class="bot-tag">AI COACH</span>
                     </div>
                     <span class="bot-status">● Ready to guide you anywhere</span>
                 </div>
@@ -2131,7 +2167,13 @@
 </div>
 
 
-<script src="/static/app.js?v=10.0"></script>
+<script src="/static/app.js?v=11.0"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
+<script src="/static/aeriva-animations.js?v=11.0" defer></script>
+<script src="/static/aeriva-3d.js?v=11.0" defer></script>
 
 </body>
 </html>

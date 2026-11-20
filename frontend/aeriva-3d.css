@@ -1,0 +1,581 @@
+/* ==========================================================================
+   AERIVA AI — 3D DEPTH & ANIMATION LAYER
+   Layered on top of Stadium Broadcast design system.
+   No blur, no glow, no glass. 3D from real perspective and parallax.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   PERFORMANCE & MOTION PREFERENCES
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .aeriva-3d-scene,
+  .depth-parallax-layer,
+  .tilt-card,
+  .hero-3d-element {
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   PERSPECTIVE CONTAINERS
+   -------------------------------------------------------------------------- */
+.perspective-root {
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+}
+
+.card-3d-wrap {
+  perspective: 900px;
+  transform-style: preserve-3d;
+}
+
+.tilt-card {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.tilt-card:hover {
+  z-index: 2;
+}
+
+/* --------------------------------------------------------------------------
+   PAGE INTRO ANIMATION
+   -------------------------------------------------------------------------- */
+.aeriva-intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+}
+
+.aeriva-intro-overlay.done {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.intro-brand-mark {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 12vw, 120px);
+  color: var(--volt);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  transform: translateY(40px) rotateX(15deg);
+}
+
+.intro-brand-mark.reveal {
+  opacity: 1;
+  transform: translateY(0) rotateX(0);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --------------------------------------------------------------------------
+   SCROLL REVEAL ANIMATIONS
+   -------------------------------------------------------------------------- */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(32px) rotateX(12deg);
+  transform-origin: center bottom;
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0) rotateX(0);
+}
+
+/* Stagger children */
+.scroll-reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal-stagger.revealed > *:nth-child(1) { transition-delay: 0.05s; }
+.scroll-reveal-stagger.revealed > *:nth-child(2) { transition-delay: 0.10s; }
+.scroll-reveal-stagger.revealed > *:nth-child(3) { transition-delay: 0.15s; }
+.scroll-reveal-stagger.revealed > *:nth-child(4) { transition-delay: 0.20s; }
+.scroll-reveal-stagger.revealed > *:nth-child(5) { transition-delay: 0.25s; }
+.scroll-reveal-stagger.revealed > *:nth-child(6) { transition-delay: 0.30s; }
+
+.scroll-reveal-stagger.revealed > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   TAB SWITCH 3D FLIP
+   -------------------------------------------------------------------------- */
+.tab-flip-enter {
+  animation: tabFlipIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes tabFlipIn {
+  0% {
+    opacity: 0;
+    transform: perspective(900px) rotateY(-8deg) translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(900px) rotateY(0) translateX(0);
+  }
+}
+
+/* Hero colour wipe per tab */
+.hero-wipe-transition {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-wipe-transition::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--volt);
+  transform: translateX(-101%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.hero-wipe-transition.wipe-active::after {
+  animation: heroWipe 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes heroWipe {
+  0% { transform: translateX(-101%); }
+  40% { transform: translateX(0); }
+  100% { transform: translateX(101%); }
+}
+
+/* --------------------------------------------------------------------------
+   BUTTON 3D PRESS
+   -------------------------------------------------------------------------- */
+.btn-3d {
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  transform: translateZ(0);
+}
+
+.btn-3d:active {
+  transform: translate(3px, 3px) translateZ(-2px);
+  box-shadow: 1px 1px 0 var(--ink) !important;
+}
+
+/* --------------------------------------------------------------------------
+   COUNT-UP NUMBER ANIMATION
+   -------------------------------------------------------------------------- */
+.count-up {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+.count-up.animating {
+  transition: none;
+}
+
+/* --------------------------------------------------------------------------
+   3D WEBGL SCENE CONTAINERS
+   -------------------------------------------------------------------------- */
+.aeriva-3d-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.aeriva-3d-scene canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Skeleton while 3D loads */
+.webgl-skeleton {
+  position: absolute;
+  inset: 0;
+  background: var(--sand);
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.webgl-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* --------------------------------------------------------------------------
+   PARALLAX DEPTH LAYERS
+   -------------------------------------------------------------------------- */
+.parallax-container {
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.depth-parallax-layer {
+  position: absolute;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.depth-layer-bg { z-index: 0; }
+.depth-layer-mid { z-index: 1; }
+.depth-layer-fg { z-index: 2; }
+
+/* --------------------------------------------------------------------------
+   TRAINER / COACH STYLES
+   -------------------------------------------------------------------------- */
+.trainer-hero-container {
+  position: relative;
+  overflow: visible; /* Breaks out of box for depth */
+}
+
+.trainer-cutout {
+  position: absolute;
+  right: -20px;
+  bottom: -10px;
+  height: 110%;
+  max-height: 420px;
+  width: auto;
+  object-fit: contain;
+  z-index: 10;
+  filter: drop-shadow(6px 6px 0 var(--ink));
+  transform-style: preserve-3d;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.trainer-cutout-fallback {
+  transition: transform 0.1s ease-out;
+}
+
+/* Trainer speech bubble */
+.coach-speech-bubble {
+  position: absolute;
+  top: 12px;
+  right: 160px;
+  max-width: 220px;
+  background: var(--white);
+  color: var(--ink);
+  border: var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 11;
+  line-height: 1.4;
+}
+
+.coach-speech-bubble::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 18px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 10px solid var(--ink);
+}
+
+/* Coach avatar (chatbot, exercise popup) */
+.coach-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2.5px solid var(--pink);
+  object-fit: cover;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.coach-avatar-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--pink);
+  object-fit: cover;
+}
+
+/* --------------------------------------------------------------------------
+   EXERCISE VIDEO PLAYER (TRAINER VIDEO MODE)
+   -------------------------------------------------------------------------- */
+.trainer-video-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--ink);
+  border: var(--border-thick);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.trainer-video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.trainer-video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.trainer-video-overlay > * {
+  pointer-events: auto;
+}
+
+.video-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+.video-exercise-label {
+  background: var(--flare);
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.video-rep-counter {
+  background: var(--volt);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink);
+}
+
+.video-progress-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 10px 8px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.video-progress-fill {
+  height: 100%;
+  background: var(--volt);
+  border-radius: 2px;
+  transition: width 0.3s linear;
+}
+
+.video-controls-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.video-speed-btn {
+  background: rgba(255,255,255,0.15);
+  color: var(--white);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
+.video-speed-btn.active {
+  background: var(--volt);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* Video / Canvas toggle */
+.view-mode-toggle {
+  display: flex;
+  border: var(--border-sm);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.view-mode-btn {
+  flex: 1;
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  background: var(--paper);
+  color: var(--ink);
+  transition: background 0.1s ease;
+}
+
+.view-mode-btn.active {
+  background: var(--ink);
+  color: var(--volt);
+}
+
+/* Why this workout sticker */
+.workout-reason-sticker {
+  background: var(--sun);
+  color: var(--ink);
+  border: var(--border-sm);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 700;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workout-reason-sticker .reason-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   CONFETTI BURST
+   -------------------------------------------------------------------------- */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confettiFall 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(720deg) scale(0.3);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3D HEALTH VITALS — FALLBACK STYLES
+   When WebGL is unavailable, these ensure the existing 2D cards still work.
+   -------------------------------------------------------------------------- */
+.vital-card-3d-wrap {
+  position: relative;
+}
+
+.vital-card-3d-wrap .aeriva-3d-scene {
+  border-radius: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   SMOOTH SCROLL BODY (Lenis compatible)
+   -------------------------------------------------------------------------- */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE 3D ADJUSTMENTS
+   -------------------------------------------------------------------------- */
+@media (max-width: 860px) {
+  .trainer-cutout {
+    position: relative;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    max-height: 280px;
+    margin: 16px auto 0;
+    display: block;
+  }
+
+  .coach-speech-bubble {
+    position: relative;
+    top: auto;
+    right: auto;
+    max-width: 100%;
+    margin-top: 10px;
+  }
+
+  .coach-speech-bubble::after {
+    display: none;
+  }
+
+  .aeriva-3d-scene {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .trainer-cutout {
+    max-height: 220px;
+  }
+
+  .view-mode-toggle {
+    flex-direction: column;
+  }
+
+  .video-speed-btn {
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+}
