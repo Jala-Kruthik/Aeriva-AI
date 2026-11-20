@@ -918,13 +918,15 @@ label {
 }
 
 .vital-card .vital-status {
-  background: var(--flare);
-  color: var(--white);
+  background: var(--sand);
+  color: var(--ink);
   border: var(--border-sm);
   box-shadow: 2px 2px 0 var(--ink);
   font-size: 10.5px;
   padding: 4px 8px;
   border-radius: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .vital-title, .vital-sub {
@@ -1820,6 +1822,15 @@ label {
   height: 36px;
   border-radius: 8px;
   border: 1.5px solid var(--ink);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.aeriva-avatar-ring, .aeriva-halo-glow, .aeriva-trigger-tooltip {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .aeriva-chat-popup {

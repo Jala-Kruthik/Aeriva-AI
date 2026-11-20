@@ -5036,6 +5036,56 @@ function updateDynamicVitals() {
     const isWorkoutDone = workoutProg.isFinished || (localStorage.getItem(getWorkoutStorageKey()) === "true");
     const workoutStepsCompleted = (workoutProg.completedSteps || []).length;
 
+    const healthValEl = document.getElementById("healthValue");
+    const healthRadialEl = document.getElementById("healthRadial");
+    const healthStatusEl = document.getElementById("healthStatusText");
+    const energyValEl = document.getElementById("energyValue");
+    const energyFillEl = document.getElementById("energyFill");
+    const energyStatusEl = document.getElementById("energyStatusText");
+
+    // -------------------------------------------------------------
+    // ZERO-DATA GUARD: If user has NOT given any details / habits yet today,
+    // do not show an arbitrary failing score like 33% or 43%!
+    // Show neutral baseline "--" and "NO DATA YET" / "READY".
+    // -------------------------------------------------------------
+    const hasAnyLoggedData = (waterL > 0 || steps > 0 || calories > 0 || isWorkoutDone || workoutStepsCompleted > 0);
+
+    if (!hasAnyLoggedData) {
+        if (healthValEl) {
+            healthValEl.textContent = "--";
+        }
+        if (healthRadialEl) {
+            healthRadialEl.style.setProperty("--progress", "0deg");
+            healthRadialEl.style.background = "var(--sand)";
+        }
+        if (healthStatusEl) {
+            healthStatusEl.textContent = "NO DATA YET";
+            healthStatusEl.style.background = "var(--sand)";
+            healthStatusEl.style.color = "var(--ink)";
+            healthStatusEl.style.borderColor = "var(--ink)";
+        }
+
+        if (energyValEl) {
+            energyValEl.textContent = "--";
+        }
+        if (energyFillEl) {
+            energyFillEl.style.width = "0%";
+        }
+        if (energyStatusEl) {
+            energyStatusEl.textContent = "READY";
+            energyStatusEl.style.background = "var(--volt)";
+            energyStatusEl.style.color = "var(--ink)";
+            energyStatusEl.style.borderColor = "var(--ink)";
+        }
+
+        const meterBlocks = document.querySelectorAll(".segmented-meter .segmented-block");
+        meterBlocks.forEach(b => {
+            b.classList.remove("filled-volt");
+            b.style.background = "transparent";
+        });
+        return;
+    }
+
     // ==========================================
     // A. CALCULATE DAILY HEALTH SCORE (0 - 100%)
     // "Calculated from your sleep, meals & activity"
@@ -5086,38 +5136,37 @@ function updateDynamicVitals() {
             nutritionScore = hour < 12 ? 18 : 13;
         }
     } else {
-        if (hour < 11) nutritionScore = 18;
-        else if (hour < 15) nutritionScore = 12;
-        else nutritionScore = 8;
+        nutritionScore = 12;
     }
 
-    const totalHealthScore = Math.max(20, Math.min(100, Math.round(sleepScore + hydrationScore + activityScore + nutritionScore)));
+    const totalHealthScore = Math.max(30, Math.min(100, Math.round(sleepScore + hydrationScore + activityScore + nutritionScore)));
 
     // Render Health Score UI
-    const healthValEl = document.getElementById("healthValue");
-    const healthRadialEl = document.getElementById("healthRadial");
-    const healthStatusEl = document.getElementById("healthStatusText");
-
     if (healthValEl) {
         healthValEl.textContent = totalHealthScore;
     }
     if (healthRadialEl) {
         const degrees = Math.round((totalHealthScore / 100) * 360);
         healthRadialEl.style.setProperty("--progress", `${degrees}deg`);
+        healthRadialEl.style.background = "";
     }
     if (healthStatusEl) {
         if (totalHealthScore >= 88) {
             healthStatusEl.textContent = "OPTIMAL";
-            healthStatusEl.style.color = "#34D399";
-        } else if (totalHealthScore >= 75) {
+            healthStatusEl.style.background = "var(--mint)";
+            healthStatusEl.style.color = "var(--ink)";
+        } else if (totalHealthScore >= 70) {
             healthStatusEl.textContent = "GOOD";
-            healthStatusEl.style.color = "#10B981";
-        } else if (totalHealthScore >= 55) {
+            healthStatusEl.style.background = "var(--volt)";
+            healthStatusEl.style.color = "var(--ink)";
+        } else if (totalHealthScore >= 50) {
             healthStatusEl.textContent = "MODERATE";
-            healthStatusEl.style.color = "#FCD34D";
+            healthStatusEl.style.background = "var(--sun)";
+            healthStatusEl.style.color = "var(--ink)";
         } else {
             healthStatusEl.textContent = "NEEDS CARE";
-            healthStatusEl.style.color = "#F87171";
+            healthStatusEl.style.background = "var(--flare)";
+            healthStatusEl.style.color = "var(--white)";
         }
     }
 
@@ -5170,13 +5219,9 @@ function updateDynamicVitals() {
         exertionMod = -5;
     }
 
-    const totalEnergy = Math.max(15, Math.min(100, Math.round(circadianBase + sleepMod + hydMod + foodMod + exertionMod)));
+    const totalEnergy = Math.max(25, Math.min(100, Math.round(circadianBase + sleepMod + hydMod + foodMod + exertionMod)));
 
     // Render Energy UI
-    const energyValEl = document.getElementById("energyValue");
-    const energyFillEl = document.getElementById("energyFill");
-    const energyStatusEl = document.getElementById("energyStatusText");
-
     if (energyValEl) {
         energyValEl.textContent = `${totalEnergy}%`;
     }
@@ -5184,20 +5229,37 @@ function updateDynamicVitals() {
         energyFillEl.style.width = `${totalEnergy}%`;
     }
     if (energyStatusEl) {
-        if (totalEnergy >= 85) {
+        if (totalEnergy >= 80) {
             energyStatusEl.textContent = "PEAK";
-            energyStatusEl.style.color = "#67E8F9";
-        } else if (totalEnergy >= 65) {
+            energyStatusEl.style.background = "var(--volt)";
+            energyStatusEl.style.color = "var(--ink)";
+        } else if (totalEnergy >= 60) {
             energyStatusEl.textContent = "ACTIVE";
-            energyStatusEl.style.color = "#06B6D4";
+            energyStatusEl.style.background = "var(--mint)";
+            energyStatusEl.style.color = "var(--ink)";
         } else if (totalEnergy >= 45) {
             energyStatusEl.textContent = "STEADY";
-            energyStatusEl.style.color = "#FCD34D";
+            energyStatusEl.style.background = "var(--sun)";
+            energyStatusEl.style.color = "var(--ink)";
         } else {
             energyStatusEl.textContent = "LOW / REST";
-            energyStatusEl.style.color = "#FDA4AF";
+            energyStatusEl.style.background = "var(--flare)";
+            energyStatusEl.style.color = "var(--white)";
         }
     }
+
+    // Render the 5 segmented meter blocks
+    const filledBlocks = Math.max(1, Math.round((totalEnergy / 100) * 5));
+    const meterBlocks = document.querySelectorAll(".segmented-meter .segmented-block");
+    meterBlocks.forEach((b, idx) => {
+        if (idx < filledBlocks) {
+            b.classList.add("filled-volt");
+            b.style.background = "var(--volt)";
+        } else {
+            b.classList.remove("filled-volt");
+            b.style.background = "transparent";
+        }
+    });
 }
 
 
@@ -5726,6 +5788,51 @@ function handleAerivaChatSubmit(e) {
     sendAerivaMessage(text);
 }
 
+function getClientAerivaFallback(userText, isAuth) {
+    const t = (userText || "").toLowerCase();
+    if (isAuth || t.includes("login") || t.includes("sign in") || t.includes("register") || t.includes("account")) {
+        return `👋 Welcome to **AERIVA AI**!\n\n` +
+               `• If you already have an account: [action:focus_login|🔐 Sign In To Existing Account]\n` +
+               `• If you are new here: [action:switch_register|✨ Create A New Account]`;
+    }
+    if (t.includes("score") || t.includes("health score") || t.includes("energy") || t.includes("vitals") || t.includes("33") || t.includes("details")) {
+        return `📊 **Daily Health Score & Energy Calculation**\n\n` +
+               `Your Health Score and Energy Level track your daily habits across 4 pillars: Sleep, Hydration (+250ml cups), Nutrition (logged meals), and Physical Activity (steps and workouts).\n\n` +
+               `💡 *If you haven't given or logged any details yet today, your score stays at **-- (NO DATA YET)** until you record your first habit!*\n\n` +
+               `• [action:open_food|📷 Log Food / Scan Meal]\n` +
+               `• [action:tab_routine|📋 View Routine Timeline]\n` +
+               `• [action:open_exercise|⚡ Start Exercise Mode]`;
+    }
+    if (t.includes("food") || t.includes("meal") || t.includes("calorie") || t.includes("scan") || t.includes("nutrition")) {
+        return `🥗 **Food & Calorie Tracking**\n\n` +
+               `AERIVA lets you log food with our AI Camera Scanner or manual entry:\n\n` +
+               `• [action:open_food|📷 Open AI Food Camera Scanner]\n` +
+               `• [action:tab_routine|📋 View Today's Meal Windows]`;
+    }
+    if (t.includes("exercise") || t.includes("workout") || t.includes("fitness") || t.includes("pushup") || t.includes("squat")) {
+        return `⚡ **Guided Exercise Mode (Dashboard 2)**\n\n` +
+               `Follow 60FPS athletic form posture tracking, interval countdown timers, and rep counters (+25 XP awarded upon completion)!\n\n` +
+               `• [action:open_exercise|⚡ Start Guided Exercise Mode]\n` +
+               `• [action:tab_fitness|🏃 Go to Dashboard 2]`;
+    }
+    if (t.includes("precaution") || t.includes("safety") || t.includes("shield")) {
+        return `🛡️ **Health Precautions & Safety Shield (Dashboard 3)**\n\n` +
+               `Monitors your food balance, rest/recovery, and physical exertion to keep you safe from burnout.\n\n` +
+               `• [action:tab_precautions|🛡️ Open Dashboard 3 Precautions]`;
+    }
+    if (t.includes("routine") || t.includes("schedule") || t.includes("edit") || t.includes("sleep")) {
+        return `📅 **Daily Schedule & Routine**\n\n` +
+               `Synchronizes your meal windows, hydration, and deep work blocks.\n\n` +
+               `• [action:open_routine|⚙️ Edit Schedule Timings]\n` +
+               `• [action:tab_routine|📋 View Today's Schedule]`;
+    }
+    return `Hi! I'm **AERIVA**, your personal platform copilot. Explore everything on your dashboard:\n\n` +
+           `• [action:tab_routine|📋 Dashboard 1: Daily Routine]\n` +
+           `• [action:tab_fitness|⚡ Dashboard 2: Exercise Mode]\n` +
+           `• [action:tab_precautions|🛡️ Dashboard 3: Health Precautions]\n` +
+           `• [action:open_food|📷 Scan Meal with Camera]`;
+}
+
 async function sendAerivaMessage(userText) {
     if (!userText || aerivaIsWaiting) return;
     aerivaIsWaiting = true;
@@ -5765,29 +5872,16 @@ async function sendAerivaMessage(userText) {
         }
 
         const data = await res.json();
-        const botReply = data.reply || "I'm here to help! Could you please repeat that?";
+        const botReply = data.reply || getClientAerivaFallback(userText, onLoginScreen);
 
         appendAerivaMessage("bot", botReply);
         aerivaChatHistory.push({ role: "assistant", content: botReply });
     } catch (err) {
         console.error("Aeriva Chat Error:", err);
         removeAerivaTypingIndicator();
-        if (isUserOnLoginScreen()) {
-            appendAerivaMessage(
-                "bot",
-                `Welcome to AERIVA AI! Ready to get started?\n\n` +
-                `• [action:focus_login|🔐 Sign In To Existing Account]\n` +
-                `• [action:switch_register|✨ Create A New Account]`
-            );
-        } else {
-            appendAerivaMessage(
-                "bot",
-                `I'm having trouble connecting to the AI brain right now. In the meantime, you can explore:\n\n` +
-                `• [action:tab_routine|📋 Go to Dashboard 1: Daily Routine]\n` +
-                `• [action:tab_fitness|⚡ Go to Dashboard 2: Exercise Mode]\n` +
-                `• [action:tab_precautions|🛡️ Go to Dashboard 3: Health Precautions]`
-            );
-        }
+        const fallbackReply = getClientAerivaFallback(userText, isUserOnLoginScreen());
+        appendAerivaMessage("bot", fallbackReply);
+        aerivaChatHistory.push({ role: "assistant", content: fallbackReply });
     } finally {
         aerivaIsWaiting = false;
         if (sendBtn) sendBtn.disabled = false;
@@ -6023,6 +6117,13 @@ function initAerivaChatbot() {
 
     trigger.addEventListener("pointerup", finishTriggerDrag);
     trigger.addEventListener("pointercancel", finishTriggerDrag);
+
+    // Direct click/tap listener to guarantee instant chat opening
+    trigger.addEventListener("click", (e) => {
+        if (!triggerHasMoved) {
+            toggleAerivaChat();
+        }
+    });
 
     // Keyboard support (Enter or Space to open)
     trigger.addEventListener("keydown", (e) => {
