@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/style.css?v=9.0">
+    <link rel="stylesheet" href="/static/style.css?v=10.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -2066,15 +2066,10 @@
 <div id="aerivaChatWidget" class="aeriva-chat-wrapper" aria-label="AERIVA AI Copilot">
 
     <!-- FLOATING DRAGGABLE LAUNCHER BUTTON -->
-    <div id="aerivaChatTrigger" class="aeriva-trigger-btn" title="Chat with AERIVA (Drag anywhere)" role="button" tabindex="0">
-        <div class="aeriva-halo-glow"></div>
+    <div id="aerivaChatTrigger" class="aeriva-trigger-btn" title="Chat with AERIVA Copilot (Tap to open)" role="button" tabindex="0" onclick="handleAerivaTriggerClick(event)">
         <div class="aeriva-avatar-ring">
             <img src="/static/aeriva-bot.jpg" alt="AERIVA Robot Copilot" class="aeriva-avatar-img">
             <span class="aeriva-online-badge"></span>
-        </div>
-        <div class="aeriva-trigger-tooltip">
-            <span class="tooltip-badge">AI COPILOT</span>
-            <span class="tooltip-text">Hi! Need help? Drag me anywhere or tap to chat!</span>
         </div>
     </div>
 
@@ -2136,7 +2131,7 @@
 </div>
 
 
-<script src="/static/app.js?v=9.0"></script>
+<script src="/static/app.js?v=10.0"></script>
 
 </body>
 </html>

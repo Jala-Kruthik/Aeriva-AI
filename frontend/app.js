@@ -5499,6 +5499,7 @@ function updateAerivaQuickChips() {
     } else {
         chipsContainer.innerHTML = `
             <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('What does this webpage do? Give me a full tour.')">🗺️ Full Tour</button>
+            <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How is my Health Score and Energy calculated?')">📊 Health Score</button>
             <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How do I log my food using a photo?')">📷 Scan Food</button>
             <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('How does Exercise Mode work in Dashboard 2?')">⚡ Exercise Mode</button>
             <button type="button" class="chip-btn" onclick="sendAerivaQuickPrompt('Explain Dashboard 3 Health Precautions and Safety Shield.')">🛡️ Precautions</button>
@@ -5713,15 +5714,66 @@ function removeAerivaTypingIndicator() {
     if (existing) existing.remove();
 }
 
+let aerivaTriggerWasDragged = false;
+
+function handleAerivaTriggerClick(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    if (aerivaTriggerWasDragged) {
+        aerivaTriggerWasDragged = false;
+        return;
+    }
+    toggleAerivaChat();
+}
+window.handleAerivaTriggerClick = handleAerivaTriggerClick;
+
+function ensureAerivaPopupInViewport(popup) {
+    if (!popup) return;
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+
+    // Mobile screens: dock at bottom
+    if (winW < 560) {
+        popup.style.left = "auto";
+        popup.style.top = "auto";
+        popup.style.right = "12px";
+        popup.style.bottom = "84px";
+        popup.style.width = "calc(100vw - 24px)";
+        return;
+    }
+
+    const hasExplicitPos = popup.style.left && popup.style.left !== "auto";
+    if (hasExplicitPos) {
+        const rect = popup.getBoundingClientRect();
+        const popupW = popup.offsetWidth || 390;
+        const popupH = popup.offsetHeight || 520;
+        if (rect.right > winW || rect.bottom > winH || rect.left < 0 || rect.top < 0) {
+            popup.style.left = "auto";
+            popup.style.top = "auto";
+            popup.style.right = "24px";
+            popup.style.bottom = "90px";
+        }
+    } else {
+        popup.style.left = "auto";
+        popup.style.top = "auto";
+        popup.style.right = "24px";
+        popup.style.bottom = "90px";
+    }
+}
+
 function toggleAerivaChat(forceOpen = null) {
     const popup = document.getElementById("aerivaChatPopup");
     if (!popup) return;
 
-    const isHidden = popup.classList.contains("hidden");
+    const isHidden = popup.classList.contains("hidden") || popup.style.display === "none";
     const shouldOpen = forceOpen !== null ? forceOpen : isHidden;
 
     if (shouldOpen) {
         popup.classList.remove("hidden");
+        popup.style.display = "flex";
+        ensureAerivaPopupInViewport(popup);
         updateAerivaQuickChips();
 
         const input = document.getElementById("aerivaChatInput");
@@ -5750,12 +5802,17 @@ function toggleAerivaChat(forceOpen = null) {
         }
     } else {
         popup.classList.add("hidden");
+        popup.style.display = "none";
     }
 }
+window.toggleAerivaChat = toggleAerivaChat;
 
 function closeAerivaChat() {
     const popup = document.getElementById("aerivaChatPopup");
-    if (popup) popup.classList.add("hidden");
+    if (popup) {
+        popup.classList.add("hidden");
+        popup.style.display = "none";
+    }
 }
 
 function clearAerivaChat() {
@@ -5809,7 +5866,7 @@ function getClientAerivaFallback(userText, isAuth) {
                `• [action:open_food|📷 Open AI Food Camera Scanner]\n` +
                `• [action:tab_routine|📋 View Today's Meal Windows]`;
     }
-    if (t.includes("exercise") || t.includes("workout") || t.includes("fitness") || t.includes("pushup") || t.includes("squat")) {
+    if (t.includes("exercise") || t.includes("workout") || t.includes("fitness") || t.includes("pushup") || t.includes("squat") || t.includes("move")) {
         return `⚡ **Guided Exercise Mode (Dashboard 2)**\n\n` +
                `Follow 60FPS athletic form posture tracking, interval countdown timers, and rep counters (+25 XP awarded upon completion)!\n\n` +
                `• [action:open_exercise|⚡ Start Guided Exercise Mode]\n` +
@@ -5826,7 +5883,20 @@ function getClientAerivaFallback(userText, isAuth) {
                `• [action:open_routine|⚙️ Edit Schedule Timings]\n` +
                `• [action:tab_routine|📋 View Today's Schedule]`;
     }
-    return `Hi! I'm **AERIVA**, your personal platform copilot. Explore everything on your dashboard:\n\n` +
+    if (t.includes("water") || t.includes("hydration") || t.includes("drink")) {
+        return `💧 **Hydration Tracking**\n\n` +
+               `Drink water to boost focus and metabolism! Tap **+250 ML** on your Water card anytime.\n\n` +
+               `• [action:tab_routine|📋 View Water Card]`;
+    }
+    if (t.includes("step") || t.includes("walk")) {
+        return `👟 **Daily Step Counter**\n\n` +
+               `Aim for 10,000 steps daily. Log your step counts directly to gain XP.\n\n` +
+               `• [action:open_steps|👟 Log Steps Now]`;
+    }
+    return `Hi! I'm **AERIVA**, your personal platform copilot. Here is your quick navigation guide:\n\n` +
+           `• **Dashboard 1 (Routine)**: Daily schedule, hydration, and AI meal scanner.\n` +
+           `• **Dashboard 2 (Move)**: 60FPS guided exercises, posture guide, timers, and reps.\n` +
+           `• **Dashboard 3 (Safety)**: Clinical precautions, recovery index, and tomorrow's meal plan.\n\n` +
            `• [action:tab_routine|📋 Dashboard 1: Daily Routine]\n` +
            `• [action:tab_fitness|⚡ Dashboard 2: Exercise Mode]\n` +
            `• [action:tab_precautions|🛡️ Dashboard 3: Health Precautions]\n` +
@@ -6026,9 +6096,9 @@ function initAerivaChatbot() {
         const savedTriggerPos = localStorage.getItem("aeriva_trigger_pos");
         if (savedTriggerPos) {
             const { left, top } = JSON.parse(savedTriggerPos);
-            if (typeof left === "number" && typeof top === "number") {
-                const clampX = Math.max(8, Math.min(left, window.innerWidth - 86));
-                const clampY = Math.max(8, Math.min(top, window.innerHeight - 86));
+            if (typeof left === "number" && typeof top === "number" && !isNaN(left) && !isNaN(top)) {
+                const clampX = Math.max(8, Math.min(left, window.innerWidth - 68));
+                const clampY = Math.max(8, Math.min(top, window.innerHeight - 68));
                 trigger.style.left = `${clampX}px`;
                 trigger.style.top = `${clampY}px`;
                 trigger.style.right = "auto";
@@ -6039,9 +6109,9 @@ function initAerivaChatbot() {
         const savedPopupPos = localStorage.getItem("aeriva_popup_pos");
         if (savedPopupPos) {
             const { left, top } = JSON.parse(savedPopupPos);
-            if (typeof left === "number" && typeof top === "number") {
+            if (typeof left === "number" && typeof top === "number" && !isNaN(left) && !isNaN(top)) {
                 const popupWidth = popup.offsetWidth || 390;
-                const popupHeight = popup.offsetHeight || 580;
+                const popupHeight = popup.offsetHeight || 520;
                 const clampX = Math.max(8, Math.min(left, window.innerWidth - popupWidth - 8));
                 const clampY = Math.max(8, Math.min(top, window.innerHeight - popupHeight - 8));
                 popup.style.left = `${clampX}px`;
@@ -6062,11 +6132,13 @@ function initAerivaChatbot() {
     let triggerStartY = 0;
     let triggerInitLeft = 0;
     let triggerInitTop = 0;
-    let triggerHasMoved = false;
+    let hasMovedFar = false;
 
     trigger.addEventListener("pointerdown", (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
         isDraggingTrigger = true;
-        triggerHasMoved = false;
+        hasMovedFar = false;
+        aerivaTriggerWasDragged = false;
         triggerStartX = e.clientX;
         triggerStartY = e.clientY;
 
@@ -6074,7 +6146,9 @@ function initAerivaChatbot() {
         triggerInitLeft = rect.left;
         triggerInitTop = rect.top;
 
-        trigger.setPointerCapture(e.pointerId);
+        try {
+            trigger.setPointerCapture(e.pointerId);
+        } catch (_) {}
     });
 
     trigger.addEventListener("pointermove", (e) => {
@@ -6082,13 +6156,14 @@ function initAerivaChatbot() {
         const dx = e.clientX - triggerStartX;
         const dy = e.clientY - triggerStartY;
 
-        if (Math.hypot(dx, dy) > 5) {
-            triggerHasMoved = true;
+        if (Math.hypot(dx, dy) > 12) {
+            hasMovedFar = true;
+            aerivaTriggerWasDragged = true;
         }
 
-        if (triggerHasMoved) {
-            const width = trigger.offsetWidth;
-            const height = trigger.offsetHeight;
+        if (hasMovedFar) {
+            const width = trigger.offsetWidth || 58;
+            const height = trigger.offsetHeight || 58;
             const newX = Math.max(8, Math.min(triggerInitLeft + dx, window.innerWidth - width - 8));
             const newY = Math.max(8, Math.min(triggerInitTop + dy, window.innerHeight - height - 8));
 
@@ -6106,24 +6181,21 @@ function initAerivaChatbot() {
             trigger.releasePointerCapture(e.pointerId);
         } catch (_) {}
 
-        if (triggerHasMoved) {
+        if (hasMovedFar) {
             const rect = trigger.getBoundingClientRect();
             localStorage.setItem("aeriva_trigger_pos", JSON.stringify({ left: rect.left, top: rect.top }));
+            aerivaTriggerWasDragged = true;
+            setTimeout(() => {
+                aerivaTriggerWasDragged = false;
+            }, 350);
         } else {
-            // Tap/click without dragging -> Toggle Chat!
-            toggleAerivaChat();
+            // Standard tap or click: let handleAerivaTriggerClick handle toggleAerivaChat
+            aerivaTriggerWasDragged = false;
         }
     };
 
     trigger.addEventListener("pointerup", finishTriggerDrag);
     trigger.addEventListener("pointercancel", finishTriggerDrag);
-
-    // Direct click/tap listener to guarantee instant chat opening
-    trigger.addEventListener("click", (e) => {
-        if (!triggerHasMoved) {
-            toggleAerivaChat();
-        }
-    });
 
     // Keyboard support (Enter or Space to open)
     trigger.addEventListener("keydown", (e) => {
@@ -6155,7 +6227,9 @@ function initAerivaChatbot() {
             popupInitLeft = rect.left;
             popupInitTop = rect.top;
 
-            header.setPointerCapture(e.pointerId);
+            try {
+                header.setPointerCapture(e.pointerId);
+            } catch (_) {}
         });
 
         header.addEventListener("pointermove", (e) => {
@@ -6163,8 +6237,8 @@ function initAerivaChatbot() {
             const dx = e.clientX - popupStartX;
             const dy = e.clientY - popupStartY;
 
-            const width = popup.offsetWidth;
-            const height = popup.offsetHeight;
+            const width = popup.offsetWidth || 390;
+            const height = popup.offsetHeight || 520;
             const newX = Math.max(8, Math.min(popupInitLeft + dx, window.innerWidth - width - 8));
             const newY = Math.max(8, Math.min(popupInitTop + dy, window.innerHeight - height - 8));
 
