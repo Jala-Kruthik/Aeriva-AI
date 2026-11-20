@@ -129,23 +129,43 @@ function removeSavedAccount(email, ev) {
 }
 
 function selectSavedAccount(email) {
-    const emailInput = document.getElementById("loginEmail");
-    const passwordInput = document.getElementById("loginPassword");
-    const form = document.getElementById("loginForm");
-    if (form) {
-        form.classList.remove("hidden-form");
-    }
-    if (emailInput) {
-        emailInput.value = email;
-        if (passwordInput) {
-            passwordInput.focus();
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+        try {
+            google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    triggerGoogleButton("#googleSignInBtn");
+                }
+            });
+        } catch (e) {
+            triggerGoogleButton("#googleSignInBtn");
         }
+    } else {
+        triggerGoogleButton("#googleSignInBtn");
+    }
+}
+
+function toggleDirectLoginForm() {
+    triggerGoogleButton("#googleSignInBtn");
+}
+
+function triggerGoogleButton(containerSelector) {
+    const container = document.querySelector(containerSelector);
+    if (container) {
+        const btn = container.querySelector("div[role=button], button, iframe");
+        if (btn) {
+            btn.click();
+            return;
+        }
+    }
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+        google.accounts.id.prompt();
     }
 }
 
 function renderSavedAccounts() {
     const container = document.getElementById("savedAccountsContainer");
     const list = document.getElementById("savedAccountsList");
+    const googleWrapper = document.getElementById("googleSignInWrapper");
     if (!container || !list) return;
 
     let accounts = getSavedAccounts();
@@ -174,10 +194,13 @@ function renderSavedAccounts() {
     if (accounts.length === 0) {
         container.classList.add("hidden");
         list.innerHTML = "";
+        if (googleWrapper) googleWrapper.classList.remove("hidden");
         return;
     }
 
     container.classList.remove("hidden");
+    if (googleWrapper) googleWrapper.classList.add("hidden");
+
     list.innerHTML = accounts.map(acc => {
         const initial = (acc.name || acc.email || "K")[0].toUpperCase();
         const cleanName = typeof escapeHTML === "function" ? escapeHTML(acc.name || acc.email) : (acc.name || acc.email);
@@ -197,7 +220,7 @@ function renderSavedAccounts() {
                 <span class="box-icon">□</span>
                 <span>${cleanEmail}</span>
             </div>
-            <div class="add-account-chip-pink" onclick="toggleDirectLoginForm()" title="Add another account">
+            <div class="add-account-chip-pink" onclick="toggleDirectLoginForm()" title="Sign in with another Google account">
                 <span class="box-icon">□</span>
                 <span>Add account</span>
             </div>
@@ -208,15 +231,9 @@ function renderSavedAccounts() {
         `;
     }).join("");
 
-    // Hide manual form if saved accounts are present, so card matches Mockup 1
+    // Hide manual form completely
     const form = document.getElementById("loginForm");
     if (form) form.classList.add("hidden-form");
-
-    // Auto-fill login field if empty
-    const emailInput = document.getElementById("loginEmail");
-    if (emailInput && !emailInput.value.trim() && accounts.length > 0) {
-        emailInput.value = accounts[0].email;
-    }
 }
 
 
@@ -258,9 +275,15 @@ function showRegister() {
     const registerProfileStep = document.getElementById("registerProfileStep");
     const registerForm = document.getElementById("registerForm");
 
-    if (registerForm) registerForm.classList.remove("hidden");
-    if (registerGoogleStep) registerGoogleStep.classList.add("hidden");
-    if (registerProfileStep) registerProfileStep.classList.add("hidden");
+    if (registerForm) registerForm.classList.add("hidden");
+
+    // If profile step is already active (i.e. Google is already linked), keep profile step; otherwise show Google link step
+    if (registerProfileStep && !registerProfileStep.classList.contains("hidden")) {
+        if (registerGoogleStep) registerGoogleStep.classList.add("hidden");
+    } else {
+        if (registerGoogleStep) registerGoogleStep.classList.remove("hidden");
+        if (registerProfileStep) registerProfileStep.classList.add("hidden");
+    }
 
     const registerMessage = document.getElementById("registerMessage");
     if (registerMessage) registerMessage.textContent = "";
@@ -6509,13 +6532,10 @@ async function handleGoogleCredentialResponse(response) {
         localStorage.setItem("aeriva_user", JSON.stringify(data.user));
         if (data.user && data.user.email) {
             localStorage.setItem("aeriva_user_email", data.user.email);
+            rememberAccount(data.user.name || "User", data.user.email);
         }
         authToken = data.access_token;
         currentUser = data.user;
-        localStorage.setItem("aeriva_user", JSON.stringify(data.user));
-        if (data.user && data.user.email) {
-            localStorage.setItem("aeriva_user_email", data.user.email);
-        }
 
         const authScreen = document.getElementById("authScreen");
         const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");
@@ -6623,6 +6643,7 @@ async function handleGoogleProfileSubmit(event) {
         localStorage.setItem("aeriva_user", JSON.stringify(data.user));
         if (data.user && data.user.email) {
             localStorage.setItem("aeriva_user_email", data.user.email);
+            rememberAccount(data.user.name || name, data.user.email);
         }
 
         const authScreen = document.getElementById("authScreen");

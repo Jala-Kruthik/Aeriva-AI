@@ -615,6 +615,22 @@ label {
   margin-top: 10px;
 }
 
+.google-linked-badge {
+  background: var(--volt);
+  color: var(--ink);
+  border: var(--border-sm);
+  border-radius: var(--radius-sm);
+  box-shadow: 2.5px 2.5px 0 var(--ink);
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;

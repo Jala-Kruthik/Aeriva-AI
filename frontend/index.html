@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/style.css?v=11.0">
-    <link rel="stylesheet" href="/static/aeriva-3d.css?v=11.0">
+    <link rel="stylesheet" href="/static/style.css?v=12.0">
+    <link rel="stylesheet" href="/static/aeriva-3d.css?v=12.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -145,7 +145,7 @@
             </button>
         </div>
 
-        <!-- LOGIN FORM: EMAIL & PASSWORD + SAVED ACCOUNTS + GOOGLE -->
+        <!-- LOGIN BOX: ONLY EXISTING GOOGLE ACCOUNT SIGN IN -->
         <div id="loginBox">
             <div class="auth-heading">
                 <h2>
@@ -157,229 +157,57 @@
             </div>
 
             <!-- SAVED ACCOUNTS / QUICK SIGN-IN (SHOWN IF USER LOGGED IN BEFORE ON THIS DEVICE) -->
-            <div id="savedAccountsContainer" class="saved-accounts-box hidden">
-
+            <div id="savedAccountsContainer" class="saved-accounts-box">
                 <div id="savedAccountsList" class="saved-accounts-list"></div>
             </div>
 
-            <form id="loginForm" onsubmit="event.preventDefault(); loginUser();">
-                <div class="field-stack">
-                    <div class="field">
-                        <label for="loginEmail">
-                            EMAIL ADDRESS
-                        </label>
-                        <input
-                            id="loginEmail"
-                            type="email"
-                            autocomplete="email"
-                            placeholder="name@email.com"
-                            required
-                        >
-                    </div>
+            <!-- GOOGLE SIGN IN BUTTON CONTAINER (SHOWN WHEN NO SAVED ACCOUNT, OR FOR SWITCHING) -->
+            <div class="google-btn-container" id="googleSignInWrapper">
+                <div id="googleSignInBtn"></div>
+            </div>
 
-                    <div class="field">
-                        <label for="loginPassword">
-                            PASSWORD
-                        </label>
-                        <input
-                            id="loginPassword"
-                            type="password"
-                            autocomplete="current-password"
-                            placeholder="••••••••"
-                            required
-                        >
-                    </div>
+            <p id="loginMessage" class="form-message" aria-live="polite"></p>
 
-                    <div class="remember-row">
-                        <label class="remember-label">
-                            <input type="checkbox" id="rememberMeCheckbox" checked>
-                            <span>Remember this account on this device</span>
-                        </label>
-                    </div>
-
-                    <button
-                        class="neon-button primary large full"
-                        type="submit"
-                        id="loginSubmitBtn">
-                        <span>
-                            SIGN IN TO DASHBOARD
-                        </span>
-                        <span>
-                            →
-                        </span>
-                    </button>
-
-                    <p id="loginMessage" class="form-message" aria-live="polite"></p>
-
-                    <div class="auth-divider">
-                        <span>OR CONTINUE WITH GOOGLE</span>
-                    </div>
-
-                    <div class="google-btn-container" id="googleSignInWrapper">
-                        <div id="googleSignInBtn"></div>
-                    </div>
-
-                    <div class="google-trust-badge">
-                        <span>🔒 Protected by Encrypted Security &amp; Google OAuth</span>
-                    </div>
-                </div>
+            <!-- PRESERVED PROTECTED HOOKS (HIDDEN) -->
+            <form id="loginForm" class="hidden" style="display: none;" onsubmit="event.preventDefault(); loginUser();">
+                <input id="loginEmail" type="email">
+                <input id="loginPassword" type="password">
+                <input type="checkbox" id="rememberMeCheckbox" checked>
+                <button type="submit" id="loginSubmitBtn"></button>
             </form>
         </div>
 
-        <!-- REGISTER FORM: EMAIL & PASSWORD + PROFILE DETAILS + GOOGLE -->
+        <!-- REGISTER BOX: 2-STEP (STEP 1: GOOGLE LINK, STEP 2: PROFILE DETAILS) -->
         <div id="registerBox" class="hidden">
-            <div class="auth-heading">
-                <p class="section-kicker">
-                    CREATE ACCOUNT
-                </p>
-                <h2>
-                    Start your health journey.
-                </h2>
-                <p>
-                    AERIVA permanently stores and remembers your profile, meals, workouts, and safety precautions.
-                </p>
-            </div>
+            <!-- STEP 1: GOOGLE SIGN UP -->
+            <div id="registerGoogleStep">
+                <div class="auth-heading">
+                    <p class="section-kicker">
+                        CREATE ACCOUNT
+                    </p>
+                    <h2>
+                        Start your health journey.
+                    </h2>
+                    <p>
+                        Sign in with Google to create your account and save your progress.
+                    </p>
+                </div>
 
-            <form id="registerForm" onsubmit="event.preventDefault(); registerUser();">
-                <div class="field-stack">
-                    <div class="form-grid two">
-                        <div class="field">
-                            <label for="registerName">
-                                YOUR FULL NAME
-                            </label>
-                            <input
-                                id="registerName"
-                                type="text"
-                                autocomplete="name"
-                                placeholder="Enter your full name"
-                                required
-                            >
-                        </div>
-
-                        <div class="field">
-                            <label for="registerEmail">
-                                EMAIL ADDRESS
-                            </label>
-                            <input
-                                id="registerEmail"
-                                type="email"
-                                autocomplete="email"
-                                placeholder="name@email.com"
-                                required
-                            >
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label for="registerPassword">
-                            PASSWORD
-                        </label>
-                        <input
-                            id="registerPassword"
-                            type="password"
-                            autocomplete="new-password"
-                            placeholder="Create a strong password"
-                            required
-                        >
-                    </div>
-
-                    <div class="form-grid three">
-                        <div class="field">
-                            <label for="registerAge">
-                                AGE (YEARS)
-                            </label>
-                            <input
-                                id="registerAge"
-                                type="number"
-                                min="1"
-                                max="120"
-                                placeholder="e.g. 25"
-                                required
-                            >
-                        </div>
-
-                        <div class="field">
-                            <label for="registerHeight">
-                                HEIGHT (Feet)
-                            </label>
-                            <input
-                                id="registerHeight"
-                                type="number"
-                                step="0.1"
-                                min="1"
-                                max="9"
-                                placeholder="e.g. 5.9"
-                                required
-                            >
-                        </div>
-
-                        <div class="field">
-                            <label for="registerWeight">
-                                WEIGHT (KG)
-                            </label>
-                            <input
-                                id="registerWeight"
-                                type="number"
-                                step="0.1"
-                                min="1"
-                                max="300"
-                                placeholder="e.g. 68"
-                                required
-                            >
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label for="registerGoal">
-                            PRIMARY HEALTH GOAL
-                        </label>
-                        <select id="registerGoal" required>
-                            <option value="">
-                                Select your health goal
-                            </option>
-                            <option value="Build healthy habits" selected>
-                                Build healthy habits
-                            </option>
-                            <option value="Improve fitness">
-                                Improve fitness &amp; exercise
-                            </option>
-                            <option value="Improve sleep">
-                                Improve sleep quality
-                            </option>
-                            <option value="Manage weight">
-                                Manage weight
-                            </option>
-                            <option value="Increase energy">
-                                Increase energy
-                            </option>
-                        </select>
-                    </div>
-
-                    <button
-                        class="neon-button primary large full"
-                        type="submit"
-                        id="registerSubmitBtn">
-                        <span>
-                            CREATE ACCOUNT &amp; ENTER
-                        </span>
-                        <span>
-                            →
-                        </span>
-                    </button>
-
-                    <p id="registerMessage" class="form-message" aria-live="polite"></p>
-
-                    <div class="auth-divider">
-                        <span>OR SIGN UP WITH GOOGLE</span>
-                    </div>
-
+                <div class="field-stack" style="align-items: center; margin-top: 20px;">
                     <div class="google-btn-container" id="googleRegisterWrapper">
                         <div id="googleRegisterBtn"></div>
                     </div>
-                </div>
-            </form>
 
-            <!-- STEP 2: PROFILE DETAILS (SHOWN AFTER GOOGLE ACCOUNT LINKED IF NEEDED) -->
+                    <div class="auth-trust-line">
+                        <span class="box-icon">□</span>
+                        <span>Protected by Google OAuth 2.0</span>
+                    </div>
+
+                    <p id="registerMessage" class="form-message" aria-live="polite"></p>
+                </div>
+            </div>
+
+            <!-- STEP 2: PROFILE DETAILS (SHOWN AFTER GOOGLE ACCOUNT LINKED) -->
             <div id="registerProfileStep" class="hidden">
                 <div class="google-linked-badge" id="googleLinkedBanner">
                     <span class="badge-icon">✓</span>
@@ -400,12 +228,94 @@
 
                 <form id="googleProfileForm" onsubmit="handleGoogleProfileSubmit(event)">
                     <div class="field-stack">
+                        <div class="field">
+                            <label for="registerName">
+                                YOUR FULL NAME
+                            </label>
+                            <input
+                                id="registerName"
+                                type="text"
+                                autocomplete="name"
+                                placeholder="Enter your full name"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-grid three">
+                            <div class="field">
+                                <label for="registerAge">
+                                    AGE (YEARS)
+                                </label>
+                                <input
+                                    id="registerAge"
+                                    type="number"
+                                    min="1"
+                                    max="120"
+                                    placeholder="e.g. 25"
+                                    required
+                                >
+                            </div>
+
+                            <div class="field">
+                                <label for="registerHeight">
+                                    HEIGHT (Feet)
+                                </label>
+                                <input
+                                    id="registerHeight"
+                                    type="number"
+                                    step="0.1"
+                                    min="1"
+                                    max="9"
+                                    placeholder="e.g. 5.9"
+                                    required
+                                >
+                            </div>
+
+                            <div class="field">
+                                <label for="registerWeight">
+                                    WEIGHT (KG)
+                                </label>
+                                <input
+                                    id="registerWeight"
+                                    type="number"
+                                    step="0.1"
+                                    min="1"
+                                    max="300"
+                                    placeholder="e.g. 68"
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="registerGoal">
+                                PRIMARY HEALTH GOAL
+                            </label>
+                            <select id="registerGoal" required>
+                                <option value="Build healthy habits" selected>
+                                    Build healthy habits
+                                </option>
+                                <option value="Improve fitness">
+                                    Improve fitness &amp; exercise
+                                </option>
+                                <option value="Improve sleep">
+                                    Improve sleep quality
+                                </option>
+                                <option value="Manage weight">
+                                    Manage weight
+                                </option>
+                                <option value="Increase energy">
+                                    Increase energy
+                                </option>
+                            </select>
+                        </div>
+
                         <button
-                            class="neon-button primary"
+                            class="neon-button primary large full"
                             type="submit"
                             id="submitProfileBtn">
                             <span>
-                                COMPLETE PROFILE &amp; CONTINUE
+                                COMPLETE PROFILE &amp; ENTER
                             </span>
                             <span>
                                 →
@@ -416,6 +326,13 @@
                     </div>
                 </form>
             </div>
+
+            <!-- PRESERVED PROTECTED HOOKS (HIDDEN) -->
+            <form id="registerForm" class="hidden" style="display: none;" onsubmit="event.preventDefault(); registerUser();">
+                <input id="registerEmail" type="email">
+                <input id="registerPassword" type="password">
+                <button type="submit" id="registerSubmitBtn"></button>
+            </form>
         </div>
 
 
@@ -2167,13 +2084,13 @@
 </div>
 
 
-<script src="/static/app.js?v=11.0"></script>
+<script src="/static/app.js?v=12.0"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
-<script src="/static/aeriva-animations.js?v=11.0" defer></script>
-<script src="/static/aeriva-3d.js?v=11.0" defer></script>
+<script src="/static/aeriva-animations.js?v=12.0" defer></script>
+<script src="/static/aeriva-3d.js?v=12.0" defer></script>
 
 </body>
 </html>
