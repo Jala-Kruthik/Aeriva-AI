@@ -325,6 +325,8 @@ async function registerUser() {
         localStorage.setItem("aeriva_user_email", currentUser.email);
 
         localStorage.setItem("aeriva_active_dashboard_tab", "routine");
+    const dashEl = document.getElementById("dashboardScreen");
+    if (dashEl) dashEl.setAttribute("data-active-tab", tab || "routine");
         switchDashboardTab("routine");
         await loadDashboard();
 
@@ -393,6 +395,8 @@ async function loginUser() {
 
         // Always enter Dashboard 1 (Daily Routine) directly upon login
         localStorage.setItem("aeriva_active_dashboard_tab", "routine");
+    const dashEl = document.getElementById("dashboardScreen");
+    if (dashEl) dashEl.setAttribute("data-active-tab", tab || "routine");
         switchDashboardTab("routine");
         await loadDashboard();
 
@@ -528,6 +532,8 @@ function switchDashboardTab(tab) {
         if (corner1Btn) corner1Btn.classList.add("active");
         if (view1) view1.classList.remove("hidden");
         localStorage.setItem("aeriva_active_dashboard_tab", "routine");
+    const dashEl = document.getElementById("dashboardScreen");
+    if (dashEl) dashEl.setAttribute("data-active-tab", tab || "routine");
     }
 }
 

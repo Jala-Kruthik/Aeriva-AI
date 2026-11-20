@@ -117,20 +117,7 @@
         <!-- RIGHT COLUMN: AUTH TERMINAL (SIGN IN & REGISTER) -->
         <div class="auth-terminal glass-panel arena-auth-card">
 
-        <div class="brand-lockup">
-            <div class="brand-mark">
-                A
-            </div>
 
-            <div>
-                <p class="eyebrow">
-                    AERIVA HEALTH
-                </p>
-                <h1>
-                    AERIVA AI
-                </h1>
-            </div>
-        </div>
 
         <div class="terminal-status">
             <span class="status-dot"></span>
@@ -652,12 +639,7 @@
                     <p class="eyebrow">
                         AERIVA HEALTH DASHBOARD
                     </p>
-                    <h1>
-                        Welcome,
-                        <span id="userName">
-                            Player
-                        </span>
-                    </h1>
+                    <h1>Hey, <span id="userName">Kruthik</span></h1>
                 </div>
 
                 <!-- TOP FLOATING PILL STATUS (MATCHES LOGIN PAGE) -->
@@ -680,7 +662,7 @@
                         onclick="switchDashboardTab('routine')"
                         title="Switch to Dashboard 1: Daily Routine">
                         <span class="dash-num-tag">1</span>
-                        <span>Daily Routine</span>
+                        <span>Routine</span>
                     </button>
                     <button
                         id="cornerTab2Btn"
@@ -689,7 +671,7 @@
                         onclick="switchDashboardTab('fitness')"
                         title="Switch to Dashboard 2: What To Do">
                         <span class="dash-num-tag">2</span>
-                        <span>What To Do</span>
+                        <span>Move</span>
                     </button>
                     <button
                         id="cornerTab3Btn"
@@ -698,7 +680,7 @@
                         onclick="switchDashboardTab('precautions')"
                         title="Switch to Dashboard 3: Precautions & Guidance">
                         <span class="dash-num-tag">3</span>
-                        <span>Precautions</span>
+                        <span>Safety</span>
                     </button>
                 </div>
             </div>
@@ -738,8 +720,8 @@
                     onclick="logoutUser()"
                     title="Logout from Aeriva"
                     aria-label="Logout">
-                    <span class="logout-icon">⏻</span>
-                    <span class="logout-text">LOGOUT</span>
+                    <span class="box-icon">□</span>
+                    <span class="logout-text">Logout</span>
                 </button>
             </div>
         </header>
@@ -996,6 +978,38 @@
                                     kcal
                                 </small>
                             </span>
+                        </div>
+
+                                                <!-- 3 MACRO PROGRESS BARS (MOCKUP 2 MATCH) -->
+                        <div class="macro-bars-stack">
+                            <div class="macro-row">
+                                <span class="macro-label">Protein</span>
+                                <div class="macro-bar-track">
+                                    <div class="macro-bar-fill protein" style="width: 35%;"></div>
+                                </div>
+                            </div>
+                            <div class="macro-row">
+                                <span class="macro-label">Carbs</span>
+                                <div class="macro-bar-track">
+                                    <div class="macro-bar-fill carbs" style="width: 65%;"></div>
+                                </div>
+                            </div>
+                            <div class="macro-row">
+                                <span class="macro-label">Fats</span>
+                                <div class="macro-bar-track">
+                                    <div class="macro-bar-fill fats" style="width: 25%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ACTION BUTTONS: LOG FOOD & SCAN -->
+                        <div class="food-intake-actions">
+                            <button class="neon-button primary" type="button" onclick="openFoodModal()">
+                                <span class="box-icon">□</span> LOG FOOD
+                            </button>
+                            <button class="neon-button outline" type="button" onclick="openFoodModal(null, true)">
+                                <span class="box-icon">□</span> SCAN
+                            </button>
                         </div>
 
                         <div id="foodList" class="food-list"></div>
@@ -1305,7 +1319,7 @@
                                 id="precautionFoodActionBtn"
                                 type="button"
                                 onclick="openFoodModal()">
-                                + LOG MEAL NOW
+                                <span class="box-icon">□</span> LOG MEAL
                             </button>
                         </div>
 
@@ -1338,7 +1352,7 @@
                                 id="precautionRestActionBtn"
                                 type="button"
                                 onclick="openRoutineModal()">
-                                ⚙️ OPTIMIZE ROUTINE REST
+                                <span class="box-icon">□</span> VIEW ROUTINE
                             </button>
                         </div>
 
@@ -1371,7 +1385,7 @@
                                 id="precautionExerciseActionBtn"
                                 type="button"
                                 onclick="switchDashboardTab('fitness'); openExerciseModePopup();">
-                                ⚡ START 10-MIN WORKOUT
+                                <span class="box-icon">□</span> START 10-MIN
                             </button>
                         </div>
 
@@ -1638,8 +1652,8 @@
             <p class="section-kicker" style="color: #67E8F9; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 4px;">
                 ⚡ GUIDED EXERCISE MODE
             </p>
-            <h2 id="popupWorkoutTitle" style="font-size: 20px; font-weight: 900; color: #F8FAFC; margin-bottom: 2px;">
-                Exercise Routine
+            <h2 id="popupWorkoutTitle">
+                INCLINE PUSH-UPS
             </h2>
             <p class="modal-subtitle" id="popupWorkoutSubtitle" style="font-size: 11.5px; color: #94A3B8; margin-bottom: 12px;">
                 Follow the posture guide and complete each exercise to advance to the next step.
@@ -1648,7 +1662,7 @@
 
         <!-- PROGRESS BAR -->
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px;">
-            <span style="font-weight: 800; color: #67E8F9;" id="popupStepCounterText">STEP 1 OF 4</span>
+            <span style="font-weight: 800; color: #67E8F9;" id="popupStepCounterText">3/5</span>
             <span style="font-weight: 800; color: #10B981;" id="popupProgressPctText">0% COMPLETED</span>
         </div>
         <div class="exercise-popup-progress-track">
@@ -1692,7 +1706,7 @@
                     <span class="exercise-popup-timer-clock" id="popupTimerClock">04:00</span>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button type="button" class="exercise-timer-btn" id="popupTimerToggleBtn" onclick="togglePopupStepTimer()">▶ START</button>
+                    <button type="button" class="exercise-timer-btn" id="popupTimerToggleBtn" onclick="togglePopupStepTimer()"><span class="box-icon">□</span> START</button>
                     <button type="button" class="exercise-timer-btn" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); color: #94A3B8;" onclick="resetPopupStepTimer()">RESET</button>
                 </div>
             </div>
@@ -1704,7 +1718,7 @@
                 type="button"
                 style="padding: 14px; font-size: 13.5px; font-weight: 800; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);"
                 onclick="handlePopupStepComplete()">
-                ✓ 1ST EXERCISE COMPLETED → NEXT EXERCISE
+                <span class="box-icon">□</span> DONE, NEXT STEP
             </button>
 
             <div id="popupNextPreview" style="font-size: 11px; color: #64748B; text-align: center; margin-top: 8px;">
