@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/style.css?v=6.0">
+    <link rel="stylesheet" href="/static/style.css?v=8.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -115,16 +115,15 @@
         </div>
 
         <!-- RIGHT COLUMN: AUTH TERMINAL (SIGN IN & REGISTER) -->
-        <div class="auth-terminal glass-panel arena-auth-card">
+        <div class="auth-terminal">
+            <div class="arena-auth-card">
 
-
-
-        <div class="terminal-status">
-            <span class="status-dot"></span>
-            <span>SYSTEM READY</span>
-            <span class="status-separator">•</span>
-            <span>SECURE LOGIN</span>
-        </div>
+                <div class="terminal-status hidden">
+                    <span class="status-dot"></span>
+                    <span>SYSTEM READY</span>
+                    <span class="status-separator">•</span>
+                    <span>SECURE LOGIN</span>
+                </div>
 
         <!-- AUTH TABS -->
         <div class="auth-tabs" role="tablist" aria-label="Authentication">
@@ -148,23 +147,17 @@
         <!-- LOGIN FORM: EMAIL & PASSWORD + SAVED ACCOUNTS + GOOGLE -->
         <div id="loginBox">
             <div class="auth-heading">
-                <p class="section-kicker">
-                    WELCOME BACK
-                </p>
                 <h2>
-                    Sign in to your account.
+                    WELCOME<br>BACK
                 </h2>
                 <p>
-                    Access your personal health and lifestyle dashboard.
+                    Pick up where you left off.
                 </p>
             </div>
 
             <!-- SAVED ACCOUNTS / QUICK SIGN-IN (SHOWN IF USER LOGGED IN BEFORE ON THIS DEVICE) -->
             <div id="savedAccountsContainer" class="saved-accounts-box hidden">
-                <div class="saved-accounts-header">
-                    <span class="status-dot"></span>
-                    <span>SAVED ACCOUNTS ON THIS DEVICE</span>
-                </div>
+
                 <div id="savedAccountsList" class="saved-accounts-list"></div>
             </div>
 
@@ -430,8 +423,8 @@
             <span>SECURE ENCRYPTED</span>
         </div>
 
-    </div>
-
+            </div> <!-- Close .arena-auth-card -->
+        </div> <!-- Close .auth-terminal -->
     </div> <!-- Close .arena-stage-container -->
 
     <!-- BOTTOM PAGE ATTRIBUTION -->
@@ -1638,7 +1631,7 @@
 ===================================================== -->
 <div id="exerciseModePopupModal" class="modal hidden" aria-hidden="true" style="z-index: 60;">
 
-    <div class="modal-card glass-panel exercise-popup-card" role="dialog" aria-modal="true" style="width: min(640px, 95%); max-height: min(880px, 94vh); padding: 24px; border-radius: 24px;">
+    <div class="modal-card glass-panel exercise-popup-card" role="dialog" aria-modal="true">
 
         <button
             class="modal-close"
@@ -1648,37 +1641,65 @@
             ×
         </button>
 
-        <div style="margin-bottom: 12px;">
-            <p class="section-kicker" style="color: #67E8F9; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 4px;">
-                ⚡ GUIDED EXERCISE MODE
-            </p>
-            <h2 id="popupWorkoutTitle">
-                INCLINE PUSH-UPS
-            </h2>
-            <p class="modal-subtitle" id="popupWorkoutSubtitle" style="font-size: 11.5px; color: #94A3B8; margin-bottom: 12px;">
-                Follow the posture guide and complete each exercise to advance to the next step.
-            </p>
+        <div class="popup-scoreboard-header">
+            <div>
+                <p class="section-kicker">
+                    ⚡ GUIDED EXERCISE MODE
+                </p>
+                <h2 id="popupWorkoutTitle">
+                    INCLINE PUSH-UPS
+                </h2>
+                <p class="modal-subtitle" id="popupWorkoutSubtitle" style="font-size: 11.5px; color: #94A3B8; margin-bottom: 6px;">
+                    Follow the posture guide and complete each exercise to advance to the next step.
+                </p>
+            </div>
+            <div class="popup-step-counter-wrap">
+                <span id="popupStepCounterText">3/5</span> <span class="box-icon-large">□</span>
+            </div>
         </div>
 
         <!-- PROGRESS BAR -->
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px;">
-            <span style="font-weight: 800; color: #67E8F9;" id="popupStepCounterText">3/5</span>
-            <span style="font-weight: 800; color: #10B981;" id="popupProgressPctText">0% COMPLETED</span>
-        </div>
         <div class="exercise-popup-progress-track">
             <div id="popupProgressFill" class="exercise-popup-progress-fill" style="width: 0%;"></div>
         </div>
 
         <!-- ACTIVE EXERCISE CARD -->
         <div id="popupActiveExerciseSection">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div class="popup-subhead-row">
                 <span class="active-exercise-badge" id="popupStepBadge">⚡ 1ST EXERCISE · ACTIVE</span>
                 <span style="font-size: 11px; color: #FCD34D; font-weight: 800;" id="popupExerciseTiming">4 mins · Controlled breathing</span>
+                <span style="font-weight: 800; color: #10B981; font-size: 11px;" id="popupProgressPctText">0% COMPLETED</span>
             </div>
 
-            <!-- ILLUSTRATION IMAGE OF HOW TO DO THAT EXERCISE -->
-            <div id="popupDiagramBox" class="exercise-popup-diagram-box">
-                <!-- SVG diagram inserted dynamically -->
+            <!-- 2-COLUMN STAGE GRID MATCHING MOCKUP 3 -->
+            <div class="popup-stage-grid">
+                <div class="popup-stage-left">
+                    <!-- ILLUSTRATION IMAGE OF HOW TO DO THAT EXERCISE -->
+                    <div id="popupDiagramBox" class="exercise-popup-diagram-box">
+                        <!-- SVG diagram inserted dynamically -->
+                    </div>
+                </div>
+
+                <div class="popup-stage-right">
+                    <!-- EXERCISE TIMER -->
+                    <div class="exercise-popup-timer-box">
+                        <span class="timer-box-kicker">EXERCISE TIMER</span>
+                        <span class="exercise-popup-timer-clock" id="popupTimerClock">04:00</span>
+                        <div class="timer-controls-row">
+                            <button type="button" class="exercise-timer-btn" id="popupTimerToggleBtn" onclick="togglePopupStepTimer()"><span class="box-icon">□</span> START</button>
+                            <button type="button" class="exercise-timer-btn-reset" onclick="resetPopupStepTimer()">RESET</button>
+                        </div>
+                    </div>
+
+                    <!-- ACTION BUTTON: COMPLETE 1ST EXERCISE TO ADVANCE TO NEXT -->
+                    <button
+                        id="popupCompleteBtn"
+                        class="neon-button primary large full"
+                        type="button"
+                        onclick="handlePopupStepComplete()">
+                        <span class="box-icon">□</span> DONE, NEXT STEP
+                    </button>
+                </div>
             </div>
 
             <h3 id="popupExerciseName" style="font-size: 17px; font-weight: 800; color: #F8FAFC; margin-bottom: 8px;">
@@ -1698,28 +1719,6 @@
                     <!-- Steps inserted dynamically -->
                 </ol>
             </div>
-
-            <!-- EXERCISE TIMER -->
-            <div class="exercise-popup-timer-box">
-                <div>
-                    <span style="font-size: 9.5px; color: #94A3B8; text-transform: uppercase; display: block; font-weight: 800;">EXERCISE TIMER</span>
-                    <span class="exercise-popup-timer-clock" id="popupTimerClock">04:00</span>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button type="button" class="exercise-timer-btn" id="popupTimerToggleBtn" onclick="togglePopupStepTimer()"><span class="box-icon">□</span> START</button>
-                    <button type="button" class="exercise-timer-btn" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); color: #94A3B8;" onclick="resetPopupStepTimer()">RESET</button>
-                </div>
-            </div>
-
-            <!-- ACTION BUTTON: COMPLETE 1ST EXERCISE TO ADVANCE TO NEXT -->
-            <button
-                id="popupCompleteBtn"
-                class="neon-button primary large full"
-                type="button"
-                style="padding: 14px; font-size: 13.5px; font-weight: 800; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);"
-                onclick="handlePopupStepComplete()">
-                <span class="box-icon">□</span> DONE, NEXT STEP
-            </button>
 
             <div id="popupNextPreview" style="font-size: 11px; color: #64748B; text-align: center; margin-top: 8px;">
                 <!-- Next exercise preview text -->
@@ -2137,7 +2136,7 @@
 </div>
 
 
-<script src="/static/app.js?v=5.2"></script>
+<script src="/static/app.js?v=8.0"></script>
 
 </body>
 </html>

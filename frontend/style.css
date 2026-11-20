@@ -332,14 +332,16 @@ label {
 #authScreen {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 30px 16px;
   background: var(--ink);
+  width: 100%;
 }
 
 .arena-stage-container {
-  width: min(940px, 100%);
+  width: min(940px, 94vw);
   background: var(--paper);
   border: var(--border-thick);
   border-radius: var(--radius-xl);
@@ -354,7 +356,7 @@ label {
 .stage-hero-content {
   background: var(--volt);
   border-right: var(--border-thick);
-  padding: 32px;
+  padding: 36px 36px 0 36px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -416,7 +418,7 @@ label {
 /* Giant Anton Headline */
 .volt-hero-headline {
   font-family: var(--font-display);
-  font-size: clamp(56px, 6.5vw, 84px);
+  font-size: clamp(62px, 7vw, 92px); line-height: 0.90; letter-spacing: -0.01em;
   line-height: 0.92;
   color: var(--ink);
   text-transform: uppercase;
@@ -442,7 +444,7 @@ label {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 10px 16px;
-  margin: 20px -32px -32px -32px;
+  margin: 0 -36px 0 -36px; width: calc(100% + 72px);
   border-top: var(--border);
   display: flex;
   align-items: center;
@@ -455,8 +457,9 @@ label {
   background: var(--paper);
   padding: 32px 28px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  width: 100%;
 }
 
 .arena-auth-card {
@@ -465,6 +468,13 @@ label {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 24px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.hidden-form {
+  display: none !important;
 }
 
 /* Segmented Toggle */
@@ -1242,11 +1252,63 @@ label {
   background: #0B0B0F !important;
   color: #FFFFFF !important;
   border: 2.5px solid var(--volt) !important;
-  border-radius: var(--radius) !important;
+  border-radius: 20px !important;
   box-shadow: 8px 8px 0 #000 !important;
-  padding: 22px !important;
-  max-width: 660px !important;
-  width: 95% !important;
+  padding: 24px !important;
+  max-width: 800px !important;
+  width: min(800px, 95vw) !important;
+}
+
+.popup-scoreboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.popup-step-counter-wrap {
+  font-family: var(--font-display) !important;
+  font-size: 32px !important;
+  color: var(--volt) !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+}
+
+.box-icon-large {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid currentColor;
+  vertical-align: middle;
+}
+
+.popup-subhead-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.popup-stage-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.popup-stage-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-stage-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .exercise-popup-card .section-kicker {
@@ -1255,13 +1317,14 @@ label {
 
 .exercise-popup-card h2, #popupWorkoutTitle {
   font-family: var(--font-display) !important;
-  font-size: 26px !important;
+  font-size: 28px !important;
   color: #FFFFFF !important;
+  line-height: 0.95;
 }
 
 #popupStepCounterText {
   font-family: var(--font-display) !important;
-  font-size: 26px !important;
+  font-size: 32px !important;
   color: var(--volt) !important;
 }
 
@@ -1269,9 +1332,9 @@ label {
   background: #222530;
   border: 1.5px solid #333845;
   border-radius: 4px;
-  height: 10px;
+  height: 8px;
   overflow: hidden;
-  margin: 10px 0 16px;
+  margin: 6px 0 14px;
 }
 
 .exercise-popup-progress-fill {
@@ -1280,12 +1343,14 @@ label {
 }
 
 .exercise-popup-diagram-box {
-  background: #16161C;
-  border: 1.8px solid #282A3A;
-  border-radius: var(--radius-sm);
+  background: #141419;
+  border: 1.5px solid #282A3A;
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
-  min-height: 240px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
 }
 
 .cartoon-hud-overlay {
@@ -1353,28 +1418,67 @@ label {
 }
 
 .exercise-popup-timer-box {
-  background: #16161C;
-  border: 1.8px solid #282A3A;
-  border-radius: var(--radius-sm);
-  padding: 16px;
+  background: #141419;
+  border: 1.5px solid #282A3A;
+  border-radius: 12px;
+  padding: 18px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  text-align: center;
+}
+
+.timer-box-kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
 }
 
 .exercise-popup-timer-clock {
   font-family: var(--font-mono);
-  font-size: 40px;
-  font-weight: 700;
+  font-size: 46px;
+  font-weight: 800;
   color: var(--volt);
   line-height: 1;
+  margin: 6px 0 16px;
+}
+
+.timer-controls-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
 }
 
 .exercise-timer-btn {
   background: var(--volt) !important;
   color: var(--ink) !important;
   border: var(--border-sm) !important;
+  border-radius: 8px !important;
   box-shadow: 2px 2px 0 #000 !important;
+  font-weight: 800 !important;
+  flex: 1;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.exercise-timer-btn-reset {
+  background: transparent !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  border: 2px solid #3A3A4A !important;
+  border-radius: 8px !important;
+  flex: 1;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
 }
 
 #popupCompleteBtn {
@@ -1387,6 +1491,24 @@ label {
   font-size: 14px !important;
   font-weight: 800 !important;
   padding: 14px !important;
+  width: 100% !important;
+  cursor: pointer;
+}
+
+.auth-bottom-attribution {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 11px;
+  color: #777;
+}
+
+.auth-bottom-attribution a {
+  color: #999;
+  text-decoration: none;
+}
+
+.auth-bottom-attribution a:hover {
+  text-decoration: underline;
 }
 
 /* --------------------------------------------------------------------------
@@ -1815,6 +1937,12 @@ label {
   .hud-header {
     flex-wrap: wrap;
     border-radius: var(--radius-lg);
+  }
+}
+
+@media (max-width: 680px) {
+  .popup-stage-grid {
+    grid-template-columns: 1fr;
   }
 }
 

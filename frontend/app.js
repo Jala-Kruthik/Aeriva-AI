@@ -131,6 +131,10 @@ function removeSavedAccount(email, ev) {
 function selectSavedAccount(email) {
     const emailInput = document.getElementById("loginEmail");
     const passwordInput = document.getElementById("loginPassword");
+    const form = document.getElementById("loginForm");
+    if (form) {
+        form.classList.remove("hidden-form");
+    }
     if (emailInput) {
         emailInput.value = email;
         if (passwordInput) {
@@ -175,20 +179,38 @@ function renderSavedAccounts() {
 
     container.classList.remove("hidden");
     list.innerHTML = accounts.map(acc => {
-        const initial = (acc.name || acc.email || "U")[0].toUpperCase();
+        const initial = (acc.name || acc.email || "K")[0].toUpperCase();
         const cleanName = typeof escapeHTML === "function" ? escapeHTML(acc.name || acc.email) : (acc.name || acc.email);
         const cleanEmail = typeof escapeHTML === "function" ? escapeHTML(acc.email) : acc.email;
         return `
-            <div class="saved-account-chip" onclick="selectSavedAccount('${acc.email}')" title="Click to sign in as ${acc.email}">
-                <div class="saved-account-avatar">${initial}</div>
-                <div class="saved-account-info">
-                    <span class="saved-account-name">${cleanName}</span>
-                    <span class="saved-account-email">${cleanEmail}</span>
+            <div class="saved-account-card" onclick="selectSavedAccount('${acc.email}')" title="Continue as ${cleanName}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="saved-account-avatar">${initial}</div>
+                    <div class="saved-account-title-wrap">
+                        <span class="saved-account-kicker">Continue</span>
+                        <span class="saved-account-name">as ${cleanName}</span>
+                    </div>
                 </div>
-                <button type="button" class="saved-account-remove" title="Remove account from device" onclick="removeSavedAccount('${acc.email}', event)">×</button>
+                <span class="box-icon">□</span>
+            </div>
+            <div class="email-chip-sun" onclick="selectSavedAccount('${acc.email}')" title="Sign in as ${cleanEmail}">
+                <span class="box-icon">□</span>
+                <span>${cleanEmail}</span>
+            </div>
+            <div class="add-account-chip-pink" onclick="toggleDirectLoginForm()" title="Add another account">
+                <span class="box-icon">□</span>
+                <span>Add account</span>
+            </div>
+            <div class="auth-trust-line">
+                <span class="box-icon">□</span>
+                <span>Protected by Google OAuth 2.0</span>
             </div>
         `;
     }).join("");
+
+    // Hide manual form if saved accounts are present, so card matches Mockup 1
+    const form = document.getElementById("loginForm");
+    if (form) form.classList.add("hidden-form");
 
     // Auto-fill login field if empty
     const emailInput = document.getElementById("loginEmail");
@@ -2710,18 +2732,10 @@ function getExerciseCartoonVideoHTML(key, name) {
                 </svg>
             </button>
 
-            <!-- Top HUD Bar with Mode Switcher & Real-time Cues -->
+            <!-- Top HUD Bar with Mockup 3 Red & Mint Badges -->
             <div class="cartoon-hud-overlay">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="cartoon-hud-badge">
-                        <span class="hud-rec-dot"></span>
-                        <span id="cartoonModeBadgeText">${isHd ? 'HD ATHLETE POSTURE' : 'AI ATHLETE VIDEO · 60FPS'}</span>
-                    </span>
-                    <button type="button" class="cartoon-mode-toggle-btn" id="cartoonModeToggleBtn" onclick="toggleCartoonDisplayMode(event)" title="Toggle 60FPS AI Video / HD Athlete Artwork">
-                        ${isHd ? '🎬 60FPS AI VIDEO' : '🖼️ HD ATHLETE POSTURE'}
-                    </button>
-                </div>
-                <span class="cartoon-hud-phase" id="cartoonPhaseCue">${escapeHTML(cue)}</span>
+                <span class="cartoon-hud-badge" id="cartoonPhaseCue">${escapeHTML(cue || "LOWER TO 90 DEG")}</span>
+                <span class="cartoon-hud-phase" id="cartoonOptimalBadge">OPTIMAL</span>
             </div>
         </div>
         <div class="cartoon-video-bottombar">
@@ -2814,7 +2828,7 @@ function mountCartoonVideoPlayer(containerEl, key, name) {
         const totSec = cartoonVideoState.cycleDuration.toFixed(0);
 
         if (progressFill) progressFill.style.width = `${Math.min(100, Math.max(0, p * 100))}%`;
-        if (timerDisplay) timerDisplay.textContent = `00:0${Math.floor(curSec)} / 00:0${totSec} · REP ${cartoonVideoState.repCount}`;
+        if (timerDisplay) timerDisplay.textContent = `REP ${cartoonVideoState.repCount} / 10`;
 
         renderAthleteAIVideo(ctx, cartoonVideoState.key, cartoonVideoState.name, p, curW, curH, phaseCue);
 
@@ -3734,9 +3748,10 @@ function renderPopupExerciseStep() {
     const ordinal = getOrdinal(curStepIdx + 1);
     const pct = Math.round((prog.completedSteps.length / total) * 100);
 
-    if (counterEl) counterEl.textContent = `STEP ${curStepIdx + 1} OF ${total}`;
+    if (counterEl) counterEl.textContent = `${curStepIdx + 1}/${total}`;
     if (pctEl) pctEl.textContent = `${pct}% COMPLETED`;
     if (fillEl) fillEl.style.width = `${pct}%`;
+    if (titleEl) titleEl.textContent = (curEx.name || "INCLINE PUSH-UPS").toUpperCase();
 
     const badgeEl = document.getElementById("popupStepBadge");
     const timingEl = document.getElementById("popupExerciseTiming");
@@ -6482,3 +6497,14 @@ function resetKineticProgressBar() {
     fill.style.width = "100%";
 }
 
+
+function toggleDirectLoginForm() {
+    const form = document.getElementById("loginForm");
+    if (form) {
+        form.classList.toggle("hidden-form");
+        if (!form.classList.contains("hidden-form")) {
+            const emailInput = document.getElementById("loginEmail");
+            if (emailInput) emailInput.focus();
+        }
+    }
+}
