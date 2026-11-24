@@ -7112,6 +7112,43 @@ function toggleDirectLoginForm() {
 let currentSelectedMonth = "";
 let availableArchiveMonths = [];
 
+function switchAccountSection(sectionKey) {
+    const sections = ["profile", "schedule", "monthly", "danger"];
+    if (!sections.includes(sectionKey)) sectionKey = "profile";
+
+    sections.forEach(sec => {
+        const btn = document.getElementById(`accNavBtn-${sec}`);
+        const panel = document.getElementById(`accSection-${sec}`);
+        const isActive = sec === sectionKey;
+        if (btn) {
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-selected", isActive ? "true" : "false");
+            const indicator = btn.querySelector(".side-heading-indicator");
+            if (indicator) {
+                if (isActive) {
+                    indicator.textContent = "ACTIVE";
+                } else {
+                    indicator.textContent = sec === "danger" ? "DANGER" : (sec === "monthly" ? "VIEW" : "EDIT");
+                }
+            }
+        }
+        if (panel) {
+            panel.classList.toggle("hidden", !isActive);
+            panel.classList.toggle("active", isActive);
+        }
+    });
+
+    localStorage.setItem("aeriva_active_account_section", sectionKey);
+
+    if (sectionKey === "monthly") {
+        if (!currentSelectedMonth) loadMonthlyFoodLogs();
+    } else if (sectionKey === "schedule") {
+        recalcScheduleTelemetry();
+    } else if (sectionKey === "profile") {
+        recalcAccountVitals();
+    }
+}
+
 async function loadAccountDetailsDashboard() {
     // 1. Populate Email and user attributes
     const emailEl = document.getElementById("accountUserEmail");
@@ -7147,6 +7184,10 @@ async function loadAccountDetailsDashboard() {
 
     // 3. Load Monthly Food Archive
     await loadMonthlyFoodLogs();
+
+    // 4. Activate chosen side heading section (default: profile)
+    const savedAccSection = localStorage.getItem("aeriva_active_account_section") || "profile";
+    switchAccountSection(savedAccSection);
 }
 
 function recalcAccountVitals() {
