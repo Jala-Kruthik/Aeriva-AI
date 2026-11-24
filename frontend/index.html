@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/style.css?v=14.0">
+    <link rel="stylesheet" href="/static/style.css?v=15.0">
     <link rel="stylesheet" href="/static/aeriva-3d.css?v=14.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -593,6 +593,15 @@
                         <span class="dash-num-tag">3</span>
                         <span>Safety</span>
                     </button>
+                    <button
+                        id="cornerTab4Btn"
+                        class="corner-dash-btn"
+                        type="button"
+                        onclick="switchDashboardTab('account')"
+                        title="Switch to Dashboard 4: Account Details">
+                        <span class="dash-num-tag">4</span>
+                        <span>Account</span>
+                    </button>
                 </div>
             </div>
 
@@ -803,6 +812,18 @@
                     <div class="dashboard-nav-content">
                         <span class="dashboard-nav-title">3 · PRECAUTIONS & GUIDANCE</span>
                         <span class="dashboard-nav-subtitle">AI Health Precautions (Food, Rest & Exercise Alerts) · Next-Day Meals</span>
+                    </div>
+                </button>
+
+                <button
+                    id="tabDashboard4Btn"
+                    class="dashboard-nav-tab"
+                    type="button"
+                    onclick="switchDashboardTab('account')">
+                    <span class="dashboard-nav-icon">👤</span>
+                    <div class="dashboard-nav-content">
+                        <span class="dashboard-nav-title">4 · ACCOUNT DETAILS</span>
+                        <span class="dashboard-nav-subtitle">Profile Metrics · Unique Schedule Editor · Monthly Food Archive · Delete Account</span>
                     </div>
                 </button>
             </div>
@@ -1372,6 +1393,345 @@
                     </div>
                 </section>
 
+            </div>
+        </div>
+
+        <!-- =====================================================
+             DASHBOARD 4: ACCOUNT DETAILS, UNIQUE SCHEDULE, MONTHLY FOOD ARCHIVE & SETTINGS
+        ===================================================== -->
+        <div id="dashboardView4" class="dashboard-view-panel hidden">
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+
+                <!-- HERO BANNER -->
+                <section class="glass-panel account-hero-card" id="accountHeroCard">
+                    <div class="account-hero-header">
+                        <div>
+                            <p class="section-kicker">
+                                04 / USER ACCOUNT &amp; SYSTEM CONTROLS
+                            </p>
+                            <h2>
+                                ACCOUNT DETAILS.
+                            </h2>
+                            <p class="account-hero-desc">
+                                Manage your physical metrics, interactive unique daily routine schedule, complete monthly food log archive, and account security.
+                            </p>
+                        </div>
+                        <div class="account-hero-pills">
+                            <span class="account-pill email" id="accountUserEmail">user@example.com</span>
+                            <span class="account-pill status">⚡ ACTIVE ATHLETE</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2-COLUMN MAIN GRID -->
+                <div class="account-main-grid">
+
+                    <!-- COLUMN 1: USER DETAILS & BIOMETRIC PROFILE -->
+                    <div class="account-column">
+                        <section class="glass-panel account-panel">
+                            <div class="account-panel-header">
+                                <span class="icon-chip cyan">👤</span>
+                                <div>
+                                    <p class="section-kicker">BIOMETRIC PROFILE</p>
+                                    <h3>User Metrics &amp; Category</h3>
+                                </div>
+                            </div>
+                            <p class="account-panel-sub">
+                                Keep your body measurements up-to-date so AERIVA calculates your exact BMR, BMI, and customized daily calorie burn.
+                            </p>
+
+                            <form id="accountProfileForm" onsubmit="saveAccountProfile(event)" class="account-form">
+                                <div class="field">
+                                    <label for="accountEditName">FULL NAME</label>
+                                    <input type="text" id="accountEditName" placeholder="Enter your full name" required autocomplete="name" />
+                                </div>
+
+                                <div class="account-fields-grid-3">
+                                    <div class="field">
+                                        <label for="accountEditAge">AGE (YRS)</label>
+                                        <input type="number" id="accountEditAge" min="10" max="120" placeholder="24" required oninput="recalcAccountVitals()" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="accountEditHeight">HEIGHT (CM)</label>
+                                        <input type="number" id="accountEditHeight" min="80" max="250" placeholder="175" required oninput="recalcAccountVitals()" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="accountEditWeight">WEIGHT (KG)</label>
+                                        <input type="number" id="accountEditWeight" min="20" max="300" step="0.5" placeholder="70" required oninput="recalcAccountVitals()" />
+                                    </div>
+                                </div>
+
+                                <div class="field">
+                                    <label for="accountEditCategory">FITNESS &amp; HEALTH CATEGORY</label>
+                                    <select id="accountEditCategory" required onchange="recalcAccountVitals()">
+                                        <option value="Fat Loss &amp; Calorie Deficit">🔥 Fat Loss &amp; Calorie Deficit</option>
+                                        <option value="Muscle Building &amp; Hypertrophy">💪 Muscle Building &amp; Hypertrophy</option>
+                                        <option value="Athletic Endurance &amp; Stamina">⚡ Athletic Endurance &amp; Stamina</option>
+                                        <option value="General Health &amp; Mobility Flow">🌿 General Health &amp; Mobility Flow</option>
+                                        <option value="Metabolic Health &amp; Blood Sugar Care">🛡️ Metabolic Health &amp; Blood Sugar Care</option>
+                                    </select>
+                                </div>
+
+                                <!-- LIVE VITALS TELEMETRY BOX -->
+                                <div class="account-vitals-preview">
+                                    <div class="vitals-telemetry-pill">
+                                        <span class="vitals-label">BMI</span>
+                                        <strong id="accountBmiDisplay">22.8</strong>
+                                        <span class="vitals-sub" id="accountBmiCategory">Normal</span>
+                                    </div>
+                                    <div class="vitals-telemetry-pill">
+                                        <span class="vitals-label">EST. BMR</span>
+                                        <strong id="accountBmrDisplay">1,680</strong>
+                                        <span class="vitals-sub">kcal / day</span>
+                                    </div>
+                                    <div class="vitals-telemetry-pill">
+                                        <span class="vitals-label">TDEE BURN</span>
+                                        <strong id="accountTdeeDisplay">2,250</strong>
+                                        <span class="vitals-sub">maintenance</span>
+                                    </div>
+                                </div>
+
+                                <p id="accountProfileMessage" class="form-message" aria-live="polite"></p>
+
+                                <button type="submit" id="saveAccountProfileBtn" class="neon-button primary full">
+                                    💾 UPDATE USER DETAILS (+15 XP)
+                                </button>
+                            </form>
+                        </section>
+                    </div>
+
+                    <!-- COLUMN 2: UNIQUE INTERACTIVE SCHEDULE EDITOR -->
+                    <div class="account-column">
+                        <section class="glass-panel account-panel">
+                            <div class="account-panel-header">
+                                <span class="icon-chip amber">⏱️</span>
+                                <div>
+                                    <p class="section-kicker">CUSTOM CHRONO MATRIX</p>
+                                    <h3>Edit Daily Routine Schedule</h3>
+                                </div>
+                            </div>
+                            <p class="account-panel-sub">
+                                Customize your 24-hour routine. Visualized as an interactive chrono-matrix with real-time sleep &amp; workout window telemetry.
+                            </p>
+
+                            <!-- PRESET BUTTONS (UNIQUE FAST CONFIG) -->
+                            <div class="chrono-presets-bar">
+                                <span class="presets-kicker">QUICK PRESETS:</span>
+                                <div class="presets-buttons-wrap">
+                                    <button type="button" class="chrono-preset-btn" onclick="applyChronoPreset('early')">⚡ 06:00 AM Early Bird</button>
+                                    <button type="button" class="chrono-preset-btn" onclick="applyChronoPreset('standard')">💼 9-to-5 Professional</button>
+                                    <button type="button" class="chrono-preset-btn" onclick="applyChronoPreset('athlete')">🏃 Athlete Double</button>
+                                    <button type="button" class="chrono-preset-btn" onclick="applyChronoPreset('night')">🌙 Night Shift</button>
+                                </div>
+                            </div>
+
+                            <form id="accountScheduleForm" onsubmit="saveAccountSchedule(event)" class="account-form">
+                                <!-- TIME BLOCKS GRID -->
+                                <div class="chrono-blocks-grid">
+                                    <div class="chrono-time-block wake">
+                                        <span class="chrono-icon">🌅</span>
+                                        <div class="chrono-info">
+                                            <label for="schedWakeUp">WAKE UP</label>
+                                            <input type="time" id="schedWakeUp" value="06:30" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block meal">
+                                        <span class="chrono-icon">🍳</span>
+                                        <div class="chrono-info">
+                                            <label for="schedBreakfast">BREAKFAST</label>
+                                            <input type="time" id="schedBreakfast" value="08:30" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block work">
+                                        <span class="chrono-icon">💼</span>
+                                        <div class="chrono-info">
+                                            <label for="schedWorkStart">WORK / STUDY START</label>
+                                            <input type="time" id="schedWorkStart" value="09:00" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block meal">
+                                        <span class="chrono-icon">🍛</span>
+                                        <div class="chrono-info">
+                                            <label for="schedLunch">LUNCH</label>
+                                            <input type="time" id="schedLunch" value="13:00" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block work">
+                                        <span class="chrono-icon">💼</span>
+                                        <div class="chrono-info">
+                                            <label for="schedWorkEnd">WORK / STUDY END</label>
+                                            <input type="time" id="schedWorkEnd" value="17:00" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block free highlight">
+                                        <span class="chrono-icon">⚡</span>
+                                        <div class="chrono-info">
+                                            <label for="schedFreeStart">WORKOUT WINDOW (FREE TIME)</label>
+                                            <div class="time-range-wrap">
+                                                <input type="time" id="schedFreeStart" value="17:30" required onchange="recalcScheduleTelemetry()" />
+                                                <span>to</span>
+                                                <input type="time" id="schedFreeEnd" value="18:30" required onchange="recalcScheduleTelemetry()" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block meal">
+                                        <span class="chrono-icon">🍎</span>
+                                        <div class="chrono-info">
+                                            <label for="schedSnack">EVENING SNACK</label>
+                                            <input type="time" id="schedSnack" value="17:00" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block meal">
+                                        <span class="chrono-icon">🍽️</span>
+                                        <div class="chrono-info">
+                                            <label for="schedDinner">DINNER</label>
+                                            <input type="time" id="schedDinner" value="20:30" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+
+                                    <div class="chrono-time-block sleep">
+                                        <span class="chrono-icon">🌙</span>
+                                        <div class="chrono-info">
+                                            <label for="schedSleep">BEDTIME / SLEEP</label>
+                                            <input type="time" id="schedSleep" value="23:00" required onchange="recalcScheduleTelemetry()" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- LIVE TELEMETRY BAR -->
+                                <div class="chrono-telemetry-bar">
+                                    <div class="telemetry-item">
+                                        <span class="telemetry-label">SLEEP TIME:</span>
+                                        <strong id="schedSleepDurationText">7h 30m (Optimal Rest)</strong>
+                                    </div>
+                                    <div class="telemetry-item">
+                                        <span class="telemetry-label">WORKOUT SLOT:</span>
+                                        <strong id="schedWorkoutWindowText">60 mins (Prime Energy)</strong>
+                                    </div>
+                                </div>
+
+                                <p id="accountScheduleMessage" class="form-message" aria-live="polite"></p>
+
+                                <button type="submit" id="saveAccountScheduleBtn" class="neon-button primary full">
+                                    ⚡ ACTIVATE &amp; SAVE SCHEDULE (+20 XP)
+                                </button>
+                            </form>
+                        </section>
+                    </div>
+
+                </div>
+
+                <!-- SECTION 3: MONTHLY FOOD LOG ARCHIVE -->
+                <section class="glass-panel account-panel monthly-archive-card">
+                    <div class="monthly-archive-header">
+                        <div>
+                            <p class="section-kicker">NUTRITION HISTORY</p>
+                            <h2>MONTHLY FOOD LOG ARCHIVE</h2>
+                            <p class="monthly-archive-sub">
+                                Review everything you ate across any month, with portion quantities, calories, and photos.
+                            </p>
+                        </div>
+
+                        <!-- MONTH PICKER CONTROLS -->
+                        <div class="monthly-picker-bar">
+                            <button type="button" class="month-nav-btn" onclick="navigateMonthlyLog(-1)" title="Previous Month">◀</button>
+                            <select id="monthlyFoodPicker" class="monthly-select" onchange="loadMonthlyFoodLogs(this.value)">
+                                <!-- Populated dynamically -->
+                            </select>
+                            <button type="button" class="month-nav-btn" onclick="navigateMonthlyLog(1)" title="Next Month">▶</button>
+                            <button type="button" class="month-refresh-btn" onclick="refreshCurrentMonthLogs()" title="Refresh">↻</button>
+                        </div>
+                    </div>
+
+                    <!-- MONTHLY STATS SUMMARY CARDS -->
+                    <div class="monthly-stats-grid">
+                        <div class="monthly-stat-card">
+                            <span class="stat-icon">🍽️</span>
+                            <div>
+                                <span class="stat-label">TOTAL MEALS</span>
+                                <strong class="stat-value" id="monthlyTotalMeals">0 items</strong>
+                            </div>
+                        </div>
+
+                        <div class="monthly-stat-card">
+                            <span class="stat-icon">🔥</span>
+                            <div>
+                                <span class="stat-label">MONTHLY CALORIES</span>
+                                <strong class="stat-value" id="monthlyTotalCalories">0 kcal</strong>
+                            </div>
+                        </div>
+
+                        <div class="monthly-stat-card">
+                            <span class="stat-icon">📈</span>
+                            <div>
+                                <span class="stat-label">DAILY AVERAGE</span>
+                                <strong class="stat-value" id="monthlyAvgCalories">0 kcal/day</strong>
+                            </div>
+                        </div>
+
+                        <div class="monthly-stat-card">
+                            <span class="stat-icon">⭐</span>
+                            <div>
+                                <span class="stat-label">TOP DISHES</span>
+                                <strong class="stat-value" id="monthlyTopFoods">—</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MONTHLY FOOD STREAM LIST -->
+                    <div id="monthlyFoodListContainer" class="monthly-food-list-container">
+                        <!-- Populated dynamically by app.js -->
+                    </div>
+                </section>
+
+                <!-- SECTION 4: DANGER ZONE - DELETE ACCOUNT -->
+                <section class="danger-zone-card">
+                    <div class="danger-zone-header">
+                        <div>
+                            <div class="danger-badge">⚠️ DANGER ZONE</div>
+                            <h3>DELETE USER ACCOUNT</h3>
+                            <p class="danger-zone-desc">
+                                Permanently delete your account, physical profile metrics, all historical monthly food logs, daily schedules, water/step tracking data, and XP points. This action cannot be reversed.
+                            </p>
+                        </div>
+                        <button type="button" class="danger-delete-btn" onclick="openDeleteAccountConfirmModal()">
+                            🗑️ DELETE ACCOUNT PERMANENTLY
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- =====================================================
+             DELETE ACCOUNT CONFIRMATION MODAL
+        ===================================================== -->
+        <div id="deleteAccountConfirmModal" class="modal hidden" aria-hidden="true" style="z-index: 100;">
+            <div class="modal-card danger-modal-card" role="dialog" aria-modal="true">
+                <button class="modal-close" type="button" onclick="closeDeleteAccountConfirmModal()" aria-label="Close">×</button>
+                <div class="danger-badge" style="display: inline-block; margin-bottom: 8px;">⚠️ FINAL CONFIRMATION</div>
+                <h3 style="font-family: var(--font-display); font-size: 26px; color: #FFF; margin: 4px 0 10px;">Are you absolutely sure?</h3>
+                <p style="font-size: 13px; color: #CBD5E1; line-height: 1.5; margin-bottom: 16px;">
+                    This will permanently destroy your user account and all data (monthly food history, photos, schedules, and XP).
+                </p>
+                <div class="field" style="margin-bottom: 16px;">
+                    <label for="deleteAccountConfirmInput" style="color: #FDA4AF; font-weight: 800;">Type "DELETE" in capital letters to confirm:</label>
+                    <input type="text" id="deleteAccountConfirmInput" placeholder="DELETE" autocomplete="off" style="border-color: #FF4D2E; background: #141419; color: #FFF; font-family: var(--font-mono); font-weight: 800;" />
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="mini-button" onclick="closeDeleteAccountConfirmModal()" style="flex: 1; padding: 12px; font-weight: 700;">CANCEL</button>
+                    <button type="button" id="confirmDeleteAccountBtn" class="danger-delete-btn" onclick="handlePermanentAccountDelete()" style="flex: 1.4; padding: 12px; font-weight: 800;">
+                        PERMANENTLY DELETE
+                    </button>
+                </div>
+                <p id="deleteAccountErrorMsg" class="form-message" style="margin-top: 10px;" aria-live="polite"></p>
             </div>
         </div>
 
@@ -2098,13 +2458,13 @@
 </div>
 
 
-<script src="/static/app.js?v=14.0"></script>
+<script src="/static/app.js?v=15.0"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
-<script src="/static/aeriva-animations.js?v=14.0" defer></script>
-<script src="/static/aeriva-3d.js?v=14.0" defer></script>
+<script src="/static/aeriva-animations.js?v=15.0" defer></script>
+<script src="/static/aeriva-3d.js?v=15.0" defer></script>
 
 </body>
 </html>

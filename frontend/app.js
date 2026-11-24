@@ -544,18 +544,21 @@ function switchDashboardTab(tab) {
     const tab1Btn = document.getElementById("tabDashboard1Btn");
     const tab2Btn = document.getElementById("tabDashboard2Btn");
     const tab3Btn = document.getElementById("tabDashboard3Btn");
+    const tab4Btn = document.getElementById("tabDashboard4Btn");
     const corner1Btn = document.getElementById("cornerTab1Btn");
     const corner2Btn = document.getElementById("cornerTab2Btn");
     const corner3Btn = document.getElementById("cornerTab3Btn");
+    const corner4Btn = document.getElementById("cornerTab4Btn");
     const view1 = document.getElementById("dashboardView1");
     const view2 = document.getElementById("dashboardView2");
     const view3 = document.getElementById("dashboardView3");
+    const view4 = document.getElementById("dashboardView4");
 
     // Reset all tabs
-    [tab1Btn, tab2Btn, tab3Btn, corner1Btn, corner2Btn, corner3Btn].forEach(btn => {
+    [tab1Btn, tab2Btn, tab3Btn, tab4Btn, corner1Btn, corner2Btn, corner3Btn, corner4Btn].forEach(btn => {
         if (btn) btn.classList.remove("active");
     });
-    [view1, view2, view3].forEach(view => {
+    [view1, view2, view3, view4].forEach(view => {
         if (view) view.classList.add("hidden");
     });
 
@@ -572,14 +575,20 @@ function switchDashboardTab(tab) {
         localStorage.setItem("aeriva_active_dashboard_tab", "precautions");
         loadHealthPrecautions();
         loadNextDaySuggestions();
+    } else if (tab === "account" || tab === "dashboard4" || tab === "4" || tab === "profile") {
+        if (tab4Btn) tab4Btn.classList.add("active");
+        if (corner4Btn) corner4Btn.classList.add("active");
+        if (view4) view4.classList.remove("hidden");
+        localStorage.setItem("aeriva_active_dashboard_tab", "account");
+        loadAccountDetailsDashboard();
     } else {
         if (tab1Btn) tab1Btn.classList.add("active");
         if (corner1Btn) corner1Btn.classList.add("active");
         if (view1) view1.classList.remove("hidden");
         localStorage.setItem("aeriva_active_dashboard_tab", "routine");
+    }
     const dashEl = document.getElementById("dashboardScreen");
     if (dashEl) dashEl.setAttribute("data-active-tab", tab || "routine");
-    }
 }
 
 
@@ -7092,5 +7101,601 @@ function toggleDirectLoginForm() {
             const emailInput = document.getElementById("loginEmail");
             if (emailInput) emailInput.focus();
         }
+    }
+}
+
+
+/* ==========================================================================
+   DASHBOARD 4: ACCOUNT DETAILS, UNIQUE SCHEDULE, MONTHLY FOOD ARCHIVE & SETTINGS
+   ========================================================================== */
+
+let currentSelectedMonth = "";
+let availableArchiveMonths = [];
+
+async function loadAccountDetailsDashboard() {
+    // 1. Populate Email and user attributes
+    const emailEl = document.getElementById("accountUserEmail");
+    const nameInput = document.getElementById("accountEditName");
+    const ageInput = document.getElementById("accountEditAge");
+    const heightInput = document.getElementById("accountEditHeight");
+    const weightInput = document.getElementById("accountEditWeight");
+    const categorySelect = document.getElementById("accountEditCategory");
+
+    let user = currentUser;
+    if (!user) {
+        try {
+            const cached = localStorage.getItem("aeriva_user");
+            if (cached) user = JSON.parse(cached);
+        } catch (_) {}
+    }
+
+    const email = (user && user.email) || localStorage.getItem("aeriva_user_email") || "user@example.com";
+    if (emailEl) emailEl.textContent = email;
+
+    if (user) {
+        if (nameInput && user.name) nameInput.value = user.name;
+        if (ageInput && user.age) ageInput.value = user.age;
+        if (heightInput && user.height) heightInput.value = user.height;
+        if (weightInput && user.weight) weightInput.value = user.weight;
+        if (categorySelect && user.health_goal) categorySelect.value = user.health_goal;
+    }
+
+    recalcAccountVitals();
+
+    // 2. Load current schedule into Chrono matrix
+    await loadAccountScheduleInputs();
+
+    // 3. Load Monthly Food Archive
+    await loadMonthlyFoodLogs();
+}
+
+function recalcAccountVitals() {
+    const ageInput = document.getElementById("accountEditAge");
+    const heightInput = document.getElementById("accountEditHeight");
+    const weightInput = document.getElementById("accountEditWeight");
+    const categorySelect = document.getElementById("accountEditCategory");
+
+    const bmiEl = document.getElementById("accountBmiDisplay");
+    const bmiCatEl = document.getElementById("accountBmiCategory");
+    const bmrEl = document.getElementById("accountBmrDisplay");
+    const tdeeEl = document.getElementById("accountTdeeDisplay");
+
+    const age = parseFloat(ageInput ? ageInput.value : 0) || 25;
+    const height = parseFloat(heightInput ? heightInput.value : 0) || 175;
+    const weight = parseFloat(weightInput ? weightInput.value : 0) || 70;
+    const category = categorySelect ? categorySelect.value : "";
+
+    // BMI Calculation: weight (kg) / (height (m))^2
+    const hM = height / 100;
+    const bmi = hM > 0 ? (weight / (hM * hM)).toFixed(1) : "22.0";
+    let bmiCat = "Normal";
+    const bmiNum = parseFloat(bmi);
+    if (bmiNum < 18.5) bmiCat = "Underweight";
+    else if (bmiNum < 25) bmiCat = "Normal";
+    else if (bmiNum < 30) bmiCat = "Overweight";
+    else bmiCat = "Obese";
+
+    // BMR (Mifflin-St Jeor formula)
+    const bmr = Math.round(10 * weight + 6.25 * height - 5 * age + 5);
+
+    // TDEE multiplier based on Category
+    let multiplier = 1.4;
+    if (category.includes("Fat Loss")) multiplier = 1.35;
+    else if (category.includes("Muscle")) multiplier = 1.55;
+    else if (category.includes("Athletic") || category.includes("Endurance")) multiplier = 1.7;
+    else if (category.includes("Metabolic")) multiplier = 1.3;
+    const tdee = Math.round(bmr * multiplier);
+
+    if (bmiEl) bmiEl.textContent = bmi;
+    if (bmiCatEl) bmiCatEl.textContent = bmiCat;
+    if (bmrEl) bmrEl.textContent = bmr.toLocaleString();
+    if (tdeeEl) tdeeEl.textContent = tdee.toLocaleString();
+}
+
+async function saveAccountProfile(event) {
+    if (event) event.preventDefault();
+
+    const nameInput = document.getElementById("accountEditName");
+    const ageInput = document.getElementById("accountEditAge");
+    const heightInput = document.getElementById("accountEditHeight");
+    const weightInput = document.getElementById("accountEditWeight");
+    const categorySelect = document.getElementById("accountEditCategory");
+    const msgEl = document.getElementById("accountProfileMessage");
+    const submitBtn = document.getElementById("saveAccountProfileBtn");
+
+    const name = nameInput ? nameInput.value.trim() : "";
+    const age = parseInt(ageInput ? ageInput.value : 0);
+    const height = parseFloat(heightInput ? heightInput.value : 0);
+    const weight = parseFloat(weightInput ? weightInput.value : 0);
+    const healthGoal = categorySelect ? categorySelect.value : "";
+
+    if (!name || isNaN(age) || isNaN(height) || isNaN(weight) || !healthGoal) {
+        if (msgEl) {
+            msgEl.textContent = "Please fill in all profile fields.";
+            msgEl.style.color = "#FF4D2E";
+        }
+        return;
+    }
+
+    if (msgEl) {
+        msgEl.textContent = "Saving biometric profile...";
+        msgEl.style.color = "#C6FF00";
+    }
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const token = authToken || localStorage.getItem("aeriva_token");
+        const res = await fetch("/auth/update-profile", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: name,
+                age: age,
+                height: height,
+                weight: weight,
+                health_goal: healthGoal
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || "Failed to update profile");
+        }
+
+        currentUser = data.user;
+        localStorage.setItem("aeriva_user", JSON.stringify(data.user));
+        if (data.user && data.user.email) {
+            localStorage.setItem("aeriva_user_email", data.user.email);
+            if (typeof rememberAccount === "function") {
+                rememberAccount(data.user.name || name, data.user.email);
+            }
+        }
+
+        const userNameEl = document.getElementById("userName");
+        if (userNameEl) userNameEl.textContent = currentUser.name || "PLAYER";
+
+        if (typeof addXP === "function") {
+            addXP(15);
+        }
+
+        if (msgEl) {
+            msgEl.textContent = "✓ Biometric profile updated successfully! (+15 XP)";
+            msgEl.style.color = "#C6FF00";
+            setTimeout(() => {
+                if (msgEl) msgEl.textContent = "";
+            }, 4000);
+        }
+    } catch (err) {
+        console.error("saveAccountProfile error:", err);
+        if (msgEl) {
+            msgEl.textContent = err.message || "Failed to update profile";
+            msgEl.style.color = "#FF4D2E";
+        }
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+async function loadAccountScheduleInputs() {
+    try {
+        const token = authToken || localStorage.getItem("aeriva_token");
+        const res = await fetch(`${API}/schedule/weekly`, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+
+        const schedules = await res.json();
+        if (Array.isArray(schedules) && schedules.length > 0) {
+            const today = typeof getTodayName === "function" ? getTodayName().toLowerCase() : "";
+            const current = schedules.find(s => s.day_of_week && s.day_of_week.toLowerCase() === today) || schedules[0];
+
+            if (current) {
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el && val) el.value = val;
+                };
+                setVal("schedWakeUp", current.wake_up_time);
+                setVal("schedBreakfast", current.breakfast_time);
+                setVal("schedWorkStart", current.work_start_time);
+                setVal("schedLunch", current.lunch_time);
+                setVal("schedWorkEnd", current.work_end_time);
+                setVal("schedFreeStart", current.free_start_time);
+                setVal("schedFreeEnd", current.free_end_time);
+                setVal("schedSnack", current.snack_time);
+                setVal("schedDinner", current.dinner_time);
+                setVal("schedSleep", current.sleep_time);
+            }
+        }
+    } catch (e) {
+        console.error("loadAccountScheduleInputs error:", e);
+    }
+    recalcScheduleTelemetry();
+}
+
+function applyChronoPreset(preset) {
+    const presets = {
+        early: {
+            wake: "05:30", breakfast: "07:00", workStart: "08:00",
+            lunch: "12:30", workEnd: "16:30", freeStart: "17:00",
+            freeEnd: "18:15", snack: "16:45", dinner: "19:30", sleep: "21:30"
+        },
+        standard: {
+            wake: "07:00", breakfast: "08:30", workStart: "09:00",
+            lunch: "13:00", workEnd: "17:30", freeStart: "18:00",
+            freeEnd: "19:00", snack: "17:30", dinner: "20:30", sleep: "23:00"
+        },
+        athlete: {
+            wake: "05:00", breakfast: "07:30", workStart: "08:30",
+            lunch: "12:30", workEnd: "16:00", freeStart: "16:30",
+            freeEnd: "18:30", snack: "16:15", dinner: "19:45", sleep: "21:45"
+        },
+        night: {
+            wake: "13:00", breakfast: "14:30", workStart: "16:00",
+            lunch: "20:00", workEnd: "01:00", freeStart: "01:30",
+            freeEnd: "02:45", snack: "23:30", dinner: "03:30", sleep: "06:00"
+        }
+    };
+
+    const cfg = presets[preset];
+    if (!cfg) return;
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    };
+    setVal("schedWakeUp", cfg.wake);
+    setVal("schedBreakfast", cfg.breakfast);
+    setVal("schedWorkStart", cfg.workStart);
+    setVal("schedLunch", cfg.lunch);
+    setVal("schedWorkEnd", cfg.workEnd);
+    setVal("schedFreeStart", cfg.freeStart);
+    setVal("schedFreeEnd", cfg.freeEnd);
+    setVal("schedSnack", cfg.snack);
+    setVal("schedDinner", cfg.dinner);
+    setVal("schedSleep", cfg.sleep);
+
+    recalcScheduleTelemetry();
+}
+
+function parseTimeToMinutes(tStr) {
+    if (!tStr || !tStr.includes(":")) return 0;
+    const [h, m] = tStr.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+}
+
+function recalcScheduleTelemetry() {
+    const wakeEl = document.getElementById("schedWakeUp");
+    const sleepEl = document.getElementById("schedSleep");
+    const freeStartEl = document.getElementById("schedFreeStart");
+    const freeEndEl = document.getElementById("schedFreeEnd");
+
+    const sleepDurationEl = document.getElementById("schedSleepDurationText");
+    const workoutWindowEl = document.getElementById("schedWorkoutWindowText");
+
+    if (wakeEl && sleepEl && sleepDurationEl) {
+        const wakeMin = parseTimeToMinutes(wakeEl.value);
+        const sleepMin = parseTimeToMinutes(sleepEl.value);
+        let diff = (wakeMin + 1440 - sleepMin) % 1440;
+        if (diff === 0) diff = 1440;
+        const hrs = Math.floor(diff / 60);
+        const mins = diff % 60;
+        let rating = "Optimal Rest";
+        if (hrs < 6) rating = "Short Recovery";
+        else if (hrs > 9) rating = "Deep Extended";
+        sleepDurationEl.textContent = `${hrs}h ${mins > 0 ? mins + "m " : ""}(${rating})`;
+    }
+
+    if (freeStartEl && freeEndEl && workoutWindowEl) {
+        const startMin = parseTimeToMinutes(freeStartEl.value);
+        const endMin = parseTimeToMinutes(freeEndEl.value);
+        let diff = endMin >= startMin ? endMin - startMin : (endMin + 1440 - startMin);
+        let rating = "Prime Energy";
+        if (diff < 45) rating = "Quick HIIT / Circuit";
+        else if (diff >= 90) rating = "Extended Endurance";
+        workoutWindowEl.textContent = `${diff} mins (${rating})`;
+    }
+}
+
+async function saveAccountSchedule(event) {
+    if (event) event.preventDefault();
+
+    const msgEl = document.getElementById("accountScheduleMessage");
+    const submitBtn = document.getElementById("saveAccountScheduleBtn");
+
+    const wake = document.getElementById("schedWakeUp")?.value || "06:30";
+    const breakfast = document.getElementById("schedBreakfast")?.value || "08:30";
+    const workStart = document.getElementById("schedWorkStart")?.value || "09:00";
+    const lunch = document.getElementById("schedLunch")?.value || "13:00";
+    const workEnd = document.getElementById("schedWorkEnd")?.value || "17:00";
+    const freeStart = document.getElementById("schedFreeStart")?.value || "17:30";
+    const freeEnd = document.getElementById("schedFreeEnd")?.value || "18:30";
+    const snack = document.getElementById("schedSnack")?.value || "17:00";
+    const dinner = document.getElementById("schedDinner")?.value || "20:30";
+    const sleep = document.getElementById("schedSleep")?.value || "23:00";
+
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const weeklySchedules = days.map(day => ({
+        day_of_week: day,
+        wake_up_time: wake,
+        breakfast_time: breakfast,
+        lunch_time: lunch,
+        snack_time: snack,
+        dinner_time: dinner,
+        work_start_time: workStart,
+        work_end_time: workEnd,
+        free_start_time: freeStart,
+        free_end_time: freeEnd,
+        sleep_time: sleep
+    }));
+
+    if (msgEl) {
+        msgEl.textContent = "Synchronizing chrono matrix...";
+        msgEl.style.color = "#C6FF00";
+    }
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const token = authToken || localStorage.getItem("aeriva_token");
+        const res = await fetch(`${API}/schedule/weekly`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ schedules: weeklySchedules })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || "Unable to save schedule");
+        }
+
+        if (typeof addXP === "function") {
+            addXP(20);
+        }
+
+        if (msgEl) {
+            msgEl.textContent = "✓ Chrono schedule synchronized across all 7 days! (+20 XP)";
+            msgEl.style.color = "#C6FF00";
+            setTimeout(() => {
+                if (msgEl) msgEl.textContent = "";
+            }, 4000);
+        }
+
+        if (typeof loadRoutine === "function") {
+            await loadRoutine();
+        }
+        if (typeof loadSmartExerciseRecommender === "function") {
+            loadSmartExerciseRecommender();
+        }
+    } catch (err) {
+        console.error("saveAccountSchedule error:", err);
+        if (msgEl) {
+            msgEl.textContent = err.message || "Failed to save schedule";
+            msgEl.style.color = "#FF4D2E";
+        }
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+async function loadMonthlyFoodLogs(targetMonth) {
+    const listContainer = document.getElementById("monthlyFoodListContainer");
+    const picker = document.getElementById("monthlyFoodPicker");
+    const totalMealsEl = document.getElementById("monthlyTotalMeals");
+    const totalCalsEl = document.getElementById("monthlyTotalCalories");
+    const avgCalsEl = document.getElementById("monthlyAvgCalories");
+    const topFoodsEl = document.getElementById("monthlyTopFoods");
+
+    if (listContainer) {
+        listContainer.innerHTML = '<div style="text-align: center; padding: 30px; font-family: var(--font-mono); color: #94A3B8;">Loading monthly nutrition records...</div>';
+    }
+
+    try {
+        const token = authToken || localStorage.getItem("aeriva_token");
+        const url = `${API}/food/log/monthly` + (targetMonth ? `?month=${encodeURIComponent(targetMonth)}` : "");
+        const res = await fetch(url, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+            throw new Error("Failed to load monthly food log");
+        }
+
+        const data = await res.json();
+        currentSelectedMonth = data.month;
+        availableArchiveMonths = data.available_months || [data.month];
+
+        // Update picker options
+        if (picker) {
+            picker.innerHTML = availableArchiveMonths.map(m => {
+                const [y, mm] = m.split("-");
+                const dateObj = new Date(parseInt(y), parseInt(mm) - 1, 1);
+                const label = dateObj.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+                return `<option value="${m}" ${m === currentSelectedMonth ? "selected" : ""}>${label} (${m})</option>`;
+            }).join("");
+        }
+
+        // Update Stats
+        if (totalMealsEl) totalMealsEl.textContent = `${data.total_meals} items`;
+        if (totalCalsEl) totalCalsEl.textContent = `${Math.round(data.total_calories).toLocaleString()} kcal`;
+        if (avgCalsEl) avgCalsEl.textContent = `${Math.round(data.average_daily_calories).toLocaleString()} kcal/day`;
+        if (topFoodsEl) {
+            if (data.top_foods && data.top_foods.length > 0) {
+                topFoodsEl.textContent = data.top_foods.map(f => `${f.name} (x${f.count})`).slice(0, 3).join(", ");
+            } else {
+                topFoodsEl.textContent = "None logged";
+            }
+        }
+
+        // Render food stream grouped by days
+        if (listContainer) {
+            if (!data.days || data.days.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="monthly-empty-card">
+                        <div class="monthly-empty-icon">🥗</div>
+                        <h4 style="font-family: var(--font-display); font-size: 20px; color: var(--ink); margin: 0 0 4px;">NO FOOD LOGS RECORDED</h4>
+                        <p style="font-size: 13px; color: #64748B; margin: 0;">No meals were logged in ${data.month_name || currentSelectedMonth}. Switch to Dashboard 1 to snap food photos!</p>
+                    </div>
+                `;
+            } else {
+                listContainer.innerHTML = data.days.map(day => {
+                    const mealsHtml = day.meals.map(m => {
+                        const fallbackImg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231E202E'/><text x='50%' y='55%' text-anchor='middle' fill='%2364748B' font-size='28' font-family='sans-serif'>🍽️</text></svg>";
+                        const imgSrc = m.image_url ? (m.image_url.startsWith("http") ? m.image_url : `${API}${m.image_url}`) : fallbackImg;
+                        const safeName = typeof escapeHTML === "function" ? escapeHTML(m.food_name) : m.food_name;
+                        return `
+                            <div class="monthly-meal-card">
+                                <img src="${imgSrc}" alt="${safeName}" class="monthly-thumb" onerror="this.onerror=null; this.src='${fallbackImg}';" />
+                                <div class="monthly-meal-info">
+                                    <div class="monthly-meal-top">
+                                        <span class="monthly-meal-tag">${m.meal_type || "MEAL"}</span>
+                                        <span class="monthly-meal-time">${m.created_at || ""}</span>
+                                    </div>
+                                    <div class="monthly-meal-name" title="${safeName}">${safeName}</div>
+                                    <div class="monthly-meal-bottom">
+                                        <span class="monthly-portion">${m.quantity} ${m.quantity === 1 ? "portion" : "portions"}</span>
+                                        <span class="monthly-calories">${Math.round(m.calories)} kcal</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+
+                    return `
+                        <div class="monthly-day-group">
+                            <div class="monthly-day-header">
+                                <span class="monthly-day-date">📅 ${day.date} (${day.day_of_week})</span>
+                                <span class="monthly-day-cals">${Math.round(day.total_calories)} kcal Total</span>
+                            </div>
+                            <div class="monthly-day-meals-grid">
+                                ${mealsHtml}
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            }
+        }
+    } catch (err) {
+        console.error("loadMonthlyFoodLogs error:", err);
+        if (listContainer) {
+            listContainer.innerHTML = `<div style="text-align: center; padding: 24px; color: #FF4D2E; font-family: var(--font-mono);">Failed to load monthly logs: ${err.message}</div>`;
+        }
+    }
+}
+
+function navigateMonthlyLog(direction) {
+    if (!availableArchiveMonths || availableArchiveMonths.length === 0) return;
+    const idx = availableArchiveMonths.indexOf(currentSelectedMonth);
+    const newIdx = idx - direction;
+    if (newIdx >= 0 && newIdx < availableArchiveMonths.length) {
+        const newMonth = availableArchiveMonths[newIdx];
+        loadMonthlyFoodLogs(newMonth);
+    }
+}
+
+function refreshCurrentMonthLogs() {
+    loadMonthlyFoodLogs(currentSelectedMonth);
+}
+
+/* =========================================
+   PERMANENT ACCOUNT DELETION
+========================================= */
+
+function openDeleteAccountConfirmModal() {
+    const modal = document.getElementById("deleteAccountConfirmModal");
+    const input = document.getElementById("deleteAccountConfirmInput");
+    const errorMsg = document.getElementById("deleteAccountErrorMsg");
+    if (input) input.value = "";
+    if (errorMsg) errorMsg.textContent = "";
+    if (modal) {
+        modal.classList.remove("hidden");
+        modal.setAttribute("aria-hidden", "false");
+        setTimeout(() => { if (input) input.focus(); }, 100);
+    }
+}
+
+function closeDeleteAccountConfirmModal() {
+    const modal = document.getElementById("deleteAccountConfirmModal");
+    if (modal) {
+        modal.classList.add("hidden");
+        modal.setAttribute("aria-hidden", "true");
+    }
+}
+
+async function handlePermanentAccountDelete() {
+    const input = document.getElementById("deleteAccountConfirmInput");
+    const errorMsg = document.getElementById("deleteAccountErrorMsg");
+    const btn = document.getElementById("confirmDeleteAccountBtn");
+
+    const val = input ? input.value.trim() : "";
+    if (val !== "DELETE") {
+        if (errorMsg) {
+            errorMsg.textContent = 'Please type "DELETE" exactly in uppercase letters to proceed.';
+            errorMsg.style.color = "#FF4D2E";
+        }
+        return;
+    }
+
+    if (errorMsg) {
+        errorMsg.textContent = "Permanently deleting user account...";
+        errorMsg.style.color = "#FDA4AF";
+    }
+    if (btn) btn.disabled = true;
+
+    try {
+        const token = authToken || localStorage.getItem("aeriva_token");
+        const res = await fetch(`${API}/auth/delete-account`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || "Failed to delete account");
+        }
+
+        // Clear all client user session and storage
+        localStorage.removeItem("aeriva_token");
+        localStorage.removeItem("aeriva_user");
+        localStorage.removeItem("aeriva_user_email");
+        localStorage.removeItem("aeriva_active_dashboard_tab");
+        localStorage.removeItem("aeriva_xp");
+        localStorage.removeItem("aeriva_water_count");
+        localStorage.removeItem("aeriva_water_target");
+        localStorage.removeItem("aeriva_daily_steps");
+
+        currentUser = null;
+        authToken = null;
+
+        closeDeleteAccountConfirmModal();
+
+        // Switch to Auth Screen
+        const authScreen = document.getElementById("authScreen");
+        const dashboardScreen = document.getElementById("dashboardScreen");
+        const scheduleSetupScreen = document.getElementById("scheduleSetupScreen");
+
+        if (dashboardScreen) dashboardScreen.classList.add("hidden");
+        if (scheduleSetupScreen) scheduleSetupScreen.classList.add("hidden");
+        if (authScreen) authScreen.classList.remove("hidden");
+
+        const authMsg = document.getElementById("authMessage");
+        if (authMsg) {
+            authMsg.textContent = "Your account and all associated data have been permanently deleted.";
+            authMsg.style.color = "#FF4D2E";
+        }
+    } catch (err) {
+        console.error("handlePermanentAccountDelete error:", err);
+        if (errorMsg) {
+            errorMsg.textContent = err.message || "Failed to delete account";
+            errorMsg.style.color = "#FF4D2E";
+        }
+    } finally {
+        if (btn) btn.disabled = false;
     }
 }

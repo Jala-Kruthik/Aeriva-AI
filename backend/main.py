@@ -1,5 +1,5 @@
 import os
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -615,6 +615,35 @@ def update_profile(
 
 
 # =========================================
+# PERMANENT USER ACCOUNT DELETION
+# =========================================
+
+@app.delete("/auth/delete-account")
+def delete_user_account(authorization: str | None = Header(default=None)):
+    """
+    Permanently deletes user account, cascade-deleting all daily schedules and food logs.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication token required")
+    user = get_current_user(authorization)
+    db = SessionLocal()
+    try:
+        db_user = db.query(User).filter(User.id == user.id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Delete user record (cascades to daily_schedules, food_logs)
+        db.delete(db_user)
+        db.commit()
+        return {
+            "status": "success",
+            "message": "User account and all associated records permanently deleted."
+        }
+    finally:
+        db.close()
+
+
+# =========================================
 # DEVELOPMENT PASSWORD RESET
 # =========================================
 
@@ -1170,6 +1199,143 @@ def get_week_food_logs(authorization: str | None = Header(default=None)):
         return {
             "retention": "Images are stored up to 1 week (7 days) and auto-purged.",
             "days": list(days_map.values())
+        }
+    finally:
+        db.close()
+
+
+# =========================================
+# MONTHLY FOOD LOG ARCHIVE
+# =========================================
+
+@app.get("/food/log/monthly")
+def get_monthly_food_logs(
+    month: str | None = None,
+    authorization: str | None = Header(default=None)
+):
+    """
+    Returns food logs grouped by month and date for comprehensive monthly nutrition tracking.
+    month format: YYYY-MM (e.g. 2026-11). If omitted, defaults to current month.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authentication token required")
+    user = get_current_user(authorization)
+
+    today = date.today()
+    if not month or not re.match(r"^\d{4}-\d{2}$", month):
+        month = today.strftime("%Y-%m")
+
+    try:
+        year_str, month_str = month.split("-")
+        target_year = int(year_str)
+        target_month = int(month_str)
+    except Exception:
+        target_year = today.year
+        target_month = today.month
+        month = today.strftime("%Y-%m")
+
+    import calendar
+    _, num_days = calendar.monthrange(target_year, target_month)
+    start_date = date(target_year, target_month, 1)
+    end_date = date(target_year, target_month, num_days)
+
+    db = SessionLocal()
+    try:
+        # 1. Fetch all distinct months for user to populate month picker
+        all_dates = (
+            db.query(FoodLog.log_date)
+            .filter(FoodLog.user_id == user.id)
+            .distinct()
+            .all()
+        )
+        avail_months = sorted(
+            list({d[0].strftime("%Y-%m") for d in all_dates if d[0]}),
+            reverse=True
+        )
+        if month not in avail_months:
+            avail_months.insert(0, month)
+
+        # 2. Query logs for the selected month
+        logs = (
+            db.query(FoodLog)
+            .filter(
+                FoodLog.user_id == user.id,
+                FoodLog.log_date >= start_date,
+                FoodLog.log_date <= end_date
+            )
+            .order_by(FoodLog.log_date.desc(), FoodLog.created_at.desc())
+            .all()
+        )
+
+        month_dt = datetime(target_year, target_month, 1)
+        month_name = month_dt.strftime("%B %Y")
+
+        total_calories = 0.0
+        days_map = {}
+        food_frequency = {}
+
+        for item in logs:
+            cals = float(item.calories) if item.calories is not None else 0.0
+            total_calories += cals
+            d_str = str(item.log_date)
+
+            fn = (item.food_name or "Food Item").strip()
+            food_frequency[fn] = food_frequency.get(fn, 0) + 1
+
+            if d_str not in days_map:
+                try:
+                    day_label = item.log_date.strftime("%a, %b %d")
+                    day_name = item.log_date.strftime("%A")
+                except Exception:
+                    day_label = d_str
+                    day_name = ""
+                days_map[d_str] = {
+                    "date": d_str,
+                    "label": day_label,
+                    "day_name": day_name,
+                    "total_calories": 0.0,
+                    "meals": []
+                }
+
+            days_map[d_str]["total_calories"] += cals
+
+            qty = 1.0
+            try:
+                if item.quantity:
+                    qty = float(item.quantity)
+            except Exception:
+                qty = 1.0
+
+            days_map[d_str]["meals"].append({
+                "id": item.id,
+                "meal_type": item.meal_type,
+                "food_name": item.food_name,
+                "quantity": qty,
+                "calories": round(cals, 1),
+                "image_url": item.image_url,
+                "created_at": item.created_at.strftime("%I:%M %p") if item.created_at else ""
+            })
+
+        for d_str in days_map:
+            days_map[d_str]["total_calories"] = round(days_map[d_str]["total_calories"], 1)
+
+        sorted_days = sorted(days_map.values(), key=lambda x: x["date"], reverse=True)
+        days_with_logs = len(sorted_days)
+        avg_daily = round(total_calories / max(1, days_with_logs), 1)
+
+        top_foods = sorted(food_frequency.items(), key=lambda x: x[1], reverse=True)[:5]
+        top_foods_list = [{"name": name, "count": count} for name, count in top_foods]
+
+        return {
+            "month": month,
+            "month_name": month_name,
+            "available_months": avail_months,
+            "total_meals": len(logs),
+            "total_calories": round(total_calories, 1),
+            "days_logged": days_with_logs,
+            "average_daily_calories": avg_daily,
+            "top_foods": top_foods_list,
+            "days": sorted_days
         }
     finally:
         db.close()
