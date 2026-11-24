@@ -422,14 +422,21 @@ def analyze_food_image_langgraph(image_bytes: bytes, mime_type: str = "image/jpe
         "- **SOOJI HALWA / SHEERA**: Semolina sweet pudding with ghee and cardamom, served in firm/grainy scoops or mounds on the plate. "
         "DO NOT mistake solid sweet halwa scoops for liquid raita!\n"
         "- **RAITA**: Liquid/creamy yogurt in a bowl or cup, NOT dry grainy solid mounds.\n\n"
-        "### 3. CLASSIC COMBINATIONS:\n"
+        "### 3. RICE, CURD, GRAINS & CONDIMENTS:\n"
+        "- **CURD RICE / DADDOJANAM / THAYIR SADAM WITH PICKLE (ACHAR)**: Creamy white mixture of soft mashed rice and curd/yogurt, often with tempering (mustard seeds, curry leaves) and commonly topped or served with spicy dark-red/brown mango/lemon pickle (Achar), podi, or chutney. If you see white creamy rice/curd with a reddish-brown pickle dollop in the center, classify it as Curd Rice with Pickle (Thayir Sadam) or Dahi Chawal with Achar.\n"
+        "- **DAHI / CURD / YOGURT WITH JAGGERY OR CHUTNEY**: Plain thick white curd/yogurt topped with dark jaggery lump, date paste, or sweet/tangy chutney.\n"
+        "- **BIRYANI / PULAO / FRIED RICE**: Spiced basmati rice with meat or vegetables, yellow/orange spices, whole spices.\n"
+        "- **KHICHDI / PONGAL**: Soft porridge of rice and lentils, seasoned with cumin, black pepper, and ghee.\n"
+        "- **POHA / UPMA**: Flattened rice with turmeric and peanuts, or roasted semolina with vegetables and mustard seeds.\n\n"
+        "### 4. CLASSIC COMBINATIONS:\n"
+        "- **Curd Rice with Pickle**: Curd Rice + spicy Mango/Lime Pickle (Achar).\n"
         "- **Poori Chana with Halwa** (or Halwa Poori): Poori + Chana Masala + Sooji Halwa.\n"
         "- **Chole Bhature**: Large puffed Bhatura + spicy Chole.\n"
         "- **Poori Bhaji**: Poori + spiced Aloo potato curry.\n"
         "- **Idli Vada Sambar**: Steamed idlis, crispy medu vada, vegetable lentil stew, and coconut chutney.\n"
         "- **Pav Bhaji**: Buttered pav bread rolls + thick vegetable mash gravy.\n"
         "- **Burger & Sides**: Patty, bun, sauce, fries, ketchup.\n\n"
-        "### 4. MULTI-ITEM ANALYSIS:\n"
+        "### 5. MULTI-ITEM ANALYSIS:\n"
         "Detect every individual food component on the plate (e.g., bread, curry, sweet/side). "
         "Provide an accurate composite dish name, as well as an `items_breakdown` list specifying each item.\n\n"
         "Output strictly valid JSON with no markdown:\n"
@@ -503,14 +510,6 @@ def analyze_food_image_langgraph(image_bytes: bytes, mime_type: str = "image/jpe
         except Exception:
             total_cal = 0.0
 
-        if total_cal <= 0 and cal_unit > 0:
-            total_cal = cal_unit * qty
-        elif total_cal > 0 and cal_unit <= 0:
-            cal_unit = total_cal / qty
-        elif total_cal <= 0 and cal_unit <= 0:
-            total_cal = 280.0
-            cal_unit = 280.0
-
         portion_desc = str(data.get("portion_description") or data.get("portion") or f"{qty} serving")
         explanation = str(data.get("visual_explanation") or data.get("description") or f"Identified as {food_name} via Groq Vision AI")
 
@@ -533,12 +532,26 @@ def analyze_food_image_langgraph(image_bytes: bytes, mime_type: str = "image/jpe
                             "calories": i_cal
                         })
 
+        if (total_cal <= 0 or total_cal is None) and items_breakdown:
+            breakdown_sum = sum(itm.get("calories", 0.0) for itm in items_breakdown)
+            if breakdown_sum > 0:
+                total_cal = breakdown_sum
+                cal_unit = total_cal / qty
+        elif total_cal <= 0 and cal_unit > 0:
+            total_cal = cal_unit * qty
+        elif total_cal > 0 and cal_unit <= 0:
+            cal_unit = total_cal / qty
+        elif total_cal <= 0 and cal_unit <= 0:
+            total_cal = 280.0
+            cal_unit = 280.0
+
         return {
             "food_name": food_name,
             "items_breakdown": items_breakdown,
             "portion_description": portion_desc,
             "quantity": round(qty, 2),
             "calories": round(total_cal, 1),
+            "total_calories": round(total_cal, 1),
             "calories_per_unit": round(cal_unit, 1),
             "macros": {
                 "protein": float(data.get("protein_g", data.get("protein", 0.0))),

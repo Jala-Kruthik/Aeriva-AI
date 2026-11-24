@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/style.css?v=13.0">
-    <link rel="stylesheet" href="/static/aeriva-3d.css?v=13.0">
+    <link rel="stylesheet" href="/static/style.css?v=14.0">
+    <link rel="stylesheet" href="/static/aeriva-3d.css?v=14.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -1409,7 +1409,7 @@
 
 <div id="foodModal" class="modal hidden" aria-hidden="true">
 
-    <div class="modal-card glass-panel" role="dialog" aria-modal="true" aria-labelledby="foodModalTitle">
+    <div class="modal-card food-modal-card" role="dialog" aria-modal="true" aria-labelledby="foodModalTitle">
 
         <button
             class="modal-close"
@@ -1484,11 +1484,25 @@
 
             <!-- SCANNING IN PROGRESS / RESULT CARD -->
             <div id="scannerResultBox" class="scanner-result-box hidden">
-                <div class="scanner-image-preview-wrapper">
+                <div class="scanner-image-preview-wrapper" id="scannerPreviewWrapper">
                     <img id="scannedImagePreview" alt="Food Photo" class="scanned-image-preview">
+                    
+                    <!-- CRAZY CYBER MATRIX SCANNING OVERLAY -->
                     <div id="scannerScanningPulse" class="scanner-radar-overlay">
-                        <div class="scanner-radar-beam"></div>
-                        <span class="scanner-radar-label">⚡ AI ANALYZING FOOD & PORTION...</span>
+                        <div class="scanner-grid-mesh"></div>
+                        <div class="scanner-corner top-left"></div>
+                        <div class="scanner-corner top-right"></div>
+                        <div class="scanner-corner bottom-left"></div>
+                        <div class="scanner-corner bottom-right"></div>
+                        <div class="scanner-target-reticle">
+                            <div class="reticle-ring"></div>
+                            <div class="reticle-crosshair"></div>
+                        </div>
+                        <div class="scanner-laser-beam"></div>
+                        <div class="scanner-hud-telemetry">
+                            <span class="hud-glitch-dot">●</span>
+                            <span id="scannerHudStatusText" class="scanner-radar-label">AI SPECTRAL SCANNING · TARGET ACQUIRED</span>
+                        </div>
                     </div>
                 </div>
 
@@ -2084,13 +2098,13 @@
 </div>
 
 
-<script src="/static/app.js?v=13.0"></script>
+<script src="/static/app.js?v=14.0"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
-<script src="/static/aeriva-animations.js?v=13.0" defer></script>
-<script src="/static/aeriva-3d.js?v=13.0" defer></script>
+<script src="/static/aeriva-animations.js?v=14.0" defer></script>
+<script src="/static/aeriva-3d.js?v=14.0" defer></script>
 
 </body>
 </html>

@@ -1551,6 +1551,7 @@ async function handleFoodImageSelected(input) {
     const previewImg = document.getElementById("scannedImagePreview");
     const scanPulse = document.getElementById("scannerScanningPulse");
     const detailsContainer = document.getElementById("scannerDetectedDetails");
+    const hudStatusText = document.getElementById("scannerHudStatusText");
 
     if (resultBox) resultBox.classList.remove("hidden");
     if (scanPulse) scanPulse.classList.remove("hidden");
@@ -1562,14 +1563,36 @@ async function handleFoodImageSelected(input) {
     };
     reader.readAsDataURL(file);
 
+    // Dynamic crazy HUD telemetry ticker
+    const telemetryMessages = [
+        "AI SPECTRAL SCANNER ACTIVE · LOCKING COORD...",
+        "⚡ ANALYZING SPECTRAL ABSORPTION (540nm)...",
+        "🔍 DETECTING FOOD TEXTURE & CONSISTENCY...",
+        "🍲 CROSS-REFERENCING CULINARY DATABASE...",
+        "📊 ESTIMATING VOLUME & MACRONUTRIENT DENSITY...",
+        "⚡ SYNCHRONIZING NUTRITIONAL TELEMETRY..."
+    ];
+    let teleIdx = 0;
+    if (hudStatusText) {
+        hudStatusText.textContent = telemetryMessages[0];
+        hudStatusText.style.color = "#00F0FF";
+    }
+    const teleInterval = setInterval(() => {
+        teleIdx = (teleIdx + 1) % telemetryMessages.length;
+        if (hudStatusText) {
+            hudStatusText.textContent = telemetryMessages[teleIdx];
+        }
+    }, 600);
+
     if (detailsContainer) {
         detailsContainer.innerHTML = `
             <div style="padding: 10px 0;">
-                <div style="font-size: 13px; font-weight: 800; color: #67E8F9; margin-bottom: 4px;">
-                    ⚡ Analyzing with Groq Vision AI...
+                <div style="font-size: 13px; font-weight: 800; color: #67E8F9; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-block; width: 8px; height: 8px; background: #C6FF00; border-radius: 50%; box-shadow: 0 0 8px #C6FF00;"></span>
+                    <span>AI Neural Vision Scanner Active...</span>
                 </div>
                 <div style="font-size: 11px; color: #94A3B8; line-height: 1.4;">
-                    Identifying dish name, detecting visible portion size, and calculating nutritional values.
+                    Analyzing visual traits, detecting food item & ingredients, calculating portion calories and macros.
                 </div>
             </div>
         `;
@@ -1591,11 +1614,7 @@ async function handleFoodImageSelected(input) {
 
         const data = await response.json();
 
-        // Hide scanning radar pulse
-        if (scanPulse) scanPulse.classList.add("hidden");
-
-        // Keep stored image url for attaching to meal log (persisted up to 1 week)
-        currentFoodModalImageUrl = data.image_url || null;
+        clearInterval(teleInterval);
 
         const foodName = data.food_name || "";
         const isRecognized = data.is_recognized !== false && Boolean(foodName);
@@ -1605,6 +1624,19 @@ async function handleFoodImageSelected(input) {
         const macros = data.macros || { protein: 0, carbs: 0, fat: 0 };
         const explanation = data.explanation || "AI vision detected this food item and estimated the serving size.";
         const itemsBreakdown = Array.isArray(data.items_breakdown) ? data.items_breakdown : [];
+
+        if (hudStatusText) {
+            hudStatusText.textContent = isRecognized ? `✓ TARGET ACQUIRED · ${(foodName || 'DISH').toUpperCase()}` : "⚠️ SCAN COMPLETE · MANUAL VERIFICATION NEEDED";
+            hudStatusText.style.color = isRecognized ? "#C6FF00" : "#F59E0B";
+        }
+
+        // Brief delay for dramatic finish before hiding laser
+        setTimeout(() => {
+            if (scanPulse) scanPulse.classList.add("hidden");
+        }, 900);
+
+        // Keep stored image url for attaching to meal log (persisted up to 1 week)
+        currentFoodModalImageUrl = data.image_url || null;
 
         if (detailsContainer) {
             if (isRecognized) {
@@ -1627,7 +1659,7 @@ async function handleFoodImageSelected(input) {
                 detailsContainer.innerHTML = `
                     <div class="scanner-detected-header">
                         <div>
-                            <div style="font-size: 9px; font-weight: 900; letter-spacing: 0.08em; color: #10B981;">✓ DISH RECOGNIZED</div>
+                            <div style="font-size: 9px; font-weight: 900; letter-spacing: 0.08em; color: #10B981;">✓ DISH RECOGNIZED BY AI VISION</div>
                             <h4 class="scanner-dish-name">${escapeHTML(foodName)}</h4>
                         </div>
                         <div class="scanner-cal-tag">
@@ -1655,7 +1687,7 @@ async function handleFoodImageSelected(input) {
 
                     <div class="scanner-success-badge">
                         <span>✓ Added to meal items list below</span>
-                        <button type="button" class="scanner-rescan-btn" onclick="triggerFoodImageUpload()">Scan Another Photo</button>
+                        <button type="button" class="scanner-rescan-btn" onclick="triggerFoodImageUpload()">🔄 Scan Another Photo</button>
                     </div>
                 `;
                 // Auto-fill or append to meal items with breakdown
@@ -1679,7 +1711,14 @@ async function handleFoodImageSelected(input) {
             }
         }
 
+        // Smooth scroll modal down to reveal detected details
+        const modalCard = document.querySelector("#foodModal .modal-card");
+        if (modalCard) {
+            modalCard.scrollTo({ top: 320, behavior: "smooth" });
+        }
+
     } catch (error) {
+        clearInterval(teleInterval);
         console.error("AI Food scan error:", error);
         if (scanPulse) scanPulse.classList.add("hidden");
         if (detailsContainer) {
@@ -1692,7 +1731,7 @@ async function handleFoodImageSelected(input) {
                         ${escapeHTML(error.message || "Could not analyze this image. Please try another clear photo.")}
                     </div>
                     <button type="button" class="mini-button" style="border-color: rgba(6, 182, 212, 0.4); color: #67E8F9;" onclick="triggerFoodImageUpload()">
-                        TRY ANOTHER PHOTO
+                        🔄 TRY ANOTHER PHOTO
                     </button>
                 </div>
             `;
