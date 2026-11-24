@@ -11,8 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/style.css?v=12.0">
-    <link rel="stylesheet" href="/static/aeriva-3d.css?v=12.0">
+    <link rel="stylesheet" href="/static/style.css?v=13.0">
+    <link rel="stylesheet" href="/static/aeriva-3d.css?v=13.0">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -1553,7 +1553,7 @@
 ===================================================== -->
 <div id="exerciseModePopupModal" class="modal hidden" aria-hidden="true" style="z-index: 60;">
 
-    <div class="modal-card glass-panel exercise-popup-card" role="dialog" aria-modal="true">
+    <div class="modal-card exercise-popup-card" role="dialog" aria-modal="true">
 
         <button
             class="modal-close"
@@ -1597,7 +1597,7 @@
             <div class="popup-stage-grid">
                 <div class="popup-stage-left">
                     <!-- VIEW MODE TOGGLE (TRAINER VIDEO vs AI POSE CANVAS) -->
-                    <div class="view-mode-toggle" id="exerciseViewModeToggle">
+                    <div class="view-mode-toggle" id="exerciseViewModeToggle" style="display: none;">
                         <button type="button" class="view-mode-btn" data-mode="video" onclick="window.aerivaSwitchViewMode && window.aerivaSwitchViewMode('video')">📹 TRAINER VIDEO</button>
                         <button type="button" class="view-mode-btn active" data-mode="canvas" onclick="window.aerivaSwitchViewMode && window.aerivaSwitchViewMode('canvas')">🤖 AI POSE VIEW</button>
                     </div>
@@ -1608,7 +1608,7 @@
                     </div>
 
                     <!-- TRAINER VIDEO PLAYER CONTAINER -->
-                    <div id="trainerVideoContainer" class="trainer-video-container hidden">
+                    <div id="trainerVideoContainer" class="trainer-video-container hidden" style="display: none;">
                         <video id="trainerVideoPlayer" class="trainer-video-player" playsinline loop muted preload="auto" poster="/static/athlete-squat.jpg"></video>
                         <div class="trainer-video-overlay">
                             <div class="video-top-bar">
@@ -2084,13 +2084,13 @@
 </div>
 
 
-<script src="/static/app.js?v=12.0"></script>
+<script src="/static/app.js?v=13.0"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" defer></script>
 <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js" defer></script>
-<script src="/static/aeriva-animations.js?v=12.0" defer></script>
-<script src="/static/aeriva-3d.js?v=12.0" defer></script>
+<script src="/static/aeriva-animations.js?v=13.0" defer></script>
+<script src="/static/aeriva-3d.js?v=13.0" defer></script>
 
 </body>
 </html>

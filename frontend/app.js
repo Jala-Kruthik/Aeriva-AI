@@ -2623,6 +2623,7 @@ const EXERCISE_CHARACTER_IMAGES = {
 function getExerciseCharacterImage(key, name) {
     const k = (key || "").toLowerCase();
     const n = (name || "").toLowerCase();
+    if (k.includes("warmup") || n.includes("warmup") || k.includes("twist") || n.includes("twist") || n.includes("brisk")) return EXERCISE_CHARACTER_IMAGES.jumping_jacks;
     if (k.includes("squat") || n.includes("squat") || n.includes("lunge") || n.includes("leg")) return EXERCISE_CHARACTER_IMAGES.squat;
     if (k.includes("cat_cow") || n.includes("cat-cow") || n.includes("spine")) return EXERCISE_CHARACTER_IMAGES.cat_cow;
     if (k.includes("surya") || n.includes("surya") || n.includes("salutation")) return EXERCISE_CHARACTER_IMAGES.surya_namaskar;
@@ -2633,6 +2634,269 @@ function getExerciseCharacterImage(key, name) {
     if (k.includes("jumping") || n.includes("jumping") || n.includes("jack") || n.includes("cardio") || n.includes("skipping") || n.includes("jog")) return EXERCISE_CHARACTER_IMAGES.jumping_jacks;
     if (k.includes("stretch") || n.includes("stretch") || n.includes("release") || n.includes("mobility")) return EXERCISE_CHARACTER_IMAGES.childs_pose;
     return EXERCISE_CHARACTER_IMAGES.default;
+}
+
+// DETAILED STEP-TO-STEP BODY MOVEMENT INSTRUCTIONS
+function getDetailedMovementSteps(key, name, fallbackInstructions) {
+    const k = (key || "").toLowerCase();
+    const n = (name || "").toLowerCase();
+
+    if (k.includes("pushup") || n.includes("pushup") || n.includes("push-up") || n.includes("push up") || k.includes("incline") || n.includes("incline") || n.includes("chest")) {
+        return [
+            {
+                num: "01",
+                title: "STANCE & SETUP",
+                desc: "Place hands slightly wider than shoulder-width on the floor or incline ledge. Set feet hip-width apart, squeeze glutes, and brace your core so your body forms a rigid straight line from crown to heels."
+            },
+            {
+                num: "02",
+                title: "MOVEMENT PATH",
+                desc: "Inhale and lower your chest down with control. Keep elbows tracking backward at roughly a 45-degree angle (arrow shape, never flared out into a T) until your chest hovers 2-3 inches above the surface."
+            },
+            {
+                num: "03",
+                title: "BREATHING & DRIVE",
+                desc: "Exhale forcefully through your mouth and push through the base of your palms to drive back up to lockout without sagging your hips or arching your lower back."
+            },
+            {
+                num: "04",
+                title: "FORM CHECK & CUES",
+                desc: "Keep neck neutral—gaze at the floor 1 foot ahead, not up at the wall. Maintain tight abs and glutes through the entire rep range."
+            }
+        ];
+    }
+
+    if (k.includes("squat") || n.includes("squat") || n.includes("lunge") || n.includes("quad") || n.includes("leg")) {
+        return [
+            {
+                num: "01",
+                title: "STANCE & SETUP",
+                desc: "Stand with feet shoulder-width apart, toes pointed slightly outward (15–30°). Keep chest lifted, spine tall, and arms extended or hands clasped at chest for balance."
+            },
+            {
+                num: "02",
+                title: "MOVEMENT PATH",
+                desc: "Inhale deeply as you initiate by hinging hips back and bending knees simultaneously. Sink down until thighs are parallel to the floor, driving knees out in line with your toes."
+            },
+            {
+                num: "03",
+                title: "DRIVE & POWER",
+                desc: "Exhale and drive evenly through whole feet (midfoot to heel) to return to standing. Squeeze glutes firmly at the top without hyperextending your lumbar spine."
+            },
+            {
+                num: "04",
+                title: "FORM CHECK & CUES",
+                desc: "Keep heels glued to the floor and torso upright. Prevent knee cave by actively pressing knees outward against imaginary resistance bands."
+            }
+        ];
+    }
+
+    if (k.includes("plank") || n.includes("plank") || k.includes("core") || n.includes("core")) {
+        return [
+            {
+                num: "01",
+                title: "STANCE & SETUP",
+                desc: "Plant forearms on the floor with elbows stacked directly under shoulders. Step feet back hip-width apart with toes tucked firmly into the ground."
+            },
+            {
+                num: "02",
+                title: "CORE & TENSION BRACE",
+                desc: "Tuck your pelvis slightly (posterior tilt) to eliminate lower back arch. Squeeze glutes, quads, and draw your navel toward your spine."
+            },
+            {
+                num: "03",
+                title: "BREATHING RHYTHM",
+                desc: "Take controlled, shallow diaphragm breaths while maintaining 100% abdominal wall stiffness. Do not hold your breath."
+            },
+            {
+                num: "04",
+                title: "FORM CHECK & CUES",
+                desc: "Maintain a straight visual line from back of head to heels. If hips start sagging or piking up, take a 5-second breather and reset with crisp form."
+            }
+        ];
+    }
+
+    if (k.includes("jumping") || n.includes("jumping") || k.includes("jack") || n.includes("jack") || k.includes("cardio") || n.includes("skipping") || n.includes("jog")) {
+        return [
+            {
+                num: "01",
+                title: "STANCE & SETUP",
+                desc: "Stand tall with feet together, arms resting naturally at your sides, chest lifted, and gaze straight ahead."
+            },
+            {
+                num: "02",
+                title: "EXPLOSIVE JUMP",
+                desc: "In a single coordinated movement, jump feet outward slightly beyond shoulder-width while sweeping arms overhead in an arc until hands nearly touch."
+            },
+            {
+                num: "03",
+                title: "SOFT LANDING & RETURN",
+                desc: "Spring off the balls of your feet, returning immediately to the starting position with feet together and arms at sides. Land softly with knees slightly bent."
+            },
+            {
+                num: "04",
+                title: "CADENCE & RHYTHM",
+                desc: "Maintain a steady, athletic cadence with continuous rhythmic nasal inhalation and mouth exhalation."
+            }
+        ];
+    }
+
+    if (k.includes("cat_cow") || n.includes("cat-cow") || k.includes("spine") || n.includes("spine")) {
+        return [
+            {
+                num: "01",
+                title: "TABLETOP SETUP",
+                desc: "Start on all fours: wrists stacked directly beneath shoulders and knees stacked beneath hips. Spread fingers wide with spine in neutral tabletop alignment."
+            },
+            {
+                num: "02",
+                title: "COW POSE (INHALATION)",
+                desc: "Slowly inhale through your nose as you drop your belly toward the floor, tilt your tailbone toward the ceiling, and lift your chest and gaze gently forward."
+            },
+            {
+                num: "03",
+                title: "CAT POSE (EXHALATION)",
+                desc: "Exhale fully through your mouth as you press into palms, round your spine up toward the ceiling like a stretching cat, and tuck chin gently to chest."
+            },
+            {
+                num: "04",
+                title: "VERTEBRAL ARTICULATION",
+                desc: "Move with slow, fluid control to mobilize each vertebra one by one without compressing your lower back or pinching your neck."
+            }
+        ];
+    }
+
+    if (k.includes("glute") || n.includes("glute") || k.includes("bridge") || n.includes("bridge") || n.includes("bird-dog") || n.includes("bird dog")) {
+        return [
+            {
+                num: "01",
+                title: "SUPINE SETUP",
+                desc: "Lie flat on your back with knees bent at 90°, feet planted flat hip-width apart, and arms resting at your sides with palms down."
+            },
+            {
+                num: "02",
+                title: "HIP DRIVE & LOCKOUT",
+                desc: "Drive through heels to lift hips off the floor until thighs and torso form a straight diagonal line. Squeeze glutes forcefully at the apex."
+            },
+            {
+                num: "03",
+                title: "PAUSE & ECCENTRIC LOWER",
+                desc: "Hold the top contraction for 1–2 seconds, then slowly lower hips back down with control until hovering just above the floor before the next rep."
+            },
+            {
+                num: "04",
+                title: "FORM CHECK & CUES",
+                desc: "Keep ribs pinned down and avoid arching lower back at the top. The drive must originate purely from glutes and hamstrings, not lumbar spine."
+            }
+        ];
+    }
+
+    if (k.includes("child") || n.includes("child") || n.includes("hip opener") || n.includes("rest")) {
+        return [
+            {
+                num: "01",
+                title: "KNEELING POSITION",
+                desc: "Kneel on your mat, bringing big toes together to touch and separating knees out toward the outer edges of the mat."
+            },
+            {
+                num: "02",
+                title: "FORWARD EXTENSION",
+                desc: "Exhale and hinge forward from hips, extending arms forward along the floor while sinking hips back toward heels. Rest forehead gently on mat."
+            },
+            {
+                num: "03",
+                title: "DEEP DIAPHRAGM BREATHING",
+                desc: "Breathe deeply into your lower back and lateral ribcage. With every exhale, allow your chest and shoulders to melt deeper toward the floor."
+            },
+            {
+                num: "04",
+                title: "REST & DECOMPRESSION",
+                desc: "Release all muscular tension in neck, jaw, and hips. Hold passively for full spinal and nervous system decompression."
+            }
+        ];
+    }
+
+    if (k.includes("surya") || n.includes("surya") || n.includes("salutation") || n.includes("sun")) {
+        return [
+            {
+                num: "01",
+                title: "PRAYER & UPWARD REACH",
+                desc: "Stand tall (Tadasana), hands in prayer at heart. Inhale, sweep arms overhead and arch backward slightly, keeping glutes active."
+            },
+            {
+                num: "02",
+                title: "FORWARD FOLD & LUNGE",
+                desc: "Exhale, hinge forward from hips with flat back to touch floor (Padahastasana). Inhale and step right leg back into a deep low lunge."
+            },
+            {
+                num: "03",
+                title: "PLANK & COBRA FLOW",
+                desc: "Step back to plank, lower chest to floor, then inhale and press upward into Cobra (Bhujangasana) with shoulders rolled down and back."
+            },
+            {
+                num: "04",
+                title: "DOWNWARD DOG & RETURN",
+                desc: "Exhale and lift hips up and back into Downward Facing Dog. Inhale step right foot forward, exhale fold, inhale rise to standing prayer."
+            }
+        ];
+    }
+
+    if (k.includes("warmup") || n.includes("warmup") || k.includes("twist") || n.includes("twist") || n.includes("brisk")) {
+        return [
+            {
+                num: "01",
+                title: "ATHLETIC STANCE",
+                desc: "Stand with feet shoulder-width apart, knees softened, and elbows bent at 90° with hands up in athletic guard."
+            },
+            {
+                num: "02",
+                title: "TORSO ROTATION",
+                desc: "Rotate upper torso smoothly from left to right, allowing back foot to pivot slightly on the ball of the foot to protect knees."
+            },
+            {
+                num: "03",
+                title: "CONTROLLED FLUID SPEED",
+                desc: "Initiate rotation from oblique abdominal muscles and thoracic spine. Keep movement smooth and fluid without snapping joints."
+            },
+            {
+                num: "04",
+                title: "RHYTHMIC BREATHING",
+                desc: "Exhale with each lateral twist, inhaling briefly through center. Feel warmth and blood flow increasing across spine and core."
+            }
+        ];
+    }
+
+    // Default / fallback instructions
+    if (fallbackInstructions && fallbackInstructions.length > 0) {
+        return fallbackInstructions.map((ins, idx) => ({
+            num: String(idx + 1).padStart(2, "0"),
+            title: `STEP ${idx + 1}`,
+            desc: ins
+        }));
+    }
+
+    return [
+        {
+            num: "01",
+            title: "STANCE & ALIGNMENT",
+            desc: "Establish a stable, balanced base with shoulders relaxed and core braced."
+        },
+        {
+            num: "02",
+            title: "MOVEMENT PATH",
+            desc: "Perform controlled motion through full range without momentum or bouncing."
+        },
+        {
+            num: "03",
+            title: "BREATHING RHYTHM",
+            desc: "Inhale on eccentric preparation phase, exhale forcefully on exertion."
+        },
+        {
+            num: "04",
+            title: "FORM CHECK",
+            desc: "Maintain neutral spine alignment throughout and prioritize quality over speed."
+        }
+    ];
 }
 
 function stopCartoonVideoPlayer() {
@@ -2716,6 +2980,7 @@ function getExerciseCycleDuration(key, name) {
 function getExerciseInitialCue(key, name) {
     const k = (key || "").toLowerCase();
     const n = (name || "").toLowerCase();
+    if (k.includes("warmup") || n.includes("warmup") || k.includes("twist") || n.includes("twist") || n.includes("brisk")) return "🔄 360° ARTICULAR ROTATION · INCREASE FLUID RANGE";
     if (k.includes("squat") || n.includes("squat") || n.includes("lunge")) return "⬇️ INHALE DOWN (2s) · ⬆️ EXHALE DRIVE (1s)";
     if (k.includes("jumping") || n.includes("jumping") || n.includes("jack")) return "⭐ EXPLOSIVE STAR JUMP · ⚡ SOFT LANDING";
     if (k.includes("pushup") || n.includes("push-up") || n.includes("push up")) return "⬇️ LOWER TO 90° ELBOWS · ⬆️ PRESS UP";
@@ -3845,76 +4110,47 @@ function renderPopupExerciseStep() {
     if (badgeEl) badgeEl.textContent = `⚡ ${ordinal.toUpperCase()} EXERCISE · ACTIVE`;
     if (timingEl) timingEl.textContent = `${curEx.duration} · ${curEx.reps}`;
 
-    // Mode handling: Canvas vs Video
-    const currentMode = (typeof window.aerivaGetVideoMode === "function") ? window.aerivaGetVideoMode() : "canvas";
-    const videoContainer = document.getElementById("trainerVideoContainer");
-    const videoPlayer = document.getElementById("trainerVideoPlayer");
-    const videoLabel = document.getElementById("videoExerciseLabel");
-    const videoReps = document.getElementById("videoRepCounter");
-    const videoFill = document.getElementById("videoProgressFill");
-
-    // Toggle button active states
-    document.querySelectorAll(".view-mode-btn").forEach(btn => {
-        if (btn.dataset.mode === currentMode) {
-            btn.classList.add("active");
-        } else {
-            btn.classList.remove("active");
-        }
-    });
-
-    if (currentMode === "video" && videoContainer && videoPlayer) {
-        if (diagramEl) diagramEl.classList.add("hidden");
-        videoContainer.classList.remove("hidden");
-        stopCartoonVideoPlayer();
-
-        const videoInfo = (typeof window.aerivaGetVideoInfo === "function") ? window.aerivaGetVideoInfo(curEx.key) : null;
-        if (videoLabel) videoLabel.textContent = (curEx.name || "EXERCISE").toUpperCase();
-        if (videoReps) videoReps.textContent = curEx.reps || "COACH MODE";
-
-        if (videoInfo && videoInfo.file_mp4) {
-            if (videoPlayer.getAttribute("data-current-src") !== videoInfo.file_mp4) {
-                videoPlayer.setAttribute("data-current-src", videoInfo.file_mp4);
-                videoPlayer.src = videoInfo.file_mp4;
-                if (videoInfo.poster) videoPlayer.poster = videoInfo.poster;
-                videoPlayer.load();
-                videoPlayer.play().catch(() => {});
-            }
-        } else {
-            videoPlayer.poster = "/static/trainer-character.jpg";
-        }
-
-        videoPlayer.ontimeupdate = () => {
-            if (videoPlayer.duration && videoFill) {
-                const pct = (videoPlayer.currentTime / videoPlayer.duration) * 100;
-                videoFill.style.width = `${pct}%`;
-            }
-        };
-    } else {
-        if (videoContainer) videoContainer.classList.add("hidden");
-        if (videoPlayer) videoPlayer.pause();
-        if (diagramEl) {
-            diagramEl.classList.remove("hidden");
-            mountCartoonVideoPlayer(diagramEl, curEx.key, curEx.name);
-        }
+    // Render real high-resolution posture image inside #popupDiagramBox
+    if (diagramEl) {
+        diagramEl.classList.remove("hidden");
+        const characterImg = getExerciseCharacterImage(curEx.key, curEx.name);
+        const initialCue = getExerciseInitialCue(curEx.key, curEx.name);
+        diagramEl.innerHTML = `
+            <div class="exercise-photo-stage">
+                <img src="${characterImg}" alt="${escapeHTML(curEx.name)}" class="exercise-photo-img" />
+                <div class="photo-badges-overlay">
+                    <span class="photo-badge-cue">${escapeHTML(initialCue)}</span>
+                    <span class="photo-badge-status">OPTIMAL POSTURE</span>
+                </div>
+                <div class="photo-caption-bar">
+                    <span class="photo-caption-dot">●</span>
+                    <span>COACH POSTURE TECHNIQUE GUIDE · ${escapeHTML((curEx.name || 'EXERCISE').toUpperCase())}</span>
+                </div>
+            </div>
+        `;
     }
 
     if (nameEl) nameEl.textContent = curEx.name;
 
     if (pillsEl) {
         pillsEl.innerHTML = `
-            <span class="active-exercise-pill timing">⏱️ ${escapeHTML(curEx.duration)}</span>
-            <span class="active-exercise-pill timing">⚡ ${escapeHTML(curEx.reps)}</span>
-            <span class="active-exercise-pill muscles">🎯 ${escapeHTML(curEx.target_muscles || "Mobility & Core")}</span>
+            <span class="active-exercise-pill timing">⏱️ TIME LIMIT: ${escapeHTML(curEx.duration)}</span>
+            <span class="active-exercise-pill timing">⚡ REPS / CADENCE: ${escapeHTML(curEx.reps)}</span>
+            <span class="active-exercise-pill muscles">🎯 TARGET: ${escapeHTML(curEx.target_muscles || "Mobility & Core")}</span>
         `;
     }
 
     if (instructionsEl) {
-        const steps = curEx.instructions && curEx.instructions.length > 0 ? curEx.instructions : [
-            "Start in proper posture and keep core engaged.",
-            "Perform controlled movements through full range of motion.",
-            "Breathe rhythmically without holding your breath."
-        ];
-        instructionsEl.innerHTML = steps.map(ins => `<li>${escapeHTML(ins)}</li>`).join("");
+        const steps = getDetailedMovementSteps(curEx.key, curEx.name, curEx.instructions);
+        instructionsEl.innerHTML = steps.map(step => `
+            <li class="exercise-step-item">
+                <div class="exercise-step-num-badge">${escapeHTML(step.num)}</div>
+                <div class="exercise-step-content">
+                    <strong class="exercise-step-title">${escapeHTML(step.title)}</strong>
+                    <p class="exercise-step-desc">${escapeHTML(step.desc)}</p>
+                </div>
+            </li>
+        `).join("");
     }
 
     if (completeBtn) {
@@ -4003,6 +4239,7 @@ function restartPopupWorkout() {
 // 6. POPUP STEP TIMER CONTROLS
 let popupTimerInterval = null;
 let popupTimerSeconds = 60;
+let currentStepInitialSeconds = 60;
 let isPopupTimerRunning = false;
 
 function initPopupTimerForStep(durationStr) {
@@ -4014,7 +4251,8 @@ function initPopupTimerForStep(durationStr) {
     } catch (e) {
         mins = 1;
     }
-    popupTimerSeconds = Math.min(mins * 60, 240);
+    currentStepInitialSeconds = Math.min(mins * 60, 600);
+    popupTimerSeconds = currentStepInitialSeconds;
     isPopupTimerRunning = false;
     updatePopupTimerDisplay();
 }
@@ -4031,17 +4269,17 @@ function togglePopupStepTimer() {
     const btn = document.getElementById("popupTimerToggleBtn");
     if (isPopupTimerRunning) {
         stopPopupStepTimer();
-        if (btn) btn.textContent = "▶ RESUME";
+        if (btn) btn.innerHTML = '<span class="box-icon">□</span> RESUME';
     } else {
         isPopupTimerRunning = true;
-        if (btn) btn.textContent = "⏸ PAUSE";
+        if (btn) btn.innerHTML = '<span class="box-icon">□</span> PAUSE';
         popupTimerInterval = setInterval(() => {
             if (popupTimerSeconds > 0) {
                 popupTimerSeconds--;
                 updatePopupTimerDisplay();
             } else {
                 stopPopupStepTimer();
-                if (btn) btn.textContent = "✓ DONE";
+                if (btn) btn.innerHTML = '<span class="box-icon">✓</span> TIME UP';
             }
         }, 1000);
     }
@@ -4054,12 +4292,12 @@ function stopPopupStepTimer() {
     }
     isPopupTimerRunning = false;
     const btn = document.getElementById("popupTimerToggleBtn");
-    if (btn) btn.textContent = "▶ START";
+    if (btn) btn.innerHTML = '<span class="box-icon">□</span> START';
 }
 
 function resetPopupStepTimer() {
     stopPopupStepTimer();
-    popupTimerSeconds = 60;
+    popupTimerSeconds = currentStepInitialSeconds || 60;
     updatePopupTimerDisplay();
 }
 
